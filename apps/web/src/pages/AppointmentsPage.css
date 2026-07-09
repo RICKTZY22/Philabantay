@@ -1,0 +1,27 @@
+.appt-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.appt-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr auto auto;
+  gap: 16px;
+  align-items: center;
+  background: var(--paper-soft);
+}
+
+.appt-when { display: flex; align-items: center; gap: 10px; }
+.appt-what { display: grid; }
+
+@media (max-width: 680px) {
+  .appt-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'when status'
+      'what cancel';
+  }
+  .appt-when { grid-area: when; }
+  .appt-what { grid-area: what; }
+}

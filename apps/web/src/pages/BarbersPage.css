@@ -1,0 +1,19 @@
+.avail-strip {
+  background: var(--green);
+  margin-top: 18px;
+}
+
+.barber-card {
+  display: grid;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  align-content: start;
+}
+
+.barber-card h3 { font-size: 1.3rem; }
+
+.book-hint {
+  font-family: 'Kalam', cursive;
+  gap: 6px;
+}

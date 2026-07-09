@@ -1,0 +1,485 @@
+/* Doodle theme — ported from paqueuehan-bills and adapted for the barbershop.
+   The hand-drawn look comes from: handwritten fonts, a faint notebook grid,
+   asymmetric border-radius + hard offset shadows, and the SVG `#rough` filter
+   (defined in DoodleDefs.tsx) applied via `filter: url('#rough')`. */
+
+@import url('https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Kalam:wght@400;700&family=Patrick+Hand&display=swap');
+
+:root {
+  --paper: #faf3ea;
+  --paper-soft: #fdf7ee;
+  --ink: #2b2b2b;
+  --muted: #54514b;
+  --faint: #8a867e;
+  --line: rgba(43, 42, 40, 0.18);
+  --yellow: #fbe7a2;
+  --green: #c7e7c4;
+  --pink: #f8cad6;
+  --blue: #bee0f1;
+  --purple: #d8cbec;
+  --orange: #fad4b8;
+  --danger: #e28b7b;
+  --shadow: rgba(43, 42, 40, 0.14);
+
+  font-family: 'Patrick Hand', cursive;
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--paper);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background-color: var(--paper);
+  font-size: 18px;
+}
+
+/* Repeating barber-doodle background — matches the design reference:
+   330px tile at .07 opacity, a faint texture behind everything. */
+.bg-pattern {
+  position: fixed;
+  inset: 0;
+  background-image: url('/barber-pattern.avif');
+  background-repeat: repeat;
+  background-size: 330px;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep page chrome above the background layer. */
+.app-shell > header,
+.app-shell > main,
+.app-shell > footer {
+  position: relative;
+  z-index: 1;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0 0 0.4em;
+}
+
+h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); }
+h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+
+p { line-height: 1.5; margin: 0 0 0.8em; }
+
+a { color: inherit; }
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+::selection {
+  background: var(--yellow);
+}
+
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.doodle-icon {
+  display: block;
+  color: currentColor;
+  filter: url('#rough');
+  flex: none;
+}
+
+/* ---- Layout shell ---- */
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  width: min(1100px, 100% - 40px);
+  margin-inline: auto;
+}
+
+main.page {
+  flex: 1;
+  padding-block: 32px 64px;
+}
+
+/* ---- Brand / nav ---- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  border: 2.5px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  background: var(--paper-soft);
+  padding: 8px 22px 8px 14px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 27px;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 3px 4px 0 rgba(43, 43, 43, 0.85);
+}
+
+.brand-pole {
+  width: 13px;
+  height: 30px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #d94f4f 0 5px,
+    #f6efe4 5px 10px,
+    #4f6fd9 10px 15px,
+    #f6efe4 15px 20px
+  );
+  animation: poleSpinSm 1.4s linear infinite;
+}
+
+@keyframes poleSpinSm {
+  from { background-position: 0 0; }
+  to { background-position: 0 28.3px; }
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 18px;
+  flex-wrap: wrap;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 220px 14px 220px 14px / 14px 220px 14px 220px;
+  border: 2px solid transparent;
+  color: var(--muted);
+}
+
+.nav-link:hover { color: var(--ink); }
+
+.nav-link.active {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--yellow);
+  filter: url('#rough');
+}
+
+/* ---- Buttons ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 3px solid var(--ink);
+  background: var(--paper-soft);
+  color: var(--ink);
+  padding: 10px 22px;
+  font-family: 'Kalam', cursive;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 220px 18px 220px 18px / 18px 220px 18px 220px;
+  box-shadow: 4px 5px 0 var(--shadow);
+  filter: url('#rough');
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translate(-1px, -2px);
+  box-shadow: 5px 7px 0 var(--shadow);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.btn-primary { background: var(--yellow); }
+.btn-green { background: var(--green); }
+.btn-pink { background: var(--pink); }
+.btn-blue { background: var(--blue); }
+.btn-danger { background: var(--danger); }
+
+.btn-sm { padding: 6px 14px; font-size: 16px; }
+.btn-ghost {
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+  filter: none;
+}
+.btn-ghost:hover:not(:disabled) { text-decoration: underline; }
+
+/* ---- Cards ---- */
+
+.rough-card {
+  position: relative;
+  border: 3px solid var(--ink);
+  background: var(--paper-soft);
+  border-radius: 18px 26px 20px 24px / 24px 18px 26px 20px;
+  padding: 20px;
+  box-shadow: 5px 7px 0 var(--shadow);
+  filter: url('#rough');
+}
+
+.rough-card > * { filter: none; }
+
+.card-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* ---- Pills / tags ---- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  font-size: 15px;
+  border: 2px solid var(--ink);
+  border-radius: 220px 14px 220px 14px / 14px 220px 14px 220px;
+  background: var(--paper);
+  filter: url('#rough');
+}
+
+.pill-on { background: var(--green); }
+.pill-off { background: var(--paper); color: var(--faint); border-color: var(--line); filter: none; }
+.pill-yellow { background: var(--yellow); }
+.pill-blue { background: var(--blue); }
+.pill-pink { background: var(--pink); }
+
+/* ---- Forms ---- */
+
+.field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--paper-soft);
+  border: 3px solid var(--ink);
+  border-radius: 13px 16px 12px 15px / 15px 12px 16px 13px;
+  box-shadow: 3px 4px 0 var(--shadow);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: rgba(43, 42, 40, 0.38);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  background: #fff;
+}
+
+.form-error {
+  color: #b1503d;
+  font-family: 'Kalam', cursive;
+  margin: 4px 0 12px;
+}
+
+/* ---- Misc helpers ---- */
+
+.eyebrow {
+  display: inline-block;
+  font-family: 'Kalam', cursive;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 2px 14px;
+  border-radius: 220px 14px 220px 14px / 14px 220px 14px 220px;
+  filter: url('#rough');
+  margin-bottom: 14px;
+}
+
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.center { text-align: center; }
+.stack > * + * { margin-top: 14px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.avatar-blob {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 46% 54% 52% 48% / 54% 46% 54% 46%;
+  background: var(--blue);
+  font-family: 'Kalam', cursive;
+  font-size: 24px;
+  font-weight: 700;
+  filter: url('#rough');
+  flex: none;
+}
+
+.divider {
+  height: 0;
+  border: none;
+  border-top: 3px dashed var(--line);
+  margin: 22px 0;
+}
+
+.screen-loading {
+  display: grid;
+  min-height: 50vh;
+  place-items: center;
+  color: var(--muted);
+  font-family: 'Kalam', cursive;
+  font-size: 24px;
+}
+
+/* ---- Barbershop curtain page transition ---- */
+
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.curtain.closing,
+.curtain.holding {
+  pointer-events: auto; /* block clicks while the curtains are shut */
+}
+
+.curtain-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52vw;
+  background:
+    repeating-linear-gradient(90deg, rgba(43, 43, 43, 0.12) 0 3px, transparent 3px 34px),
+    repeating-linear-gradient(90deg, #d94f4f 0 34px, #fdf7ee 34px 48px);
+  transition: transform 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.curtain-left {
+  left: 0;
+  transform: translateX(-103%);
+  border-right: 4px solid var(--ink);
+}
+
+.curtain-right {
+  right: 0;
+  transform: translateX(103%);
+  border-left: 4px solid var(--ink);
+}
+
+/* scalloped cloth bumps along the meeting edge */
+.curtain-left::after,
+.curtain-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 15px;
+}
+
+.curtain-left::after {
+  right: -18px;
+  background: radial-gradient(circle at 0 50%, var(--ink) 0 14px, transparent 15px);
+  background-size: 15px 34px;
+  background-repeat: repeat-y;
+}
+
+.curtain-right::after {
+  left: -18px;
+  background: radial-gradient(circle at 100% 50%, var(--ink) 0 14px, transparent 15px);
+  background-size: 15px 34px;
+  background-repeat: repeat-y;
+}
+
+.curtain.closing .curtain-panel,
+.curtain.holding .curtain-panel {
+  transform: translateX(0);
+}
+
+.curtain-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+  background: var(--paper-soft);
+  border: 3px solid var(--ink);
+  border-radius: 48% 52% 50% 50% / 52% 48% 52% 48%;
+  box-shadow: 4px 5px 0 rgba(43, 43, 43, 0.5);
+  filter: url('#rough');
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) 0.3s;
+}
+
+.curtain.closing .curtain-badge,
+.curtain.holding .curtain-badge {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ---- Footer ---- */
+
+.site-footer {
+  border-top: 3px dashed var(--line);
+  padding-block: 22px;
+  color: var(--faint);
+  text-align: center;
+}

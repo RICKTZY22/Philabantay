@@ -1,0 +1,85 @@
+.dash-shift {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--paper-soft);
+  margin-top: 8px;
+}
+
+.accepting-toggle { gap: 6px; font-family: 'Kalam', cursive; }
+.accepting-toggle input { width: auto; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.dash-grid h2 { display: flex; align-items: center; gap: 8px; }
+
+.hours-editor { display: grid; gap: 8px; }
+
+.hours-row {
+  display: grid;
+  grid-template-columns: 1.2fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.hours-day { gap: 6px; font-family: 'Kalam', cursive; }
+.hours-day input { width: auto; }
+
+.hours-row input[type='time'] {
+  width: auto;
+  padding: 6px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 10px 12px 9px 11px / 11px 9px 12px 10px;
+  background: var(--paper-soft);
+}
+
+.ov-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ov-form input {
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 10px 12px 9px 11px / 11px 9px 12px 10px;
+  background: var(--paper-soft);
+}
+
+.ov-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.booking-note {
+  color: #2f7d4f;
+  font-family: 'Kalam', cursive;
+}
+
+.dash-appt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed var(--line);
+}
+.dash-appt:last-child { border-bottom: none; padding-bottom: 0; }
+
+@media (max-width: 780px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .ov-form { grid-template-columns: 1fr 1fr; }
+  .ov-form .btn { grid-column: 1 / -1; }
+}

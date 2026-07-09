@@ -1,0 +1,119 @@
+.chat-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  min-height: 64vh;
+}
+
+.chat-inbox h2 { display: flex; align-items: center; gap: 8px; }
+
+.convo-list { display: grid; gap: 10px; }
+
+.convo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: inherit;
+  border: 3px solid var(--ink);
+  border-radius: 16px 22px 18px 20px / 20px 16px 22px 18px;
+  background: var(--paper-soft);
+  box-shadow: 3px 4px 0 var(--shadow);
+  filter: url('#rough');
+}
+.convo-item > * { filter: none; }
+.convo-item.active { background: var(--yellow); }
+
+.convo-meta { flex: 1; min-width: 0; }
+.convo-preview {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.unread { font-size: 13px; }
+
+.chat-thread {
+  border: 3px solid var(--ink);
+  border-radius: 20px 26px 22px 24px / 24px 20px 26px 22px;
+  background: var(--paper-soft);
+  box-shadow: 5px 7px 0 var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.thread { display: flex; flex-direction: column; height: 100%; min-height: 64vh; }
+
+.thread-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 3px dashed var(--line);
+}
+.thread-back { display: none; }
+
+.thread-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bubble-row { display: flex; }
+.bubble-row.mine { justify-content: flex-end; }
+
+.bubble {
+  max-width: 72%;
+  padding: 9px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 16px 18px 16px 6px / 18px 16px 8px 16px;
+  background: var(--paper);
+  box-shadow: 2px 3px 0 var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bubble-row.mine .bubble {
+  background: var(--blue);
+  border-radius: 18px 16px 6px 16px / 16px 18px 16px 8px;
+}
+.bubble-time { font-size: 12px; color: var(--faint); align-self: flex-end; }
+
+.thread-input {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 3px dashed var(--line);
+}
+.thread-input input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 999px 16px 999px 16px / 16px 999px 16px 999px;
+  background: var(--paper);
+}
+
+.chat-foot { padding: 0 16px 12px; margin: 0; }
+
+@media (max-width: 760px) {
+  .chat-layout { grid-template-columns: 1fr; }
+  /* On mobile, show one pane at a time based on whether a thread is open. */
+  .chat-inbox.has-open { display: none; }
+  .chat-thread:not(.has-open) { display: none; }
+  .thread-back { display: inline-flex; }
+}
