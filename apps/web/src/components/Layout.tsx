@@ -1,14 +1,17 @@
+import { Suspense } from 'react'
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
-import { CurtainProvider, CurtainLink } from './CurtainTransition'
+import { CurtainProvider } from './CurtainTransition'
+import { Loading } from './Loading'
+import { RouteErrorBoundary } from './RouteErrorBoundary'
 
 export function Layout() {
   const { profile, isBarber, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  // The landing hero carries its own Sign up / Sign in, so keep the header clean there.
+  // May sariling auth billboard ang landing, kaya chill at malinis lang ang nav doon.
   const onLanding = location.pathname === '/'
 
   async function handleSignOut() {
@@ -28,7 +31,7 @@ export function Layout() {
             {SHOP_NAME}
           </Link>
           <div className="nav-links">
-            {/* The landing header stays clean — no Barbers link for visitors. */}
+            {/* Navigation feature flags: profile at role ang source of truth dito. */}
             {(profile || !onLanding) && <NavLink to="/barbers" className="nav-link">Barbers</NavLink>}
             {profile && <NavLink to="/appointments" className="nav-link">Appointments</NavLink>}
             {profile && <NavLink to="/chat" className="nav-link">Chat</NavLink>}
@@ -41,8 +44,8 @@ export function Layout() {
             ) : (
               !onLanding && (
                 <>
-                  <CurtainLink to="/login" className="nav-link">Log in</CurtainLink>
-                  <CurtainLink to="/signup" className="btn btn-sm btn-primary">Sign up</CurtainLink>
+                  <NavLink to="/login" className="nav-link">Log in</NavLink>
+                  <Link to="/signup" className="btn btn-sm btn-primary">Sign up</Link>
                 </>
               )
             )}
@@ -52,7 +55,18 @@ export function Layout() {
 
       <main className="page">
         <div className="container">
-          <Outlet />
+          {/*
+            IMPORTANT - HUWAG ILIPAT SA LABAS NG LAYOUT:
+            Dito lang dapat nag-suspend ang lazy page para buhay pa rin ang nav,
+            footer, background, at curtain habang dina-download ang next chunk.
+            ErrorBoundary ang sasalo kapag rejected ang import; Suspense naman
+            kapag pending pa lang. Magkaiba sila at parehong kailangan.
+          */}
+          <RouteErrorBoundary key={location.key}>
+            <Suspense fallback={<Loading label="Sandali, binubuksan ang page..." />}>
+              <Outlet />
+            </Suspense>
+          </RouteErrorBoundary>
         </div>
       </main>
 

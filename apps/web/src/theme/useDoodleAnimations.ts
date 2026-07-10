@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Attaches the doodle scroll animations to a container. Return `ref` and spread
- * it on the scroll root of a page/section. Re-runs whenever `deps` change
- * (e.g. the route pathname or when async content finishes loading).
+ * Reusable doodle animation hook. Ikabit ang returned ref sa page root at siya
+ * na ang bahala sa reveal, cleanup, at reduced-motion version.
  *
- * - Respects `prefers-reduced-motion` (shows the static final state, no GSAP).
- * - Lazy-loads the GSAP runtime so it stays out of the initial bundle.
- * - StrictMode-safe via the `cancelled` guard + returned cleanup.
+ * Feature notes:
+ * - Lazy din ang animation runtime para hindi bumigat ang initial bundle.
+ * - Static final state ang reduced-motion para walang nawawalang content.
+ * - Safe sa StrictMode dahil may cancelled guard at GSAP cleanup.
  */
 export function useDoodleAnimations<T extends HTMLElement = HTMLDivElement>(
   deps: React.DependencyList = [],
@@ -22,6 +22,8 @@ export function useDoodleAnimations<T extends HTMLElement = HTMLDivElement>(
     let cleanup: (() => void) | undefined
     let cancelled = false
 
+    // IMPORTANT: dynamic import ito on purpose. Kapag ginawang normal import,
+    // babalik sa entry bundle ang animation runtime at mawawala ang code split.
     import('./doodleAnimationRuntime')
       .then(({ runDoodleAnimations, revealStaticState }) => {
         if (cancelled || !ref.current) return
@@ -32,13 +34,15 @@ export function useDoodleAnimations<T extends HTMLElement = HTMLDivElement>(
         cleanup = runDoodleAnimations(ref.current)
       })
       .catch(() => {
-        /* animation is progressive enhancement — ignore load failures */
+        /* Bonus lang ang animation; usable pa rin dapat ang page kapag pumalya. */
       })
 
     return () => {
       cancelled = true
       cleanup?.()
     }
+    // Caller ang may kontrol sa deps dahil async page data ang madalas na trigger.
+    // Huwag palitan ng `[deps]`; magre-run iyon kada bagong array identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 

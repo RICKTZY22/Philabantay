@@ -20,13 +20,19 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null)
 
+/** Isang source of truth para sa current user, session loading, at role helpers. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const backend = useBackend()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // IMPORTANT: kailangan ang `active` guard dahil dini-double run ni
+    // StrictMode ang effects sa dev. Pinipigilan nito ang stale state update.
     let active = true
+
+    // Unang bukas ng app: ibalik muna ang existing session bago mag-render ng
+    // protected route. Ito ang loading na hinihintay ng RequireAuth.
     backend.auth
       .getCurrentProfile()
       .then((p) => {
@@ -35,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         if (active) setLoading(false)
       })
+    // Live updates ito para sabay ang header at guards after login/logout.
     const unsub = backend.auth.onAuthChange((p) => {
       if (active) setProfile(p)
     })
@@ -44,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [backend])
 
+  // Role flags dito kinukuha para pare-pareho ang nav at route permissions.
   const value: AuthState = {
     profile,
     loading,

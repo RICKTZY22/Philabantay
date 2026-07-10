@@ -10,4 +10,5 @@ build/
 npm-debug.log*
 .vite/
 coverage/
+*.tsbuildinfo
 .claude/*.lock

@@ -1,0 +1,303 @@
+/* Split-panel sliding auth form. The pink overlay slides between halves to
+   swap the visible form; punchlines/titles live on the overlay. */
+
+.auth-slider {
+  --accent: #f4b8c4;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: clamp(530px, calc(100svh - 118px), 660px);
+  background:
+    radial-gradient(circle at 12% 16%, rgba(244, 184, 196, 0.13) 0 2px, transparent 2.5px),
+    linear-gradient(rgba(43, 43, 43, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 43, 43, 0.025) 1px, transparent 1px),
+    var(--paper-soft);
+  background-size: auto, 28px 28px, 28px 28px, auto;
+  border: 3px solid var(--ink);
+  border-radius: 22px 28px 20px 26px / 26px 20px 28px 22px;
+  box-shadow: 6px 8px 0 var(--shadow);
+  overflow: hidden;
+}
+
+/* ---- form halves ---- */
+
+.auth-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  padding: 38px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: opacity 0.35s ease 0.18s, transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: rgba(43, 43, 43, 0.38) transparent;
+  scrollbar-width: thin;
+  z-index: 2;
+}
+
+.half-signin { left: 0; }
+.half-signup {
+  right: 0;
+  justify-content: center;
+  padding-block: 36px;
+}
+
+.half-signup .field { margin-bottom: 10px; }
+.half-signup .auth-mini-title { margin-bottom: 8px; font-size: 27px; }
+
+.auth-slider .half-signup {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(6%);
+}
+.auth-slider.is-signup .half-signup {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+.auth-slider.is-signup .half-signin {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-6%);
+}
+
+.auth-mini-title {
+  font-family: 'Gochi Hand', cursive;
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+.auth-mini-title::after {
+  content: '';
+  display: block;
+  width: 58px;
+  height: 4px;
+  margin-top: 2px;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.auth-demo { margin-top: 6px; }
+
+/* ---- sliding overlay ---- */
+
+.auth-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 50%;
+  z-index: 5;
+  display: grid;
+  background:
+    repeating-linear-gradient(-45deg, rgba(43, 43, 43, 0.05) 0 14px, transparent 14px 28px),
+    var(--accent);
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Loose ink drawings make the paper half feel sketched without crowding inputs. */
+.auth-doodles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  color: rgba(43, 43, 43, 0.2);
+}
+
+.auth-doodle {
+  position: absolute;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url('#rough');
+}
+
+.auth-doodle-comb {
+  top: 24px;
+  left: 35%;
+  width: 88px;
+  transform: rotate(8deg);
+}
+
+.auth-doodle-scissors {
+  left: 18px;
+  bottom: 20px;
+  width: 68px;
+  transform: rotate(-10deg);
+}
+
+.auth-doodle-spark {
+  left: 43%;
+  bottom: 36px;
+  width: 36px;
+  color: rgba(217, 79, 79, 0.22);
+  animation: authSpark 2.8s ease-in-out infinite;
+}
+
+.auth-doodle-loop {
+  position: absolute;
+  width: 46px;
+  height: 25px;
+  border: 2px dashed rgba(43, 43, 43, 0.14);
+  border-color: rgba(43, 43, 43, 0.14) transparent transparent;
+  border-radius: 50%;
+}
+
+.auth-doodle-loop-one { left: 24px; top: 24px; transform: rotate(-18deg); }
+.auth-doodle-loop-two { left: 40%; bottom: 88px; transform: rotate(20deg); }
+
+@keyframes authSpark {
+  0%, 100% { opacity: 0.45; transform: rotate(-5deg) scale(0.85); }
+  50% { opacity: 1; transform: rotate(5deg) scale(1.08); }
+}
+
+.auth-slider.is-signup .auth-overlay { transform: translateX(-100%); }
+
+/* blobby scalloped cloth edge on whichever side leads */
+.auth-overlay::before,
+.auth-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 15px;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.auth-overlay::before {
+  left: -14px;
+  background: radial-gradient(circle at 100% 50%, var(--accent) 0 10.5px, var(--ink) 10.5px 13.5px, transparent 14px);
+  background-size: 15px 34px;
+  background-repeat: repeat-y;
+  opacity: 1;
+}
+.auth-overlay::after {
+  right: -14px;
+  background: radial-gradient(circle at 0 50%, var(--accent) 0 10.5px, var(--ink) 10.5px 13.5px, transparent 14px);
+  background-size: 15px 34px;
+  background-repeat: repeat-y;
+  opacity: 0;
+}
+.auth-slider.is-signup .auth-overlay::before { opacity: 0; }
+.auth-slider.is-signup .auth-overlay::after { opacity: 1; }
+
+.auth-overlay-inner {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 44px 40px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease 0.15s;
+  position: relative;
+  z-index: 2;
+}
+.auth-overlay-inner.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.auth-overlay-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 27px;
+}
+
+.auth-overlay-inner h2 {
+  margin: 0;
+  font-family: 'Gochi Hand', cursive;
+  font-weight: 400;
+  font-size: 42px;
+  line-height: 1.1;
+}
+
+.auth-overlay-inner p {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.5;
+  max-width: 34ch;
+}
+
+.auth-overlay-sub {
+  font-family: 'Kalam', cursive;
+  margin-top: 10px !important;
+}
+
+.auth-overlay-doodle {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  width: 128px;
+  color: rgba(43, 43, 43, 0.14);
+  transform: rotate(3deg);
+  pointer-events: none;
+}
+
+.auth-overlay-doodle svg { display: block; }
+.overlay-doodle-line,
+.overlay-doodle-fill {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.overlay-doodle-fill { fill: rgba(253, 247, 238, 0.14); }
+.overlay-doodle-dot { fill: currentColor; }
+
+/* ---- mobile: stack instead of slide ---- */
+
+@media (max-width: 720px) {
+  .auth-slider { min-height: 0; display: block; }
+
+  .auth-half {
+    position: static;
+    width: 100%;
+    padding: 26px 22px 12px;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+  .auth-slider .half-signup { display: none; }
+  .auth-slider.is-signup .half-signup { display: flex; }
+  .auth-slider.is-signup .half-signin { display: none; }
+
+  .auth-overlay {
+    position: static;
+    width: 100%;
+    transform: none !important;
+    border-top: 3px dashed var(--line);
+  }
+  .auth-overlay::before,
+  .auth-overlay::after { display: none; }
+  .auth-overlay-inner {
+    display: none;
+    padding: 22px 20px;
+    gap: 8px;
+  }
+  .auth-overlay-inner.active { display: flex; }
+  .auth-overlay-inner h2 { font-size: 28px; }
+  .auth-overlay-brand { display: none; }
+  .auth-doodle-comb { left: auto; right: 20px; }
+  .auth-doodle-spark,
+  .auth-doodle-loop-two,
+  .auth-overlay-doodle { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-doodle-spark { animation: none; }
+}

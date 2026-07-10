@@ -387,7 +387,8 @@ main.page {
   font-size: 24px;
 }
 
-/* ---- Barbershop curtain page transition ---- */
+/* ---- Barbershop curtain page transition ----
+   IMPORTANT: naka-sync ang .55s dito sa timers ng CurtainTransition.tsx. */
 
 .curtain {
   position: fixed;

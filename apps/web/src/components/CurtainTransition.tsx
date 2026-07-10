@@ -10,10 +10,9 @@ import { useNavigate } from 'react-router-dom'
 import { DoodleIcon } from '../theme/DoodleDefs'
 
 /**
- * Doodle barbershop-curtain page transition. Call `go(path)` (or use
- * <CurtainLink>) and two striped cloth panels sweep shut from the sides,
- * the route swaps behind them, then they part again on the new page.
- * Respects prefers-reduced-motion (plain navigation).
+ * Ito yung barber-curtain handoff pagkatapos ng successful auth. Isara muna,
+ * palit route sa likod, tapos buksan ulit para hindi biglang tumalon ang page.
+ * Kapag reduced-motion ang user, diretso navigation lang at walang arte.
  */
 
 type Phase = 'idle' | 'closing' | 'holding' | 'opening'
@@ -27,9 +26,11 @@ const CurtainContext = createContext<CurtainState | null>(null)
 export function CurtainProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<Phase>('idle')
   const navigate = useNavigate()
+  // Ref ito para hindi magpalit ang destination habang tumatakbo ang timers.
   const target = useRef('')
 
   const go = (to: string) => {
+    // Iwas double-click at dalawang sabay na navigation habang nakasara curtain.
     if (phase !== 'idle') return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       navigate(to)
@@ -40,8 +41,11 @@ export function CurtainProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // IMPORTANT - NAKA-SYNC ITO SA `.curtain-panel` CSS TRANSITIONS.
+    // Huwag baguhin ang milliseconds dito nang hindi chine-check ang doodle.css,
+    // kundi puwedeng makita ang route swap habang kalahati pa lang ang curtain.
     if (phase === 'closing') {
-      // Panels take ~.55s to meet in the middle.
+      // Mga .55s bago magtagpo ang dalawang panel sa gitna.
       const t = setTimeout(() => {
         navigate(target.current)
         window.scrollTo({ top: 0, behavior: 'instant' })
@@ -50,7 +54,7 @@ export function CurtainProvider({ children }: { children: ReactNode }) {
       return () => clearTimeout(t)
     }
     if (phase === 'holding') {
-      // Give the new page a beat to paint behind the closed curtains.
+      // Maikling pahinga para makapag-paint ang bagong page sa likod.
       const t = setTimeout(() => setPhase('opening'), 160)
       return () => clearTimeout(t)
     }
@@ -79,29 +83,4 @@ export function useCurtain(): CurtainState {
   const ctx = useContext(CurtainContext)
   if (!ctx) throw new Error('useCurtain must be used within a CurtainProvider')
   return ctx
-}
-
-/** Anchor that navigates through the curtain transition. */
-export function CurtainLink({
-  to,
-  className,
-  children,
-}: {
-  to: string
-  className?: string
-  children: ReactNode
-}) {
-  const { go } = useCurtain()
-  return (
-    <a
-      href={to}
-      className={className}
-      onClick={(e) => {
-        e.preventDefault()
-        go(to)
-      }}
-    >
-      {children}
-    </a>
-  )
 }

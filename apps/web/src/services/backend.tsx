@@ -5,9 +5,12 @@ import { createMockBackend } from './mock/MockBackend'
 const BackendContext = createContext<DataBackend | null>(null)
 
 /**
- * Chooses the data layer. Phase 1 always uses the mock. Phase 2 will add a
- * `createSupabaseBackend()` branch here keyed on VITE_DATA_BACKEND — no other
- * file in the app needs to change.
+ * Switchboard ng data layer. Mock muna ngayon; dito lang ikakabit ang Supabase
+ * adapter later gamit ang VITE_DATA_BACKEND para walang page na kailangang
+ * baguhin isa-isa.
+ *
+ * IMPORTANT - HUWAG MAG-IMPORT NG MOCK DIRETSO SA MGA PAGE:
+ * `DataBackend` contract ang dapat kausap ng UI para plug-and-play ang Supabase.
  */
 function createBackend(): DataBackend {
   const kind = import.meta.env.VITE_DATA_BACKEND ?? 'mock'
@@ -23,6 +26,7 @@ function createBackend(): DataBackend {
 }
 
 export function BackendProvider({ children }: { children: ReactNode }) {
+  // Isang backend instance lang buong app; huwag gumawa ulit kada render.
   const backend = useMemo(() => createBackend(), [])
   return <BackendContext.Provider value={backend}>{children}</BackendContext.Provider>
 }

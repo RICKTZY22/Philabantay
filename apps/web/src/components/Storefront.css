@@ -1,0 +1,310 @@
+/* Keyframes + sizing for the animated Philabantay storefront scene.
+   Self-contained so the component works on any page. Some keyframes are
+   intentionally identical to LandingPage.css definitions. */
+
+@keyframes poleSpin { from { background-position: 0 0; } to { background-position: 0 50.9px; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+@keyframes flagWave { from { transform: skewY(-7deg); } to { transform: skewY(7deg); } }
+@keyframes cloudDrift { from { transform: translateX(0); } to { transform: translateX(46px); } }
+@keyframes birdGlide {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(90px, -14px); }
+  50% { transform: translate(180px, 4px); }
+  75% { transform: translate(270px, -10px); }
+  100% { transform: translate(360px, 0); }
+}
+@keyframes walkIn {
+  0% { transform: translateX(0); opacity: 1; }
+  26%, 31.5% { transform: translateX(425px); opacity: 1; }
+  32%, 100% { transform: translateX(425px); opacity: 0; }
+}
+@keyframes walkOut {
+  0%, 58% { transform: translateX(0) scale(1); opacity: 0; }
+  60% { transform: translateX(0) scale(1); opacity: 1; }
+  68% { transform: translateX(0) scale(1); opacity: 1; }
+  92% { transform: translateX(430px) scale(1); opacity: 1; }
+  94%, 100% { transform: translateX(430px) scale(1); opacity: 0; }
+}
+@keyframes walkerSideIn {
+  0%, 23.5% { opacity: 1; transform: scaleX(1); }
+  25.5%, 100% { opacity: 0; transform: scaleX(.12); }
+}
+@keyframes walkerBackIn {
+  0%, 24% { opacity: 0; transform: scaleX(.12); }
+  26%, 31.5% { opacity: 1; transform: scaleX(1); }
+  32%, 100% { opacity: 0; transform: scaleX(.9); }
+}
+@keyframes walkerFrontOut {
+  0%, 59% { opacity: 0; transform: scaleX(.12); }
+  61.5%, 65.5% { opacity: 1; transform: scaleX(1); }
+  67.5%, 100% { opacity: 0; transform: scaleX(.12); }
+}
+@keyframes walkerSideOut {
+  0%, 65.5% { opacity: 0; transform: scaleX(.12); }
+  67.5%, 100% { opacity: 1; transform: scaleX(1); }
+}
+@keyframes doorSwing {
+  0%, 26% { transform: scaleX(1); }
+  30%, 62% { transform: scaleX(.12); }
+  68%, 100% { transform: scaleX(1); }
+}
+@keyframes windowShow {
+  0%, 33% { opacity: 0; }
+  37%, 54% { opacity: 1; }
+  58%, 100% { opacity: 0; }
+}
+@keyframes freshTag {
+  0%, 59% { opacity: 0; transform: scale(.4); }
+  63% { opacity: 1; transform: scale(1); }
+  82% { opacity: 1; transform: scale(1); }
+  88%, 100% { opacity: 0; transform: scale(.8); }
+}
+@keyframes legSwing { from { transform: rotate(26deg); } to { transform: rotate(-26deg); } }
+@keyframes armSwing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+@keyframes armPump { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+@keyframes lean { from { transform: rotate(1.4deg); } to { transform: rotate(-1.4deg); } }
+@keyframes snipJiggle { from { transform: rotate(-12deg); } to { transform: rotate(14deg); } }
+@keyframes snipPop { 0%, 100% { transform: scale(.85); } 50% { transform: scale(1.12); } }
+@keyframes hairFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(32px) rotate(90deg); opacity: 0; }
+}
+@keyframes sparkle { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+
+.phil-stage.phil-neighborhood-stage {
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
+  flex: 0 0 1320px;
+  width: 1320px;
+  height: 520px;
+}
+
+.phil-shop-core {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 3;
+  width: 560px;
+  height: 452px;
+  transform: translateX(-50%);
+}
+
+.city-doodle {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.city-doodle > div[style*="position: absolute"] {
+  filter: saturate(.88);
+}
+
+.city-sidewalk {
+  position: absolute;
+  left: -18px;
+  right: -18px;
+  top: 451px;
+  height: 22px;
+  z-index: 2;
+  border-top: 3px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: #e9dfcd;
+}
+
+.city-road {
+  position: absolute;
+  left: -18px;
+  right: -18px;
+  top: 473px;
+  height: 47px;
+  z-index: 2;
+  overflow: hidden;
+  background: #cbc3b5;
+  border-bottom: 3px solid var(--ink);
+}
+.city-road span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--paper-soft) 0 30px, transparent 30px 66px);
+}
+
+.city-water-tower {
+  position: absolute;
+  left: 44px;
+  top: 98px;
+  width: 70px;
+  height: 60px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 46% 54% 12px 12px / 34% 38% 12px 12px;
+  background: #bee0f1;
+  box-shadow: 4px 5px 0 rgba(43, 43, 43, .18);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 13px;
+  line-height: 1.05;
+  text-align: center;
+  transform: rotate(-2deg);
+}
+.city-water-tower::before,
+.city-water-tower::after {
+  content: '';
+  position: absolute;
+  top: 56px;
+  width: 4px;
+  height: 40px;
+  border-radius: 3px;
+  background: var(--ink);
+}
+.city-water-tower::before { left: 13px; transform: rotate(7deg); }
+.city-water-tower::after { right: 13px; transform: rotate(-7deg); }
+
+.city-doodle-sign {
+  position: absolute;
+  z-index: 3;
+  padding: 2px 9px;
+  border: 2px solid var(--ink);
+  border-radius: 8px 5px 8px 5px;
+  background: var(--paper-soft);
+  box-shadow: 2px 3px 0 rgba(43, 43, 43, .2);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.city-doodle-sign-kape { left: 139px; top: 298px; transform: rotate(-2deg); background: var(--orange); }
+.city-doodle-sign-pandesal { right: 13px; top: 236px; transform: rotate(2deg); background: var(--yellow); }
+
+.city-doodle-tree {
+  position: absolute;
+  z-index: 5;
+  width: 42px;
+  height: 82px;
+  border-bottom: 34px solid #a47754;
+  border-left: 17px solid transparent;
+  border-right: 17px solid transparent;
+}
+.city-doodle-tree::before {
+  content: '';
+  position: absolute;
+  left: -21px;
+  top: -3px;
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ink);
+  border-radius: 48% 52% 45% 55% / 54% 46% 55% 45%;
+  background: #a8d8b9;
+  filter: url('#rough');
+}
+.city-doodle-tree-left { left: 145px; top: 368px; transform: scale(.8) rotate(-3deg); }
+.city-doodle-tree-right { right: 20px; top: 365px; transform: scale(.82) rotate(3deg); }
+
+.city-doodle-lamp {
+  position: absolute;
+  top: 334px;
+  z-index: 5;
+  width: 4px;
+  height: 118px;
+  border-radius: 3px;
+  background: var(--ink);
+}
+.city-doodle-lamp span {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  background: #ffd76a;
+  box-shadow: 0 0 14px 4px rgba(255, 205, 90, .58);
+  transform: translateX(-50%);
+  animation: blink 4s ease-in-out infinite;
+}
+.city-doodle-lamp-left { left: 178px; }
+.city-doodle-lamp-right { right: 90px; }
+
+.phil-walker-out,
+.fresh-cut-tag {
+  isolation: isolate;
+}
+
+.phil-doodle-walker {
+  position: absolute;
+  top: 288px;
+  width: 108px;
+  height: 168px;
+  transform-origin: 50% 100%;
+}
+.phil-doodle-walker-in {
+  left: -150px;
+  z-index: 4;
+}
+.phil-doodle-walker-out {
+  left: 282px;
+  z-index: 10;
+  opacity: 0;
+}
+.phil-walker-view {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 46%;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+.phil-walker-side-in { animation: walkerSideIn var(--walk, 12s) linear infinite; }
+.phil-walker-back-in { opacity: 0; animation: walkerBackIn var(--walk, 12s) linear infinite; }
+.phil-walker-front-out { opacity: 0; animation: walkerFrontOut var(--walk, 12s) linear infinite; }
+.phil-walker-side-out { opacity: 0; animation: walkerSideOut var(--walk, 12s) linear infinite; }
+.fresh-cut-tag {
+  position: absolute;
+  left: 2px;
+  top: -30px;
+  z-index: 11;
+  padding: 2px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  background: var(--accent);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .city-doodle-lamp span { animation: none; }
+}
+
+@media (max-width: 1180px) {
+  .phil-stage.phil-neighborhood-stage {
+    height: 426px;
+    transform: scale(0.82);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 1040px) {
+  .phil-stage.phil-neighborhood-stage {
+    height: 374px;
+    transform: scale(0.72);
+  }
+}
+
+@media (max-width: 900px) {
+  .phil-stage.phil-neighborhood-stage {
+    height: 333px;
+    transform: scale(0.64);
+  }
+}
+
+@media (max-width: 720px) {
+  .phil-stage.phil-neighborhood-stage {
+    height: 150px;
+    transform: scale(0.285);
+  }
+}

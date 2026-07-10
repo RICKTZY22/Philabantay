@@ -1,63 +1,32 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { SHOP_NAME } from '@barbershop/shared'
-import { CurtainLink } from '../components/CurtainTransition'
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
+import { AuthSlider } from '../components/AuthSlider'
+import { WalkFigure } from '../components/WalkFigure'
+import { Storefront, Building } from '../components/Storefront'
+import { useJourneyScroll } from './useJourneyScroll'
 import './LandingPage.css'
 
-gsap.registerPlugin(ScrollTrigger)
-
-const COLORS = ['#4f6fd9', '#d94f4f', '#3f9b62', '#e0913f', '#8e5fc9', '#3aa6a6']
-const PANTS = ['#3a4668', '#6b4a3a', '#4a5d3a', '#7a4a68']
 const ACCENT = '#f4b8c4'
 const INK = '#2b2b2b'
 const EASE = 'cubic-bezier(.37,0,.63,1)'
-
-const vis = (on: boolean): CSSProperties => ({ visibility: on ? 'visible' : 'hidden' })
-
-interface Win { l: number; t: number; w: number; h: number }
-function Building({
-  pos,
-  w,
-  h,
-  body,
-  roof,
-  windows,
-}: {
-  pos: CSSProperties
-  w: number
-  h: number
-  body: string
-  roof: string
-  windows: Win[]
-}) {
-  return (
-    <div style={{ position: 'absolute', width: w, height: h, background: body, border: `3px solid ${INK}`, borderRadius: '6px 6px 0 0', ...pos }}>
-      <div style={{ position: 'absolute', left: -6, top: -14, right: -6, height: 12, background: roof, border: `2.5px solid ${INK}`, borderRadius: 4 }} />
-      {windows.map((wd, i) => (
-        <div key={i} style={{ position: 'absolute', left: wd.l, top: wd.t, width: wd.w, height: wd.h, background: '#f4efe2', border: `2.5px solid ${INK}`, borderRadius: 3 }} />
-      ))}
-    </div>
-  )
-}
-
-const bird = (w: number, h: number) => (
-  <svg width={w} height={h} viewBox="0 0 34 14">
-    <path d="M2 10 Q9 2 16 10 M16 10 Q23 2 32 10" fill="none" stroke={INK} strokeWidth="2.5" strokeLinecap="round" />
-  </svg>
-)
 
 interface Step {
   no: number
   title: string
   body: string
   icon: ReactNode
+  color: string
+  tags: [string, string]
+  footer: string
 }
 
 const CUSTOMER_STEPS: Step[] = [
   {
     no: 1,
     title: 'Spot a free chair',
+    color: '#fbe7a2',
+    tags: ['LIVE STATUS', 'NEARBY'],
+    footer: 'FIND A CHAIR',
     body: 'Buksan ang app, makikita agad kung sinong barbershop ang bukas o may pila.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><circle cx="32" cy="32" r="24" fill="#f4efe2" /><line x1="32" y1="32" x2="32" y2="18" /><line x1="32" y1="32" x2="43" y2="38" /></g></svg>
@@ -66,6 +35,9 @@ const CUSTOMER_STEPS: Step[] = [
   {
     no: 2,
     title: 'Book it in one tap',
+    color: '#f8cad6',
+    tags: ['ONE TAP', 'NO CALLS'],
+    footer: 'LOCK THE SLOT',
     body: 'I-tap ang available slot — walang tawag, walang antay sa phone.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><rect x="10" y="14" width="44" height="40" rx="6" fill="#f4efe2" /><line x1="10" y1="26" x2="54" y2="26" /><line x1="22" y1="8" x2="22" y2="18" /><line x1="42" y1="8" x2="42" y2="18" /><path d="M24 40 L30 46 L42 34" stroke="#3f9b62" /></g></svg>
@@ -74,6 +46,9 @@ const CUSTOMER_STEPS: Step[] = [
   {
     no: 3,
     title: 'Sort the details in chat',
+    color: '#bee0f1',
+    tags: ['DIRECT CHAT', 'CUT NOTES'],
+    footer: 'TALK TO THE SHOP',
     body: 'I-message ang barbershop kung anong gupit — fade, trim, o full buzz.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><rect x="8" y="12" width="48" height="32" rx="10" fill="#f4efe2" /><path d="M22 44 L20 56 L34 44" /><circle cx="21" cy="28" r="2.5" fill={INK} /><circle cx="32" cy="28" r="2.5" fill={INK} /><circle cx="43" cy="28" r="2.5" fill={INK} /></g></svg>
@@ -82,6 +57,9 @@ const CUSTOMER_STEPS: Step[] = [
   {
     no: 4,
     title: 'Get a scribbly nudge',
+    color: '#c7e7c4',
+    tags: ['REMINDER', 'ON TIME'],
+    footer: 'HEAD OUT',
     body: 'May paalala bago dumating ang turn mo — sakto lang para makalakad papunta.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><path d="M32 10 Q46 12 46 28 L48 42 L16 42 L18 28 Q18 12 32 10 Z" fill="#f4efe2" /><path d="M27 48 Q32 54 37 48" /><line x1="32" y1="5" x2="32" y2="10" /><path d="M52 14 Q56 20 54 26" strokeWidth="3" /><path d="M12 14 Q8 20 10 26" strokeWidth="3" /></g></svg>
@@ -90,6 +68,9 @@ const CUSTOMER_STEPS: Step[] = [
   {
     no: 5,
     title: 'Strut out and rate the cut',
+    color: '#fad4b8',
+    tags: ['CUT HISTORY', 'RATE IT'],
+    footer: 'LOOK SHARP',
     body: 'Mag-iwan ng doodle-star rating pagkatapos, at naka-save lahat ng cut history mo.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M32 6 L39 23 L57 24 L43 35 L48 53 L32 42 L16 53 L21 35 L7 24 L25 23 Z" fill="#ffd76a" /></g></svg>
@@ -97,343 +78,106 @@ const CUSTOMER_STEPS: Step[] = [
   },
 ]
 
-const OWNER_STEPS: Step[] = [
+const BARBER_STEPS: Step[] = [
   {
     no: 1,
-    title: 'Set up your shop',
-    body: 'Ilagay ang shop name, address, at services — parang gumagawa ka lang ng sign sa bintana.',
+    title: 'Build your shop profile',
+    color: '#fbe7a2',
+    tags: ['SHOP PROFILE', 'SERVICES'],
+    footer: 'SET THE SHOP UP',
+    body: 'Ilagay ang shop details, services, presyo, at regular working hours.',
     icon: (
-      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="12" y="26" width="40" height="24" rx="3" fill="#f4efe2" /><path d="M8 26 L14 12 h36 l6 14 Z" fill={ACCENT} /><line x1="32" y1="36" x2="32" y2="50" /><rect x="18" y="34" width="9" height="9" fill="#fdf7ee" strokeWidth="3" /><rect x="37" y="34" width="9" height="9" fill="#fdf7ee" strokeWidth="3" /></g></svg>
+      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M8 27 H56 L52 15 H12 Z" fill="#f8cad6" /><path d="M12 27 V55 H52 V27" fill="#f4efe2" /><path d="M25 55 V38 H39 V55" /><path d="M8 27 Q12 36 20 27 Q24 36 32 27 Q36 36 44 27 Q48 36 56 27" fill="#bee0f1" /></g></svg>
     ),
   },
   {
     no: 2,
-    title: 'Add your barbers',
-    body: 'I-list ang mga barbers mo at ang oras nila — sino nasa upuan, sino may break.',
+    title: 'Switch your chair on',
+    color: '#f8cad6',
+    tags: ['LIVE STATUS', 'ACCEPTING'],
+    footer: 'GO LIVE',
+    body: 'I-on ang shift at accepting bookings para alam ng customers na may libreng upuan.',
     icon: (
-      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><circle cx="23" cy="22" r="9" fill="#f4efe2" /><path d="M8 52 c0 -12 7 -16 15 -16 s15 4 15 16" /><circle cx="45" cy="24" r="7" fill="#f4efe2" /><path d="M37 52 c0 -9 3 -13 8 -13 s11 4 11 13" /></g></svg>
+      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><path d="M32 8 V28" /><path d="M20 16 Q8 24 11 39 Q14 54 32 55 Q50 54 53 39 Q56 24 44 16" fill="#c7e7c4" /><circle cx="32" cy="36" r="3" fill={INK} /></g></svg>
     ),
   },
   {
     no: 3,
-    title: 'Flip the status',
-    body: 'Toggle lang: Open, Busy, o Full. Real-time, walang katext-text.',
+    title: 'Watch bookings land',
+    color: '#bee0f1',
+    tags: ['BOOKINGS', 'DAILY QUEUE'],
+    footer: 'PLAN THE DAY',
+    body: 'Makikita agad ang confirmed slots at pila para maayos ang takbo ng bawat chair.',
     icon: (
-      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><rect x="8" y="22" width="48" height="20" rx="10" fill="#f4efe2" /><circle cx="46" cy="32" r="9" fill="#a8d8b9" /></g></svg>
+      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="12" y="9" width="40" height="48" rx="6" fill="#f4efe2" /><path d="M22 9 V5 M42 9 V5 M20 22 H44 M21 34 L27 40 L43 27" stroke="#3f9b62" /></g></svg>
     ),
   },
   {
     no: 4,
-    title: 'Watch it come in',
-    body: 'Makikita ang income at tips habang dumadating ang customers — parang jar na napupuno.',
+    title: 'Chat before the cut',
+    color: '#c7e7c4',
+    tags: ['CUSTOMER CHAT', 'CUT NOTES'],
+    footer: 'GET THE DETAILS',
+    body: 'Linawin ang style, oras, at special requests bago pa umupo ang customer.',
     icon: (
-      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="10" x2="42" y2="10" /><path d="M18 16 q0 -4 6 -4 h16 q6 0 6 4 v30 q0 6 -6 6 H24 q-6 0 -6 -6 z" fill="#f4efe2" /><circle cx="32" cy="34" r="8" fill="#ffd76a" strokeWidth="3" /><line x1="32" y1="29" x2="32" y2="39" strokeWidth="2.5" /><line x1="28.5" y1="31.5" x2="35.5" y2="31.5" strokeWidth="2.5" /><line x1="28.5" y1="34.5" x2="35.5" y2="34.5" strokeWidth="2.5" /></g></svg>
+      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><rect x="8" y="12" width="48" height="32" rx="10" fill="#f4efe2" /><path d="M22 44 L20 56 L34 44" /><circle cx="21" cy="28" r="2.5" fill={INK} /><circle cx="32" cy="28" r="2.5" fill={INK} /><circle cx="43" cy="28" r="2.5" fill={INK} /></g></svg>
     ),
   },
   {
     no: 5,
-    title: 'Check your scribbly reports',
-    body: 'Tignan kung anong best day at sino best barber — lahat naka-log, walang lost na kita.',
+    title: 'Finish, update, repeat',
+    color: '#fad4b8',
+    tags: ['CUT HISTORY', 'REVIEWS'],
+    footer: 'GROW THE SHOP',
+    body: 'Markahan ang tapos na cut, bantayan ang reviews, at balikan ang shop activity.',
     icon: (
-      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 10 v42 h42" /><rect x="20" y="36" width="8" height="16" fill={ACCENT} strokeWidth="3" /><rect x="32" y="28" width="8" height="24" fill="#f4efe2" strokeWidth="3" /><rect x="44" y="18" width="8" height="34" fill="#ffd76a" strokeWidth="3" /></g></svg>
+      <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M10 52 H55 M15 48 L27 36 L36 42 L53 21" /><path d="M43 21 H53 V31" /><path d="M18 12 L22 20 L31 21 L24 27 L26 36 L18 31 L10 36 L12 27 L5 21 L14 20 Z" fill="#ffd76a" strokeWidth="3" /></g></svg>
     ),
   },
 ]
 
 export function LandingPage() {
-  const [s, setS] = useState({ inHair: 0, outCut: 0, colorIdx: 0, body: 2, pantsIdx: 0 })
-  const [side, setSide] = useState<'customer' | 'owner'>('customer')
-  const firstSide = useRef(true)
   const rootRef = useRef<HTMLDivElement>(null)
-  const fxRef = useRef<HTMLDivElement>(null)
-  const walkerRef = useRef<HTMLDivElement>(null)
-  const last = useRef<{ x: number; y: number } | null>(null)
+  const location = useLocation()
+  const [audience, setAudience] = useState<'customer' | 'barber'>('customer')
+  // /login and /signup redirect here carrying the desired form mode + `from`.
+  const navState = location.state as { authMode?: 'signin' | 'signup'; from?: string } | null
 
-  // Reshuffle the walker's look on each loop.
-  useEffect(() => {
-    const w = walkerRef.current
-    if (!w) return
-    const pick = (n: number, prev: number) => {
-      let v: number
-      do {
-        v = Math.floor(Math.random() * n)
-      } while (v === prev && n > 1)
-      return v
-    }
-    const onIter = (e: AnimationEvent) => {
-      if (e.animationName !== 'walkIn') return
-      setS((p) => ({
-        inHair: pick(5, p.inHair),
-        outCut: pick(6, p.outCut),
-        colorIdx: pick(6, p.colorIdx),
-        body: pick(3, p.body),
-        pantsIdx: pick(4, p.pantsIdx),
-      }))
-    }
-    w.addEventListener('animationiteration', onIter)
-    return () => w.removeEventListener('animationiteration', onIter)
-  }, [])
+  // Scroll-driven reveals + the scissor-walker route for "how it works".
+  useJourneyScroll(rootRef, audience)
 
-  // Scroll-driven reveals for the "how it works" section.
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-
-    const ctx = gsap.context(() => {
-      const title = root.querySelector('[data-anim="s2title"]')
-      if (title) {
-        gsap.fromTo(title, { y: 70, opacity: 0, rotation: -2 }, { y: 0, opacity: 1, rotation: 0, duration: 0.9, ease: 'power2.out', scrollTrigger: { trigger: title, start: 'top 88%' } })
-      }
-      root.querySelectorAll<HTMLElement>('[data-anim="card"]').forEach((el) => {
-        // clearProps on finish so the CSS :hover lift can take over from GSAP's inline transform
-        gsap.fromTo(el, { y: 80, opacity: 0, rotation: Number.parseFloat(el.dataset.tilt ?? '3') }, { y: 0, opacity: 1, rotation: 0, duration: 0.8, ease: 'back.out(1.4)', scrollTrigger: { trigger: el, start: 'top 87%' }, onComplete: () => gsap.set(el, { clearProps: 'transform' }) })
-      })
-      root.querySelectorAll<HTMLElement>('[data-anim="icon"]').forEach((el) => {
-        const rot = Number.parseFloat(el.dataset.rot ?? '0')
-        gsap.fromTo(el, { scale: 0.3, opacity: 0, rotation: -14 }, { scale: 1, opacity: 1, rotation: rot, duration: 0.7, ease: 'back.out(2)', scrollTrigger: { trigger: el, start: 'top 87%' } })
-      })
-      root.querySelectorAll<HTMLElement>('[data-anim="badge"]').forEach((el) => {
-        gsap.fromTo(el, { scale: 0 }, { scale: 1, duration: 0.5, ease: 'back.out(2.5)', scrollTrigger: { trigger: el, start: 'top 87%' } })
-      })
-      root.querySelectorAll<HTMLElement>('[data-anim="doodle"]').forEach((el) => {
-        gsap.fromTo(el, { scale: 0, opacity: 0, rotation: -30 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.6, ease: 'back.out(2)', scrollTrigger: { trigger: el, start: 'top 94%' } })
-        const d = Number.parseFloat(el.dataset.depth ?? '40')
-        gsap.to(el, { y: -d * 2, ease: 'none', scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: 0.5 } })
-      })
-      const wrap = root.querySelector<HTMLElement>('[data-anim="stepswrap"]')
-      const path = root.querySelector<HTMLElement>('[data-anim="path"]')
-      const walker = root.querySelector<HTMLElement>('[data-anim="s2walker"]')
-      if (wrap && path) {
-        gsap.fromTo(path, { scaleY: 0 }, { scaleY: 1, ease: 'none', scrollTrigger: { trigger: wrap, start: 'top 70%', end: 'bottom 65%', scrub: 0.4 } })
-      }
-      if (wrap && walker) {
-        const badges = Array.from(root.querySelectorAll<HTMLElement>('.phil-badge-no'))
-        const applyCut = () => {
-          const sr = walker.getBoundingClientRect()
-          const cutY = sr.top + sr.height * 0.5 // the blade-crossing point
-          badges.forEach((b) => {
-            const br = b.getBoundingClientRect()
-            b.classList.toggle('is-cut', cutY >= br.top + br.height / 2)
-          })
-        }
-        gsap.fromTo(
-          walker,
-          { y: 0 },
-          {
-            y: () => wrap.offsetHeight - 100,
-            ease: 'none',
-            immediateRender: true,
-            scrollTrigger: { trigger: wrap, start: 'top 70%', end: 'bottom 65%', scrub: 0.4, invalidateOnRefresh: true },
-            onUpdate: applyCut,
-          },
-        )
-      }
-    }, root)
-
-    return () => ctx.revert()
-  }, [])
-
-  // Little pop when switching sides so the content swap feels alive.
-  useEffect(() => {
-    if (firstSide.current) {
-      firstSide.current = false
-      return
-    }
-    const root = rootRef.current
-    if (!root || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-    const targets = root.querySelectorAll('[data-anim="card"], .phil-icon-card')
-    gsap.fromTo(targets, { scale: 0.94 }, { scale: 1, duration: 0.35, ease: 'back.out(2)', stagger: 0.03, clearProps: 'scale' })
-  }, [side])
-
-  function slash(x: number, y: number, a: number) {
-    const ov = fxRef.current
-    if (!ov) return
-    const wrap = document.createElement('div')
-    wrap.style.cssText = `position:absolute;left:${x}px;top:${y}px;transform:translate(-50%,-50%) rotate(${a}rad);pointer-events:none;`
-    const blade = document.createElement('div')
-    blade.style.cssText = 'width:74px;height:4px;border-radius:4px;background:linear-gradient(90deg,rgba(43,43,43,0),#2b2b2b 30%,#2b2b2b 70%,rgba(43,43,43,0));animation:slashFx .38s ease-out forwards;'
-    wrap.appendChild(blade)
-    for (let k = 0; k < 2; k++) {
-      const h = document.createElement('div')
-      h.style.cssText = `position:absolute;left:${Math.round(Math.random() * 44 - 22)}px;top:3px;width:9px;height:2.5px;background:#2b2b2b;border-radius:2px;transform:rotate(${Math.round(Math.random() * 120)}deg);animation:hairFall .7s ease-in forwards;`
-      wrap.appendChild(h)
-    }
-    ov.appendChild(wrap)
-    setTimeout(() => wrap.remove(), 760)
-  }
-
-  function onHeadMove(e: React.MouseEvent) {
-    const ov = fxRef.current
-    if (!ov) return
-    const r = ov.getBoundingClientRect()
-    const x = e.clientX - r.left
-    const y = e.clientY - r.top
-    if (last.current) {
-      const dx = x - last.current.x
-      const dy = y - last.current.y
-      if (Math.hypot(dx, dy) > 36) {
-        slash((x + last.current.x) / 2, (y + last.current.y) / 2, Math.atan2(dy, dx))
-        last.current = { x, y }
-      }
-    } else {
-      last.current = { x, y }
-    }
-  }
-
-  const personColor = COLORS[s.colorIdx]
-  const pantsColor = PANTS[s.pantsIdx]
-  const steps = side === 'customer' ? CUSTOMER_STEPS : OWNER_STEPS
-  const heroVars = { '--accent': ACCENT, '--walk': '12s' } as CSSProperties
+  const steps = audience === 'customer' ? CUSTOMER_STEPS : BARBER_STEPS
+  const heroVars = { '--accent': ACCENT } as CSSProperties // --walk is set on .phil in CSS
 
   return (
     <div className="phil" ref={rootRef} style={heroVars}>
       <main className="phil-hero-main" style={{ position: 'relative', zIndex: 1 }}>
-        <section className="phil-hero">
-          {/* Billboard column */}
-          <div className="phil-billboard-col">
-            <div className="phil-billboard">
-              <span className="phil-bulb" style={{ left: 30 }} />
-              <span className="phil-bulb" style={{ left: '30%', animationDelay: '.55s' }} />
-              <span className="phil-bulb" style={{ left: '55%' }} />
-              <span className="phil-bulb" style={{ right: 36, animationDelay: '.55s' }} />
-              <div style={{ position: 'absolute', right: 74, top: -22 }}>{bird(30, 16)}</div>
-
-              <div className="phil-badge">✂ {SHOP_NAME} · your local city barber</div>
-              <h1 className="phil-title" onMouseMove={onHeadMove} onMouseLeave={() => (last.current = null)}>
-                Walk in scruffy,<br />walk out sharp.
-              </h1>
-              <p className="phil-lead">
-                See which barber is free right now, book the chair, and strut out with a fresh cut. No lines, no phone calls — all in one scribbly little app.
-              </p>
-              <div className="phil-actions">
-                <CurtainLink to="/signup" className="phil-btn phil-btn-accent">Sign up →</CurtainLink>
-                <CurtainLink to="/login" className="phil-btn">Sign in</CurtainLink>
-              </div>
-            </div>
+        <section className="phil-hero phil-hero-auth">
+          {/* The auth slider IS the billboard now — one form, front and center. */}
+          <div className="phil-billboard-col phil-billboard-col-wide">
+            <AuthSlider
+              initialMode={navState?.authMode ?? 'signin'}
+              from={navState?.from ?? '/barbers'}
+            />
             <div className="phil-posts">
               <div className="phil-post" />
               <div className="phil-post" />
-            </div>
-          </div>
-
-          {/* Storefront stage */}
-          <div className="phil-stage">
-            {/* sky */}
-            <div style={{ position: 'absolute', left: 14, top: 8, width: 42, height: 42, borderRadius: '50%', background: '#ffd76a', border: `2.5px solid ${INK}`, boxShadow: '0 0 24px 8px rgba(255,205,90,.55)', animation: 'blink 4s ease-in-out infinite', zIndex: 0 }} />
-            <div style={{ position: 'absolute', left: 110, top: 36, width: 74, height: 22, borderRadius: 12, background: '#fdf7ee', border: `2.5px solid ${INK}`, animation: 'cloudDrift 8s ease-in-out infinite alternate', zIndex: 0 }} />
-            <div style={{ position: 'absolute', left: 430, top: 12, width: 88, height: 24, borderRadius: 14, background: '#fdf7ee', border: `2.5px solid ${INK}`, animation: 'cloudDrift 11s ease-in-out infinite alternate-reverse', zIndex: 0 }} />
-            <div style={{ position: 'absolute', left: -360, top: 26, animation: 'birdGlide 14s linear infinite', zIndex: 0 }}>{bird(34, 14)}</div>
-            <div style={{ position: 'absolute', left: -300, top: 64, animation: 'birdGlide 18s linear infinite -7s', zIndex: 0 }}>{bird(26, 12)}</div>
-
-            {/* side buildings */}
-            <Building pos={{ left: -6, top: 190 }} w={84} h={262} body="#e7d9c5" roof="#b8a68c" windows={[{ l: 12, t: 22, w: 20, h: 24 }, { l: 46, t: 22, w: 20, h: 24 }, { l: 12, t: 70, w: 20, h: 24 }, { l: 46, t: 70, w: 20, h: 24 }, { l: 12, t: 118, w: 20, h: 24 }, { l: 46, t: 118, w: 20, h: 24 }]} />
-            <Building pos={{ left: 480, top: 214 }} w={86} h={238} body="#d9e2ea" roof="#9fb3c2" windows={[{ l: 12, t: 22, w: 20, h: 24 }, { l: 46, t: 22, w: 20, h: 24 }, { l: 12, t: 70, w: 20, h: 24 }, { l: 46, t: 70, w: 20, h: 24 }]} />
-
-            {/* awning backboard */}
-            <div style={{ position: 'absolute', left: 60, top: 96, width: 440, height: 56, background: '#c0392b', border: `3px solid ${INK}`, borderRadius: 8, zIndex: 0 }} />
-            {/* flag */}
-            <div style={{ position: 'absolute', left: 278, top: 0, width: 3, height: 30, background: INK, zIndex: 3 }} />
-            <div style={{ position: 'absolute', left: 281, top: 1, width: 28, height: 15, background: ACCENT, border: `2px solid ${INK}`, borderRadius: '2px 6px 6px 2px', transformOrigin: 'left center', animation: 'flagWave .9s ease-in-out infinite alternate', zIndex: 3 }} />
-            {/* est topper */}
-            <div style={{ position: 'absolute', left: 216, top: 44, width: 128, height: 26, borderRadius: '64px 64px 0 0', background: '#c0392b', border: `2.5px solid ${INK}`, zIndex: 2 }} />
-            <div style={{ position: 'absolute', left: 225, top: 26, width: 110, height: 44, background: '#fdf7ee', border: `2.5px solid ${INK}`, borderRadius: '10px 10px 0 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 3 }}>
-              <span style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 13, letterSpacing: 1 }}>EST.ᴰ</span>
-              <span style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 17, letterSpacing: 2 }}>2026</span>
-            </div>
-            {/* marquee */}
-            <div style={{ position: 'absolute', left: 70, top: 70, width: 420, height: 56, background: '#fdf7ee', border: `3px solid ${INK}`, borderRadius: 6, boxShadow: '4px 4px 0 rgba(43,43,43,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4 }}>
-              <span style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 30, letterSpacing: 5 }}>{SHOP_NAME.toUpperCase()}</span>
-              {[12, 76, 140, 204, 268, 332, 396].map((lx, i) => (
-                <div key={lx} style={{ position: 'absolute', left: lx, top: -7, width: 11, height: 11, borderRadius: '50%', background: '#ffd76a', border: `2px solid ${INK}`, boxShadow: '0 0 10px 3px rgba(255,200,70,.75)', animation: 'blink .9s ease-in-out infinite', animationDelay: i % 2 ? '.45s' : '0s' }} />
-              ))}
-            </div>
-            {/* valance */}
-            <div style={{ position: 'absolute', left: 70, top: 126, width: 420, height: 14, background: 'repeating-linear-gradient(90deg,#c0392b 0 6px,#fdf7ee 6px 34px)', border: `2px solid ${INK}`, zIndex: 4 }} />
-            {/* barber strip */}
-            <div style={{ position: 'absolute', left: 120, top: 146, width: 320, height: 32, background: '#fdf7ee', border: `2.5px solid ${INK}`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4 }}>
-              <span style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 19, letterSpacing: 3, color: '#c0392b' }}>— B·A·R·B·E·R —</span>
-            </div>
-            {/* facade */}
-            <div style={{ position: 'absolute', left: 70, top: 160, width: 420, height: 292, backgroundColor: '#fdf7ee', backgroundImage: 'repeating-linear-gradient(180deg, rgba(43,43,43,.10) 0 2px, transparent 2px 16px)', border: `3px solid ${INK}`, borderRadius: '4px 4px 8px 8px', boxShadow: '5px 6px 0 rgba(43,43,43,.45)', zIndex: 1 }} />
-            {/* lamppost */}
-            <div style={{ position: 'absolute', left: 36, top: 338, width: 4, height: 114, background: INK, borderRadius: 2, zIndex: 2 }} />
-            <div style={{ position: 'absolute', left: 29, top: 328, width: 18, height: 18, borderRadius: '50%', background: '#ffd76a', border: `2.5px solid ${INK}`, boxShadow: '0 0 14px 4px rgba(255,205,90,.7)', animation: 'blink 3s ease-in-out infinite', zIndex: 2 }} />
-            {/* poles */}
-            <div style={{ position: 'absolute', left: 100, top: 200, width: 24, height: 252, border: `2.5px solid ${INK}`, borderRadius: 6, background: 'repeating-linear-gradient(-45deg,#d94f4f 0 9px,#f6efe4 9px 18px,#4f6fd9 18px 27px,#f6efe4 27px 36px)', animation: 'poleSpin 1.2s linear infinite', zIndex: 3 }} />
-            <div style={{ position: 'absolute', left: 376, top: 200, width: 24, height: 252, border: `2.5px solid ${INK}`, borderRadius: 6, background: 'repeating-linear-gradient(-45deg,#d94f4f 0 9px,#f6efe4 9px 18px,#4f6fd9 18px 27px,#f6efe4 27px 36px)', animation: 'poleSpin 1.2s linear infinite', zIndex: 3 }} />
-            {/* window */}
-            <div style={{ position: 'absolute', left: 142, top: 208, width: 150, height: 144, background: 'repeating-linear-gradient(-45deg,#d94f4f 0 8px,#f6efe4 8px 16px,#4f6fd9 16px 24px,#f6efe4 24px 32px)', border: `3px solid ${INK}`, borderRadius: 8, zIndex: 2 }}>
-              <div style={{ position: 'absolute', inset: 10, background: '#f4efe2', border: `2px solid ${INK}`, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, animation: 'windowShow var(--walk, 12s) linear infinite' }}>
-                  <svg width="58" height="42" viewBox="0 0 64 48" style={{ animation: 'snipJiggle .3s ease-in-out infinite alternate' }}>
-                    <g stroke={INK} strokeWidth="4" strokeLinecap="round" fill="none">
-                      <line x1="16" y1="12" x2="52" y2="34" />
-                      <line x1="16" y1="34" x2="52" y2="12" />
-                      <circle cx="11" cy="9" r="6" />
-                      <circle cx="11" cy="37" r="6" />
-                    </g>
-                  </svg>
-                  <span style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 17, animation: 'snipPop .8s ease-in-out infinite' }}>snip! snip!</span>
-                  <div style={{ position: 'absolute', left: 14, top: 26, width: 9, height: 3, background: INK, borderRadius: 2, animation: 'hairFall .8s linear infinite' }} />
-                  <div style={{ position: 'absolute', left: 32, top: 20, width: 8, height: 3, background: INK, borderRadius: 2, animation: 'hairFall .8s linear infinite .3s' }} />
-                  <div style={{ position: 'absolute', left: 46, top: 28, width: 9, height: 3, background: INK, borderRadius: 2, animation: 'hairFall .8s linear infinite .55s' }} />
-                </div>
-              </div>
-            </div>
-            {/* door */}
-            <div style={{ position: 'absolute', left: 298, top: 250, width: 64, height: 202, background: 'linear-gradient(180deg,#f2dfae 0 30%,#8d7260 30% 100%)', border: `3px solid ${INK}`, borderRadius: '10px 10px 0 0', zIndex: 2 }}>
-              <div style={{ position: 'absolute', left: 14, top: 8, width: 30, height: 8, borderRadius: 4, background: '#ffd76a', border: `2px solid ${INK}`, boxShadow: '0 4px 10px 2px rgba(255,205,90,.8)' }} />
-              <div style={{ position: 'absolute', left: -3, top: -3, width: 64, height: 202, background: '#b03a3a', border: `3px solid ${INK}`, borderRadius: '10px 10px 0 0', transformOrigin: 'left center', animation: 'doorSwing var(--walk, 12s) linear infinite' }}>
-                <div style={{ position: 'absolute', left: 12, top: 56, right: 12, height: 56, border: `2px solid ${INK}`, borderRadius: 4, background: '#f4efe2' }} />
-                <div style={{ position: 'absolute', right: 8, top: 118, width: 9, height: 9, borderRadius: '50%', background: '#ffd76a', border: `1.5px solid ${INK}` }} />
-                <div style={{ position: 'absolute', left: '50%', top: 18, transform: 'translateX(-50%)', background: '#fdf7ee', border: `2px solid ${INK}`, borderRadius: 6, padding: '1px 8px', fontFamily: "'Gochi Hand', cursive", fontSize: 14 }}>OPEN</div>
-              </div>
-            </div>
-            {/* fence */}
-            <div style={{ position: 'absolute', left: 404, top: 414, width: 146, height: 5, background: '#fdf7ee', border: `2px solid ${INK}`, zIndex: 6 }} />
-            {[408, 427, 446, 465, 484, 503, 522].map((lx) => (
-              <div key={lx} style={{ position: 'absolute', left: lx, top: 396, width: 10, height: 56, background: '#fdf7ee', border: `2px solid ${INK}`, borderRadius: '5px 5px 0 0', zIndex: 6 }} />
-            ))}
-
-            {/* walk-in figure */}
-            <div ref={walkerRef} style={{ position: 'absolute', left: -140, top: 306, width: 90, height: 152, animation: 'walkIn var(--walk, 12s) linear infinite', zIndex: 4 }}>
-              <div style={{ position: 'absolute', left: 18, bottom: 2, width: 56, height: 9, borderRadius: '50%', background: 'rgba(43,43,43,.14)' }} />
-              <div style={{ transformOrigin: '50% 100%', animation: `lean .5s ${EASE} infinite alternate` }}>
-                <div style={{ animation: `bob .3s ${EASE} infinite alternate` }}>
-                  <svg width="90" height="150" viewBox="0 0 90 150" style={{ overflow: 'visible' }}>
-                    <g stroke={INK} strokeLinecap="round" fill="none">
-                      {renderInHead(s.inHair)}
-                      {renderBody(s.body, personColor, pantsColor, 'in')}
-                    </g>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* walk-out figure */}
-            <div style={{ position: 'absolute', left: 285, top: 306, width: 90, height: 152, animation: 'walkOut var(--walk, 12s) linear infinite', transformOrigin: '50% 100%', opacity: 0, zIndex: 4 }}>
-              <div style={{ position: 'absolute', left: 6, top: -36, background: ACCENT, border: `2px solid ${INK}`, borderRadius: '255px 15px 225px 15px / 15px 225px 15px 255px', padding: '2px 12px', fontFamily: "'Gochi Hand', cursive", fontSize: 16, whiteSpace: 'nowrap', animation: 'freshTag var(--walk, 12s) linear infinite' }}>fresh cut!</div>
-              <div style={{ position: 'absolute', left: 18, bottom: 2, width: 56, height: 9, borderRadius: '50%', background: 'rgba(43,43,43,.14)' }} />
-              <div style={{ transformOrigin: '50% 100%', animation: `lean .5s ${EASE} -.25s infinite alternate` }}>
-                <div style={{ animation: `bob .3s ${EASE} infinite alternate` }}>
-                  <svg width="90" height="150" viewBox="0 0 90 150" style={{ overflow: 'visible' }}>
-                    <g stroke={INK} strokeLinecap="round" fill="none">
-                      {renderOutHead(s.outCut, personColor)}
-                      {renderBody(s.body, personColor, pantsColor, 'out')}
-                    </g>
-                  </svg>
-                </div>
-              </div>
             </div>
           </div>
         </section>
 
         {/* Street */}
         <div className="phil-street">
+          <div className="phil-city-label" aria-hidden="true">Paranaque City</div>
           <Building pos={{ left: '2%', bottom: 136 }} w={110} h={214} body="#e7d9c5" roof="#b8a68c" windows={[{ l: 14, t: 22, w: 24, h: 26 }, { l: 60, t: 22, w: 24, h: 26 }, { l: 14, t: 74, w: 24, h: 26 }, { l: 60, t: 74, w: 24, h: 26 }, { l: 14, t: 126, w: 24, h: 26 }, { l: 60, t: 126, w: 24, h: 26 }]} />
           <Building pos={{ left: '12%', bottom: 136 }} w={88} h={150} body="#d9e2ea" roof="#9fb3c2" windows={[{ l: 12, t: 20, w: 22, h: 24 }, { l: 50, t: 20, w: 22, h: 24 }, { l: 12, t: 66, w: 22, h: 24 }, { l: 50, t: 66, w: 22, h: 24 }]} />
+          <Building pos={{ left: '20%', bottom: 136 }} w={72} h={108} body="#f0d8b9" roof="#c59a75" windows={[{ l: 10, t: 18, w: 18, h: 22 }, { l: 42, t: 18, w: 18, h: 22 }, { l: 10, t: 58, w: 18, h: 22 }, { l: 42, t: 58, w: 18, h: 22 }]} />
           <Building pos={{ left: '29%', bottom: 136 }} w={78} h={118} body="#ead9d3" roof="#c9a99f" windows={[{ l: 11, t: 20, w: 20, h: 22 }, { l: 46, t: 20, w: 20, h: 22 }, { l: 11, t: 62, w: 20, h: 22 }, { l: 46, t: 62, w: 20, h: 22 }]} />
+          <Building pos={{ left: '38%', bottom: 136 }} w={90} h={168} body="#d5e4d5" roof="#94b294" windows={[{ l: 12, t: 22, w: 22, h: 24 }, { l: 52, t: 22, w: 22, h: 24 }, { l: 12, t: 70, w: 22, h: 24 }, { l: 52, t: 70, w: 22, h: 24 }, { l: 12, t: 116, w: 22, h: 24 }, { l: 52, t: 116, w: 22, h: 24 }]} />
+          <Building pos={{ left: '49%', bottom: 136 }} w={82} h={126} body="#eadcc8" roof="#bfa887" windows={[{ l: 11, t: 20, w: 20, h: 22 }, { l: 47, t: 20, w: 20, h: 22 }, { l: 11, t: 62, w: 20, h: 22 }, { l: 47, t: 62, w: 20, h: 22 }]} />
+          <Building pos={{ left: '58%', bottom: 136 }} w={104} h={198} body="#d7deea" roof="#94a8c0" windows={[{ l: 13, t: 22, w: 22, h: 24 }, { l: 63, t: 22, w: 22, h: 24 }, { l: 13, t: 70, w: 22, h: 24 }, { l: 63, t: 70, w: 22, h: 24 }, { l: 13, t: 118, w: 22, h: 24 }, { l: 63, t: 118, w: 22, h: 24 }]} />
+          <Building pos={{ left: '70%', bottom: 136 }} w={76} h={116} body="#efd2cf" roof="#c59690" windows={[{ l: 10, t: 18, w: 19, h: 23 }, { l: 44, t: 18, w: 19, h: 23 }, { l: 10, t: 60, w: 19, h: 23 }, { l: 44, t: 60, w: 19, h: 23 }]} />
+          <Building pos={{ left: '79%', bottom: 136 }} w={86} h={148} body="#e5dfbd" roof="#b9ae76" windows={[{ l: 11, t: 20, w: 21, h: 23 }, { l: 49, t: 20, w: 21, h: 23 }, { l: 11, t: 66, w: 21, h: 23 }, { l: 49, t: 66, w: 21, h: 23 }]} />
           <Building pos={{ right: '1%', bottom: 136 }} w={96} h={176} body="#d9e2ea" roof="#9fb3c2" windows={[{ l: 13, t: 22, w: 22, h: 24 }, { l: 55, t: 22, w: 22, h: 24 }, { l: 13, t: 70, w: 22, h: 24 }, { l: 55, t: 70, w: 22, h: 24 }]} />
 
           {/* street lamps */}
@@ -441,10 +185,13 @@ export function LandingPage() {
           <div style={{ position: 'absolute', left: '19%', bottom: 246, width: 18, height: 18, marginLeft: -7, borderRadius: '50%', background: '#ffd76a', border: `2.5px solid ${INK}`, boxShadow: '0 0 14px 4px rgba(255,205,90,.7)', animation: 'blink 3.6s ease-in-out infinite' }} />
           <div style={{ position: 'absolute', left: '36%', bottom: 136, width: 4, height: 118, background: INK, borderRadius: 2 }} />
           <div style={{ position: 'absolute', left: '36%', bottom: 246, width: 18, height: 18, marginLeft: -7, borderRadius: '50%', background: '#ffd76a', border: `2.5px solid ${INK}`, boxShadow: '0 0 14px 4px rgba(255,205,90,.7)', animation: 'blink 4.4s ease-in-out infinite' }} />
+          <div className="phil-city-lamp phil-city-lamp-right" aria-hidden="true"><span /></div>
 
           {/* bushes + hydrant */}
           <div style={{ position: 'absolute', left: '9%', bottom: 136, width: 70, height: 38, background: '#a8d8b9', border: `2.5px solid ${INK}`, borderRadius: '35px 35px 0 0' }} />
           <div style={{ position: 'absolute', left: '33.5%', bottom: 136, width: 54, height: 30, background: '#a8d8b9', border: `2.5px solid ${INK}`, borderRadius: '27px 27px 0 0' }} />
+          <div className="phil-city-tree phil-city-tree-one" aria-hidden="true"><span /></div>
+          <div className="phil-city-tree phil-city-tree-two" aria-hidden="true"><span /></div>
           <div style={{ position: 'absolute', left: '24%', bottom: 136, width: 22, height: 32, background: '#d94f4f', border: `2.5px solid ${INK}`, borderRadius: '8px 8px 2px 2px' }}>
             <div style={{ position: 'absolute', left: 5, top: -8, width: 12, height: 8, background: '#d94f4f', border: `2px solid ${INK}`, borderRadius: '4px 4px 0 0' }} />
           </div>
@@ -490,37 +237,57 @@ export function LandingPage() {
         <div data-anim="s2title" className="phil-how-title">
           <div style={{ background: ACCENT, border: `2px solid ${INK}`, borderRadius: '255px 15px 225px 15px / 15px 225px 15px 255px', padding: '5px 18px', fontFamily: "'Gochi Hand', cursive", fontSize: 18, boxShadow: '2px 3px 0 rgba(43,43,43,.85)' }}>how it works</div>
           <h2>
-            {side === 'customer' ? (
+            {audience === 'customer' ? (
               <>From scruffy to sharp,<br />in five scribbly steps.</>
             ) : (
-              <>From empty chair to full books,<br />in five scribbly steps.</>
+              <>From open chair to full book,<br />in five shop-side steps.</>
             )}
           </h2>
-          <div className="phil-role-toggle" role="tablist" aria-label="Piliin ang side mo">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={side === 'customer'}
-              className={`phil-role-btn ${side === 'customer' ? 'active' : ''}`}
-              onClick={() => setSide('customer')}
-            >
-              🙋 For customers
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={side === 'owner'}
-              className={`phil-role-btn ${side === 'owner' ? 'active' : ''}`}
-              onClick={() => setSide('owner')}
-            >
-              💈 For barbershops
-            </button>
-          </div>
         </div>
 
-        <div data-anim="stepswrap" className="phil-steps">
-          <div data-anim="path" className="phil-path" />
-          <div data-anim="s2walker" className="phil-s2walker">
+        <div className="phil-audience-switch" role="group" aria-label="Choose how-it-works guide">
+          <button
+            type="button"
+            className={audience === 'customer' ? 'is-active' : ''}
+            aria-pressed={audience === 'customer'}
+            onClick={() => setAudience('customer')}
+          >
+            <span className="phil-switch-kicker">I NEED A CUT</span>
+            Customer
+          </button>
+          <span className="phil-switch-flip" aria-hidden="true">
+            <svg viewBox="0 0 46 46"><path d="M10 17 Q16 7 29 10 L35 13 M35 13 L29 15 M35 13 L34 7 M36 29 Q30 39 17 36 L11 33 M11 33 L17 31 M11 33 L12 39" /></svg>
+          </span>
+          <button
+            type="button"
+            className={audience === 'barber' ? 'is-active' : ''}
+            aria-pressed={audience === 'barber'}
+            onClick={() => setAudience('barber')}
+          >
+            <span className="phil-switch-kicker">I RUN A CHAIR</span>
+            Barber
+          </button>
+        </div>
+
+        <div
+          key={audience}
+          data-anim="stepswrap"
+          className={`phil-steps phil-card-stack phil-journey-flip phil-journey-${audience}`}
+          aria-label={`${audience} how-it-works guide`}
+        >
+          <div className="phil-stack-kicker" aria-hidden="true">
+            <span>{audience === 'customer' ? 'YOUR BARBERSHOP RUN' : 'YOUR SHOP-SIDE RUN'}</span>
+            <span>5 QUICK STOPS</span>
+          </div>
+          <div className="phil-stack-orbit phil-stack-orbit-one" aria-hidden="true" />
+          <div className="phil-stack-orbit phil-stack-orbit-two" aria-hidden="true" />
+          <JourneyDoodles />
+          <svg className="phil-route-map" aria-hidden="true">
+            <path data-anim="path-guide" className="phil-path-guide" />
+            <path data-anim="path" className="phil-path" />
+          </svg>
+          <div className="phil-progress-note" aria-hidden="true">scroll to snip 1 - 5</div>
+          <div data-anim="s2walker" className="phil-s2walker" aria-hidden="true">
             <div style={{ animation: `bob .5s ${EASE} infinite alternate` }}>
               <svg width="56" height="84" viewBox="0 0 56 84" style={{ overflow: 'visible' }}>
                 <g stroke={INK} strokeLinecap="round" fill="none">
@@ -541,234 +308,123 @@ export function LandingPage() {
           </div>
 
           {steps.map((step) => {
-            const cardLeft = step.no % 2 === 1
-            const rot = cardLeft ? 4 : -4
-            const tilt = cardLeft ? -3 : 3
-            const card = (
-              <div data-anim="card" data-tilt={tilt} className="phil-card">
-                <span className="step-no">step {step.no}</span>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </div>
-            )
-            const icon = (
-              <div className="phil-cell">
-                <div data-anim="icon" data-rot={rot} style={{ transform: `rotate(${rot}deg)` }}>
-                  <div className="phil-icon-card" style={{ animation: `floatY ${3 + step.no * 0.2}s ease-in-out infinite alternate` }}>{step.icon}</div>
-                </div>
-              </div>
-            )
-            const badge = (
-              <div className="phil-cell">
-                <div data-anim="badge" className="phil-badge-no">
-                  <span className="badge-half badge-left">{step.no}</span>
-                  <span className="badge-half badge-right">{step.no}</span>
-                </div>
-              </div>
-            )
+            const rot = step.no % 2 === 1 ? 4 : -4
+            const tilt = step.no % 2 === 1 ? -4 : 4
+            const enterX = step.no % 2 === 1 ? -90 : 90
             return (
-              <div className="phil-step-row" key={step.no}>
-                {cardLeft ? card : icon}
-                {badge}
-                {cardLeft ? icon : card}
-              </div>
+              <article className={`phil-pile-slot phil-pile-slot-${step.no}`} key={step.no}>
+                <div
+                  data-anim="card"
+                  data-tilt={tilt}
+                  data-order={step.no - 1}
+                  data-enter-x={enterX}
+                  className="phil-card phil-pile-card"
+                  style={{ '--step-color': step.color } as CSSProperties}
+                >
+                  <div className="phil-pile-sheet">
+                    <div className="phil-pile-head">
+                      <div data-anim="icon" data-rot={rot} className="phil-pile-icon" style={{ transform: `rotate(${rot}deg)` }}>
+                        {step.icon}
+                      </div>
+                      <span className="phil-pile-route">Philabantay route</span>
+                      <div data-anim="badge" className="phil-badge-no">
+                        <span className="badge-half badge-left">{step.no}</span>
+                        <span className="badge-half badge-right">{step.no}</span>
+                      </div>
+                    </div>
+                    <span className="step-no">step {step.no}</span>
+                    <h3>{step.title}</h3>
+                    <p>{step.body}</p>
+                    <div className="phil-pile-tags">
+                      {step.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                    </div>
+                  </div>
+                  <div className="phil-pile-footer">
+                    <span>STEP {step.no} OF 5</span>
+                    <strong>{step.footer}</strong>
+                  </div>
+                </div>
+              </article>
             )
           })}
         </div>
 
-        <div data-anim="card" data-tilt={2} className="phil-cta">
-          <ShopInterior />
-          <h3>Ready for a fresh one?</h3>
-          <p>The chair's free. The lights are on.</p>
-          <CurtainLink to="/signup" className="phil-btn">Sign up →</CurtainLink>
+        {/* The shop itself closes the page — walk in scruffy, walk out sharp. */}
+        <div className="phil-shopfront-outro">
+          <Storefront />
         </div>
       </section>
-
-      <div ref={fxRef} className="phil-fx" />
     </div>
   )
 }
 
-/* ---------- illustration helpers ---------- */
-
-function renderInHead(inHair: number) {
+function JourneyDoodles() {
   return (
-    <>
-      <g style={vis(inHair === 0)}>
-        <path d="M34 12 Q30 3 26 6 M40 9 Q38 0 34 2 M47 8 Q47 -1 52 1 M54 10 Q59 1 63 5 M58 15 Q66 9 68 14" strokeWidth="3" />
-      </g>
-      <g style={vis(inHair === 1)}>
-        <path d="M31 22 Q25 1 45 3 Q65 1 59 22 Q52 11 45 13 Q38 11 31 22 Z" fill={INK} strokeWidth="2" />
-        <line x1="31" y1="21" x2="27" y2="32" strokeWidth="3" />
-        <line x1="59" y1="21" x2="63" y2="32" strokeWidth="3" />
-      </g>
-      <g style={vis(inHair === 2)} fill={INK} strokeWidth="2">
-        <circle cx="45" cy="9" r="11" />
-        <circle cx="33" cy="14" r="7" />
-        <circle cx="57" cy="14" r="7" />
-      </g>
-      <g style={vis(inHair === 3)}>
-        <ellipse cx="45" cy="5" rx="17" ry="13" fill={INK} strokeWidth="2" />
-        <path d="M28 8 Q23 5 24 -1 M62 8 Q67 5 66 -1" strokeWidth="3" />
-      </g>
-      <g style={vis(inHair === 4)}>
-        <path d="M32 24 Q28 2 45 2 Q62 2 58 24 L54 15 Q50 19 45 15 Q40 19 36 15 Z" fill={INK} strokeWidth="2" />
-        <line x1="33" y1="23" x2="30" y2="33" strokeWidth="3" />
-        <line x1="57" y1="23" x2="60" y2="33" strokeWidth="3" />
-      </g>
-      <circle cx="45" cy="22" r="13" strokeWidth="4" fill="#faf3ea" />
-      <line x1="45" y1="35" x2="45" y2="46" strokeWidth="6" />
-    </>
-  )
-}
-
-function renderOutHead(outCut: number, personColor: string) {
-  return (
-    <>
-      <g style={vis(outCut === 0)}>
-        <rect x="33" y="3" width="24" height="9" rx="2" fill={INK} strokeWidth="3" />
-      </g>
-      <g style={vis(outCut === 1)}>
-        <path d="M36 12 L39 -1 L42 12 M42 12 L45 -4 L48 12 M48 12 L51 -1 L54 12" fill={INK} strokeWidth="2.5" />
-      </g>
-      <g style={vis(outCut === 2)}>
-        <path d="M32 16 Q31 3 45 3 Q59 3 58 16 Q50 6 41 9 Q36 11 32 16 Z" fill={INK} strokeWidth="2" />
-      </g>
-      <g style={vis(outCut === 3)}>
-        <path d="M33 13 Q33 5 45 5 Q57 5 57 13" strokeWidth="5" />
-        <path d="M37 28 Q42 24 45 28 Q48 24 53 28" stroke={personColor} strokeWidth="3.5" />
-      </g>
-      <g style={vis(outCut === 4)}>
-        <path d="M33 12 Q33 -3 47 0 Q58 3 57 12 Q45 6 33 12 Z" fill={INK} strokeWidth="2.5" />
-      </g>
-      <g style={vis(outCut === 5)}>
-        <path d="M32 13 Q34 4 45 4 Q56 4 58 13" strokeWidth="6" />
-        <line x1="41" y1="6" x2="40" y2="12" stroke="#faf3ea" strokeWidth="1.5" />
-      </g>
-      <circle cx="45" cy="22" r="13" strokeWidth="4" fill="#faf3ea" />
-      <g style={{ animation: 'sparkle .9s ease-in-out infinite' }}>
-        <line x1="72" y1="6" x2="72" y2="18" strokeWidth="3" />
-        <line x1="66" y1="12" x2="78" y2="12" strokeWidth="3" />
-      </g>
-      <g style={{ animation: 'sparkle .9s ease-in-out infinite .45s' }}>
-        <line x1="17" y1="10" x2="17" y2="20" strokeWidth="3" />
-        <line x1="12" y1="15" x2="22" y2="15" strokeWidth="3" />
-      </g>
-      <line x1="45" y1="35" x2="45" y2="46" strokeWidth="6" />
-    </>
-  )
-}
-
-function renderBody(body: number, personColor: string, pantsColor: string, mode: 'in' | 'out') {
-  const arm = mode === 'in' ? 'armSwing' : 'armPump'
-  const a0 = `${arm} .5s ${EASE} infinite alternate`
-  const aD = `${arm} .5s ${EASE} -.5s infinite alternate`
-  // Which arm carries the -.5s delay differs between walk-in and walk-out.
-  const leftArm = mode === 'in' ? aD : a0
-  const rightArm = mode === 'in' ? a0 : aD
-  const legA = `legSwing .5s ${EASE} infinite alternate`
-  const legB = `legSwing .5s ${EASE} -.5s infinite alternate`
-
-  if (body === 0) {
-    return (
-      <g>
-        <path d="M38 46 L52 46 L51 90 L39 90 Z" fill={personColor} strokeWidth="3" />
-        <line x1="34" y1="48" x2="56" y2="48" strokeWidth="6" />
-        {mode === 'in' ? (
-          <>
-            <g style={{ transformBox: 'view-box', transformOrigin: '34px 50px', animation: leftArm }}><path d="M34 50 L27 71 L31 91" strokeWidth="5" /><line x1="34" y1="50" x2="30" y2="64" stroke={personColor} strokeWidth="8" /></g>
-            <g style={{ transformBox: 'view-box', transformOrigin: '56px 50px', animation: rightArm }}><path d="M56 50 L63 71 L59 91" strokeWidth="5" /><line x1="56" y1="50" x2="60" y2="64" stroke={personColor} strokeWidth="8" /></g>
-          </>
-        ) : (
-          <>
-            <g style={{ transformBox: 'view-box', transformOrigin: '34px 50px', animation: leftArm }}><path d="M34 50 L22 61 L25 44" strokeWidth="5" /><line x1="34" y1="50" x2="28" y2="56" stroke={personColor} strokeWidth="8" /></g>
-            <g style={{ transformBox: 'view-box', transformOrigin: '56px 50px', animation: rightArm }}><path d="M56 50 L68 61 L65 44" strokeWidth="5" /><line x1="56" y1="50" x2="62" y2="56" stroke={personColor} strokeWidth="8" /></g>
-          </>
-        )}
-        <g style={{ transformBox: 'view-box', transformOrigin: '42px 88px', animation: legA }}><path d="M42 88 L37 116 L35 143" stroke={pantsColor} strokeWidth="6" /><line x1="35" y1="143" x2="44" y2="143" strokeWidth="6" /></g>
-        <g style={{ transformBox: 'view-box', transformOrigin: '48px 88px', animation: legB }}><path d="M48 88 L53 116 L55 143" stroke={pantsColor} strokeWidth="6" /><line x1="55" y1="143" x2="64" y2="143" strokeWidth="6" /></g>
-      </g>
-    )
-  }
-  if (body === 1) {
-    return (
-      <g>
-        <path d="M34 46 L56 46 Q68 68 58 90 L32 90 Q22 68 34 46 Z" fill={personColor} strokeWidth="3" />
-        <line x1="30" y1="48" x2="60" y2="48" strokeWidth="8" />
-        {mode === 'in' ? (
-          <>
-            <g style={{ transformBox: 'view-box', transformOrigin: '31px 50px', animation: leftArm }}><path d="M31 50 L23 70 L28 90" strokeWidth="6" /><line x1="31" y1="50" x2="26" y2="63" stroke={personColor} strokeWidth="9" /></g>
-            <g style={{ transformBox: 'view-box', transformOrigin: '59px 50px', animation: rightArm }}><path d="M59 50 L67 70 L62 90" strokeWidth="6" /><line x1="59" y1="50" x2="64" y2="63" stroke={personColor} strokeWidth="9" /></g>
-          </>
-        ) : (
-          <>
-            <g style={{ transformBox: 'view-box', transformOrigin: '31px 50px', animation: leftArm }}><path d="M31 50 L18 62 L21 44" strokeWidth="6" /><line x1="31" y1="50" x2="25" y2="57" stroke={personColor} strokeWidth="9" /></g>
-            <g style={{ transformBox: 'view-box', transformOrigin: '59px 50px', animation: rightArm }}><path d="M59 50 L72 62 L69 44" strokeWidth="6" /><line x1="59" y1="50" x2="65" y2="57" stroke={personColor} strokeWidth="9" /></g>
-          </>
-        )}
-        <g style={{ transformBox: 'view-box', transformOrigin: '41px 88px', animation: legA }}><path d="M41 88 L36 116 L34 143" stroke={pantsColor} strokeWidth="7" /><line x1="34" y1="143" x2="43" y2="143" strokeWidth="7" /></g>
-        <g style={{ transformBox: 'view-box', transformOrigin: '49px 88px', animation: legB }}><path d="M49 88 L54 116 L56 143" stroke={pantsColor} strokeWidth="7" /><line x1="56" y1="143" x2="65" y2="143" strokeWidth="7" /></g>
-      </g>
-    )
-  }
-  return (
-    <g>
-      <path d="M30 46 L60 46 L52 90 L38 90 Z" fill={personColor} strokeWidth="3" />
-      <line x1="27" y1="49" x2="63" y2="49" strokeWidth="11" />
-      {mode === 'in' ? (
-        <>
-          <g style={{ transformBox: 'view-box', transformOrigin: '31px 50px', animation: leftArm }}><path d="M31 50 L22 72 L27 92" strokeWidth="8" /><line x1="31" y1="50" x2="25" y2="65" stroke={personColor} strokeWidth="11" /></g>
-          <g style={{ transformBox: 'view-box', transformOrigin: '59px 50px', animation: rightArm }}><path d="M59 50 L68 72 L63 92" strokeWidth="8" /><line x1="59" y1="50" x2="65" y2="65" stroke={personColor} strokeWidth="11" /></g>
-        </>
-      ) : (
-        <>
-          <g style={{ transformBox: 'view-box', transformOrigin: '31px 50px', animation: leftArm }}><path d="M31 50 L18 60 L21 42" strokeWidth="8" /><line x1="31" y1="50" x2="24" y2="56" stroke={personColor} strokeWidth="11" /></g>
-          <g style={{ transformBox: 'view-box', transformOrigin: '59px 50px', animation: rightArm }}><path d="M59 50 L72 60 L69 42" strokeWidth="8" /><line x1="59" y1="50" x2="66" y2="56" stroke={personColor} strokeWidth="11" /></g>
-        </>
-      )}
-      <g style={{ transformBox: 'view-box', transformOrigin: '41px 88px', animation: legA }}><path d="M41 88 L36 116 L34 143" stroke={pantsColor} strokeWidth="8" /><line x1="34" y1="143" x2="43" y2="143" strokeWidth="8" /></g>
-      <g style={{ transformBox: 'view-box', transformOrigin: '49px 88px', animation: legB }}><path d="M49 88 L54 116 L56 143" stroke={pantsColor} strokeWidth="8" /><line x1="56" y1="143" x2="65" y2="143" strokeWidth="8" /></g>
-    </g>
-  )
-}
-
-/** Doodle take on the reference photo: dark-panel barbershop interior with three
-    lit mirror stations and red chairs, sitting on a warm wood floor. */
-function ShopInterior() {
-  const station = (i: number) => (
-    <div key={i} style={{ position: 'relative', width: 118, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* mirror with blinking side bulbs */}
-      <div style={{ position: 'relative', width: 64, height: 74, background: 'linear-gradient(160deg,#eef3f6 0 45%,#cfdbe3 45% 100%)', border: `2.5px solid ${INK}`, borderRadius: 8 }}>
-        <span style={{ position: 'absolute', left: 4, top: 4, fontSize: 15, opacity: 0.55 }}>✂</span>
-        {[12, 36].map((ty, b) => (
-          <span key={`l${ty}`} style={{ position: 'absolute', left: -11, top: ty, width: 8, height: 8, borderRadius: '50%', background: '#ffd76a', border: `2px solid ${INK}`, boxShadow: '0 0 8px 2px rgba(255,205,90,.7)', animation: `blink 1.6s ease-in-out ${(i + b) * 0.3}s infinite` }} />
-        ))}
-        {[12, 36].map((ty, b) => (
-          <span key={`r${ty}`} style={{ position: 'absolute', right: -11, top: ty, width: 8, height: 8, borderRadius: '50%', background: '#ffd76a', border: `2px solid ${INK}`, boxShadow: '0 0 8px 2px rgba(255,205,90,.7)', animation: `blink 1.6s ease-in-out ${(i + b) * 0.3 + 0.8}s infinite` }} />
-        ))}
+    <div className="phil-journey-doodles" aria-hidden="true">
+      <div data-anim="doodle" data-depth="16" className="phil-journey-doodle phil-route-cloud phil-route-cloud-one">
+        <div className="phil-cloud-float">
+          <svg viewBox="0 0 150 82">
+            <path d="M24 65 C8 63 7 42 23 36 C25 17 48 12 61 25 C72 4 108 10 111 36 C132 33 143 48 135 63 C132 69 122 72 111 72 H27 C19 72 15 69 24 65 Z" fill="#fffdf8" stroke={INK} strokeWidth="4" strokeLinejoin="round" />
+            <path d="M45 50 q8 7 16 0 M91 50 q8 7 16 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+            <circle cx="38" cy="56" r="5" fill="#f8cad6" opacity=".75" />
+            <circle cx="116" cy="56" r="5" fill="#f8cad6" opacity=".75" />
+          </svg>
+        </div>
       </div>
-      {/* counter */}
-      <div style={{ width: 92, height: 10, background: '#241f1e', border: `2.5px solid ${INK}`, borderRadius: 3, marginTop: 5 }} />
-      {/* red chair */}
-      <div style={{ position: 'relative', width: 70, height: 54, marginTop: 6 }}>
-        <div style={{ position: 'absolute', left: 14, top: 0, width: 42, height: 26, background: '#d94f4f', border: `2.5px solid ${INK}`, borderRadius: '12px 12px 4px 4px' }} />
-        <div style={{ position: 'absolute', left: 4, top: 21, width: 62, height: 16, background: '#d94f4f', border: `2.5px solid ${INK}`, borderRadius: 8 }} />
-        <div style={{ position: 'absolute', left: 31, top: 37, width: 8, height: 10, background: '#b6bec5', border: `2px solid ${INK}` }} />
-        <div style={{ position: 'absolute', left: 17, top: 46, width: 36, height: 7, background: '#b6bec5', border: `2px solid ${INK}`, borderRadius: 4 }} />
-      </div>
-    </div>
-  )
 
-  return (
-    <div style={{ width: '100%', maxWidth: 470, border: `3px solid ${INK}`, borderRadius: 12, overflow: 'hidden', boxShadow: '4px 5px 0 rgba(43,43,43,.5)' }}>
-      {/* tin ceiling */}
-      <div style={{ height: 14, background: '#2e2926', borderBottom: `2.5px solid ${INK}`, backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 12px, transparent 12px 24px)' }} />
-      {/* dark panelled wall with the three stations */}
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-evenly', alignItems: 'flex-end', paddingTop: 16, background: '#413a37', backgroundImage: 'repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 2px, transparent 2px 46px)' }}>
-        {[0, 1, 2].map(station)}
+      <div data-anim="doodle" data-depth="22" className="phil-journey-doodle phil-route-sun">
+        <div className="phil-sun-spin">
+          <svg viewBox="0 0 120 120">
+            <g stroke={INK} strokeWidth="4" strokeLinecap="round">
+              <path d="M60 4 V18 M60 102 V116 M4 60 H18 M102 60 H116 M20 20 L30 30 M90 90 L100 100 M100 20 L90 30 M30 90 L20 100" />
+              <circle cx="60" cy="60" r="35" fill="#ffd76a" />
+              <path d="M44 54 q5 -5 10 0 M66 54 q5 -5 10 0 M48 72 q12 10 24 0" fill="none" />
+            </g>
+            <circle cx="40" cy="66" r="5" fill="#f4b8c4" opacity=".8" />
+            <circle cx="80" cy="66" r="5" fill="#f4b8c4" opacity=".8" />
+          </svg>
+        </div>
       </div>
-      {/* wood floor */}
-      <div style={{ height: 24, background: '#d9c6a5', borderTop: `2.5px solid ${INK}`, backgroundImage: 'repeating-linear-gradient(90deg, rgba(43,43,43,.28) 0 2px, transparent 2px 34px)' }} />
+
+      <div data-anim="doodle" data-depth="26" className="phil-journey-doodle phil-route-person phil-route-customer">
+        <div className="phil-person-bob">
+          <WalkFigure
+            hairStyle="curly"
+            hair="#3f3029"
+            shirt="#4f6fd9"
+            pants="#3a4668"
+            skin="#d69b74"
+            walking={false}
+            showGround={false}
+            showMotionLines={false}
+          />
+        </div>
+      </div>
+
+      <div data-anim="doodle" data-depth="30" className="phil-journey-doodle phil-route-person phil-route-barber">
+        <div className="phil-person-bob phil-person-bob-late">
+          <WalkFigure
+            hairStyle="low-fade"
+            hair="#2f2926"
+            shirt="#d9903d"
+            pants="#4a5d3a"
+            skin="#b97952"
+            walking={false}
+            fresh
+            showGround={false}
+            showMotionLines={false}
+          />
+        </div>
+      </div>
+
+      <div data-anim="doodle" data-depth="18" className="phil-journey-doodle phil-route-cloud phil-route-cloud-two">
+        <div className="phil-cloud-float phil-cloud-float-late">
+          <svg viewBox="0 0 130 70">
+            <path d="M17 56 C3 52 7 35 21 32 C25 12 48 10 58 24 C71 5 101 13 102 35 C121 33 128 48 118 58 H20 Z" fill="#fffdf8" stroke={INK} strokeWidth="4" strokeLinejoin="round" />
+            <path d="M41 45 q6 5 12 0 M76 45 q6 5 12 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }
