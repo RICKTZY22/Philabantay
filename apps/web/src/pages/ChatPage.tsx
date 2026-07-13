@@ -7,6 +7,7 @@ import { Avatar } from '../components/Avatar'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { Loading } from '../components/Loading'
 import { relativeTime, timeOfDay } from '../lib/format'
+import { routeSegment } from '../lib/security'
 import './ChatPage.css'
 
 export function ChatPage() {
@@ -25,6 +26,10 @@ export function ChatPage() {
     loadConversations()
   }, [loadConversations])
 
+  const canOpenThread = Boolean(
+    conversationId && conversations?.some((conversation) => conversation.id === conversationId),
+  )
+
   return (
     <div className="chat-layout">
       <aside className={`chat-inbox ${conversationId ? 'has-open' : ''}`}>
@@ -42,7 +47,7 @@ export function ChatPage() {
               return (
                 <Link
                   key={c.id}
-                  to={`/chat/${c.id}`}
+                  to={`/chat/${routeSegment(c.id)}`}
                   className={`convo-item ${c.id === conversationId ? 'active' : ''}`}
                 >
                   <Avatar name={other.full_name} size={44} />
@@ -63,13 +68,21 @@ export function ChatPage() {
       </aside>
 
       <section className={`chat-thread ${conversationId ? 'has-open' : ''}`}>
-        {conversationId ? (
+        {conversationId && conversations === null ? (
+          <Loading label="Checking conversation…" />
+        ) : canOpenThread && conversationId ? (
           <Thread
             key={conversationId}
             conversationId={conversationId}
             onActivity={loadConversations}
             onBack={() => navigate('/chat')}
           />
+        ) : conversationId ? (
+          <div className="chat-empty">
+            <DoodleIcon name="chat" size={64} />
+            <p className="muted">Conversation not found or you do not have access.</p>
+            <button className="btn btn-sm" type="button" onClick={() => navigate('/chat')}>Back to inbox</button>
+          </div>
         ) : (
           <div className="chat-empty">
             <DoodleIcon name="scissors" size={64} />
@@ -176,6 +189,7 @@ function Thread({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Type a message…"
           aria-label="Message"
+          maxLength={2_000}
         />
         <button className="btn btn-primary" type="submit" disabled={!draft.trim()}>
           <DoodleIcon name="send" size={20} />

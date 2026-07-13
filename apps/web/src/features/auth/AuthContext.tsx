@@ -5,16 +5,18 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Profile, SignInInput, SignUpInput } from '@barbershop/shared'
+import type { CompleteRoleOnboardingInput, Profile, SignInInput, SignUpInput } from '@barbershop/shared'
 import { useBackend } from '../../services/backend'
 
 interface AuthState {
   profile: Profile | null
   loading: boolean
   isBarber: boolean
+  isShopOwner: boolean
   isAdmin: boolean
   signIn: (input: SignInInput) => Promise<Profile>
   signUp: (input: SignUpInput) => Promise<Profile>
+  completeRoleOnboarding: (input: CompleteRoleOnboardingInput) => Promise<Profile>
   signOut: () => Promise<void>
 }
 
@@ -56,9 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     isBarber: profile?.role === 'barber',
+    isShopOwner: profile?.role === 'shop_owner',
     isAdmin: profile?.role === 'admin',
     signIn: (input) => backend.auth.signIn(input),
     signUp: (input) => backend.auth.signUp(input),
+    completeRoleOnboarding: (input) => backend.auth.completeRoleOnboarding(input),
     signOut: () => backend.auth.signOut(),
   }
 

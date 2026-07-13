@@ -6,6 +6,7 @@ import { Avatar } from '../components/Avatar'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { Loading } from '../components/Loading'
 import { useDoodleAnimations } from '../theme/useDoodleAnimations'
+import { routeSegment } from '../lib/security'
 import './BarbersPage.css'
 
 export function BarbersPage() {
@@ -46,7 +47,7 @@ export function BarbersPage() {
           </div>
           <div className="row">
             {availableNow.map((b) => (
-              <Link key={b.id} to={`/barbers/${b.id}`} className="pill pill-on">
+              <Link key={b.id} to={`/barbers/${routeSegment(b.id)}`} className="pill pill-on">
                 {b.profile.full_name}
               </Link>
             ))}
@@ -56,7 +57,7 @@ export function BarbersPage() {
 
       <div className="card-grid" data-reveal-group style={{ marginTop: 24 }}>
         {all.map((b) => (
-          <Link to={`/barbers/${b.id}`} key={b.id} className="rough-card barber-card">
+          <Link to={`/barbers/${routeSegment(b.id)}`} key={b.id} className="rough-card barber-card">
             <div className="row">
               <Avatar name={b.profile.full_name} />
               <div>

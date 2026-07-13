@@ -6,6 +6,7 @@ import type {
   AvailabilityOverrideInput,
   AvailabilityRuleInput,
   CreateAppointmentInput,
+  CompleteRoleOnboardingInput,
   SendMessageInput,
   SignInInput,
   SignUpInput,
@@ -21,6 +22,7 @@ import type {
   Message,
   Profile,
   Service,
+  ShopWithStatus,
   Slot,
 } from './types'
 
@@ -30,6 +32,11 @@ export type Unsubscribe = () => void
 export interface AuthService {
   signUp(input: SignUpInput): Promise<Profile>
   signIn(input: SignInInput): Promise<Profile>
+  /**
+   * One-time onboarding. IMPORTANT: barber/shop owner stays customer-level
+   * hanggang ma-approve ng trusted server/admin process.
+   */
+  completeRoleOnboarding(input: CompleteRoleOnboardingInput): Promise<Profile>
   signOut(): Promise<void>
   /** Current signed-in profile, or null. Resolves the persisted session. */
   getCurrentProfile(): Promise<Profile | null>
@@ -64,6 +71,8 @@ export interface ServiceCatalog {
 
 export interface BookingService {
   create(input: CreateAppointmentInput): Promise<Appointment>
+  /** Customer-only atomic move of an active appointment to a validated slot. */
+  reschedule(appointmentId: string, input: CreateAppointmentInput): Promise<Appointment>
   cancel(appointmentId: string): Promise<Appointment>
   /** Appointments for the signed-in user (as customer or barber). */
   listMine(): Promise<AppointmentDetailed[]>
@@ -83,6 +92,19 @@ export interface ChatService {
   subscribe(conversationId: string, cb: (message: Message) => void): Unsubscribe
 }
 
+export interface ShopService {
+  /** All shops with live status — the customer map's data source. */
+  list(): Promise<ShopWithStatus[]>
+  get(shopId: string): Promise<ShopWithStatus | null>
+}
+
+export interface FavoriteService {
+  /** Shop ids na hinearted ng signed-in user. */
+  list(): Promise<string[]>
+  /** Toggle a shop in/out of favorites; returns the updated id list. */
+  toggle(shopId: string): Promise<string[]>
+}
+
 /** The full data layer handed to the UI through a React provider. */
 export interface DataBackend {
   auth: AuthService
@@ -91,4 +113,6 @@ export interface DataBackend {
   services: ServiceCatalog
   bookings: BookingService
   chat: ChatService
+  shops: ShopService
+  favorites: FavoriteService
 }

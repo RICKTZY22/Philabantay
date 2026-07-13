@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DoodleIcon } from '../theme/DoodleDefs'
+import { safeInternalPath } from '../lib/security'
 
 /**
  * Ito yung barber-curtain handoff pagkatapos ng successful auth. Isara muna,
@@ -32,11 +33,12 @@ export function CurtainProvider({ children }: { children: ReactNode }) {
   const go = (to: string) => {
     // Iwas double-click at dalawang sabay na navigation habang nakasara curtain.
     if (phase !== 'idle') return
+    const destination = safeInternalPath(to)
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      navigate(to)
+      navigate(destination)
       return
     }
-    target.current = to
+    target.current = destination
     setPhase('closing')
   }
 

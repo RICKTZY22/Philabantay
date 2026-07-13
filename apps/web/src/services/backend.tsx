@@ -16,12 +16,13 @@ function createBackend(): DataBackend {
   const kind = import.meta.env.VITE_DATA_BACKEND ?? 'mock'
   switch (kind) {
     case 'supabase':
-      // TODO(Phase 2): return createSupabaseBackend()
-      console.warn('[backend] supabase backend not implemented yet — using mock')
-      return createMockBackend()
+      // Fail closed: never make a production-looking deployment silently write
+      // credentials and appointments into browser storage.
+      throw new Error('Supabase backend is not implemented. Set VITE_DATA_BACKEND=mock only for a local/demo build.')
     case 'mock':
-    default:
       return createMockBackend()
+    default:
+      throw new Error(`Unsupported data backend: ${kind}`)
   }
 }
 

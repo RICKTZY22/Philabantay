@@ -15,7 +15,11 @@ const BarbersPage = lazy(() => import('./pages/BarbersPage').then((m) => ({ defa
 const BarberDetailPage = lazy(() => import('./pages/BarberDetailPage').then((m) => ({ default: m.BarberDetailPage })))
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) => ({ default: m.AppDashboardPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
+const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const ShopProfilePage = lazy(() => import('./pages/ShopProfilePage').then((m) => ({ default: m.ShopProfilePage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 /**
@@ -39,9 +43,20 @@ export function App() {
         <Route path="login" element={<AuthRedirect />} />
         <Route path="signup" element={<AuthRedirect />} />
 
+        {/* One-time role request: signed in dapat, pero incomplete profile is allowed. */}
+        <Route
+          path="onboarding/role"
+          element={
+            <RequireAuth allowIncomplete>
+              <RoleSelectionPage />
+            </RequireAuth>
+          }
+        />
+
         {/* Public discovery: puwedeng tumingin ng shops kahit guest pa. */}
         <Route path="barbers" element={<BarbersPage />} />
         <Route path="barbers/:barberId" element={<BarberDetailPage />} />
+        <Route path="shops/:shopId" element={<ShopProfilePage />} />
 
         {/* Customer features: kailangan munang may restored auth profile. */}
         <Route
@@ -68,9 +83,27 @@ export function App() {
             </RequireAuth>
           }
         />
-        {/* Barber tools: role guard bago pa ma-download/render ang dashboard UI. */}
+        {/* Safe app home: role-aware pero walang privileged shop controls. */}
         <Route
           path="dashboard"
+          element={
+            <RequireAuth>
+              <AppDashboardPage />
+            </RequireAuth>
+          }
+        />
+        {/* Account preferences ng kahit anong signed-in user. */}
+        <Route
+          path="settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
+            </RequireAuth>
+          }
+        />
+        {/* Verified barber tools lang ang nasa nested route na ito. */}
+        <Route
+          path="dashboard/barber"
           element={
             <RequireAuth role="barber">
               <DashboardPage />

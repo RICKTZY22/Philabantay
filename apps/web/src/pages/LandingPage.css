@@ -885,3 +885,7 @@
 @media (prefers-reduced-motion: reduce) {
   .phil-journey-flip { animation: none; }
 }
+.phil[data-animation-paused='true'] *,
+.phil-hero-main[data-animation-paused='true'] * {
+  animation-play-state: paused !important;
+}

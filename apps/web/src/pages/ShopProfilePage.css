@@ -1,0 +1,57 @@
+.shop-profile-page { width: min(1320px, calc(100vw - 28px)); margin: 0 0 48px 50%; transform: translateX(-50%); }
+.shop-back { margin-bottom: 12px; }
+.shop-profile-hero { display: grid; grid-template-columns: minmax(330px, .8fr) minmax(0, 1.2fr); gap: 22px; padding: 24px; border: 3px solid var(--ink); border-radius: 26px 18px 30px 20px / 20px 30px 18px 26px; background: var(--paper-soft); box-shadow: 7px 9px 0 var(--shadow); }
+.shop-profile-copy { align-self: center; }
+.shop-profile-copy h1 { margin: 12px 0 5px; font-size: clamp(2.3rem, 5vw, 4.5rem); }
+.shop-profile-copy > p { color: var(--muted); }
+.shop-status.is-open { background: var(--green); }
+.shop-status.is-busy { background: var(--yellow); }
+.shop-status.is-closed { background: var(--pink); }
+.shop-profile-rating { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.shop-profile-rating .doodle-icon { color: #d99a1b; }
+.shop-profile-rating span { color: var(--faint); }
+.shop-profile-rating span + span { padding-left: 10px; border-left: 1px solid var(--line); }
+.shop-profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.shop-gallery { min-height: 320px; display: grid; grid-template-columns: 1.2fr .8fr; grid-template-rows: 1fr 1fr; gap: 10px; }
+.shop-photo { position: relative; overflow: hidden; border: 2px solid var(--ink); border-radius: 17px 22px 15px 20px / 20px 15px 22px 17px; background-color: #dce8e8; }
+.shop-photo::before, .shop-photo::after { content: ''; position: absolute; border: 3px solid var(--ink); }
+.shop-photo span { position: absolute; left: 10px; bottom: 9px; padding: 3px 9px; border: 1.5px solid var(--ink); background: var(--paper-soft); font-family: 'Gochi Hand', cursive; }
+.shop-photo.is-front { grid-row: 1 / 3; background: linear-gradient(150deg, #bee0f1, #f8cad6); }
+.shop-photo.is-front::before { left: 16%; right: 16%; bottom: 20%; height: 45%; background: repeating-linear-gradient(90deg, #d94f4f 0 12px, #f6efe4 12px 24px, #4f6fd9 24px 36px); }
+.shop-photo.is-front::after { left: 28%; right: 28%; bottom: 20%; height: 29%; background: var(--paper-soft); }
+.shop-photo.is-chair { background: linear-gradient(140deg, #f8df9d, #dce8e8); }
+.shop-photo.is-chair::before { width: 42%; height: 48%; left: 29%; top: 20%; border-radius: 20px 20px 8px 8px; background: #c55a52; }
+.shop-photo.is-cuts { background: linear-gradient(140deg, #c7e7c4, #f8cad6); }
+.shop-photo.is-cuts::before { width: 55%; height: 55%; left: 22%; top: 17%; border-radius: 50%; background: var(--paper-soft); }
+.shop-profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; margin-top: 20px; }
+.shop-profile-main, .shop-profile-side { display: grid; align-content: start; gap: 20px; min-width: 0; }
+.shop-section-card, .shop-queue-card, .shop-hours-card, .shop-review-card { padding: 20px; border: 2.5px solid var(--ink); border-radius: 18px 25px 17px 22px / 22px 17px 25px 18px; background: var(--paper-soft); box-shadow: 4px 6px 0 var(--shadow); }
+.shop-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.shop-section-head > div > span, .shop-card-kicker { color: #16878d; font: 13px 'Gochi Hand', cursive; letter-spacing: 1px; }
+.shop-section-head h2, .shop-profile-side h2 { margin: 2px 0 0; font-size: 1.55rem; }
+.shop-services-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.shop-services-grid article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px; border: 1.5px dashed var(--line); background: var(--paper); }
+.shop-service-icon { width: 39px; height: 39px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; background: var(--yellow); }
+.shop-services-grid article > div { display: grid; min-width: 0; }
+.shop-services-grid article span { color: var(--faint); font-size: 13px; }
+.shop-services-grid article b { white-space: nowrap; }
+.shop-barber-grid { display: grid; gap: 10px; }
+.shop-barber-grid article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 2px solid var(--ink); border-radius: 13px; background: var(--paper); }
+.shop-barber-grid article > div:nth-child(2) { display: grid; min-width: 0; }
+.shop-barber-grid article > div:nth-child(2) > span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.shop-specialty { color: #16878d !important; font-size: 13px; }
+.shop-barber-cta { display: grid; justify-items: end; gap: 7px; }
+.shop-queue-card { background: color-mix(in srgb, var(--yellow) 35%, var(--paper-soft)); }
+.shop-queue-icon { width: 58px; height: 58px; display: grid; place-items: center; margin-bottom: 12px; border: 2px solid var(--ink); border-radius: 50%; background: var(--paper-soft); }
+.shop-queue-card p { color: var(--muted); }
+.shop-wait-time { display: block; margin: 10px 0 0; font: 700 46px/1 'Kalam', cursive; }
+.shop-hours-card dl { margin: 14px 0; }
+.shop-hours-card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1.5px dashed var(--line); }
+.shop-hours-card dd { margin: 0; text-align: right; }
+.shop-hours-card > p { display: flex; gap: 7px; color: var(--muted); }
+.shop-review-card { background: color-mix(in srgb, var(--pink) 24%, var(--paper-soft)); }
+.shop-review-card p { color: var(--muted); }
+.shop-review-card > strong { display: flex; justify-content: space-between; }
+.shop-review-card > strong span { color: #b87c19; }
+@media (max-width: 980px) { .shop-profile-hero, .shop-profile-grid { grid-template-columns: 1fr; } .shop-gallery { min-height: 280px; } }
+@media (max-width: 640px) { .shop-profile-page { width: min(100%, calc(100vw - 16px)); } .shop-profile-hero { padding: 16px; } .shop-gallery { min-height: 360px; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr .8fr; } .shop-photo.is-front { grid-column: 1 / 3; grid-row: auto; } .shop-services-grid { grid-template-columns: 1fr; } .shop-barber-grid article { grid-template-columns: auto 1fr; } .shop-barber-cta { grid-column: 1 / -1; grid-template-columns: auto 1fr; align-items: center; justify-items: stretch; } }

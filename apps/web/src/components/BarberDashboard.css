@@ -1,0 +1,165 @@
+.barber-board {
+  --barber-accent: #ef9f45;
+  background: #f4f1e8;
+}
+
+.barber-rail {
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .22) 0 10px, transparent 10px 20px),
+    var(--barber-accent);
+}
+
+.barber-profile-chip > span { background: var(--pink); }
+.barber-dashboard-grid { grid-template-columns: minmax(0, 1fr) 315px; }
+.barber-schedule table { min-width: 690px; }
+.barber-schedule td:nth-child(3) { color: var(--muted); }
+.barber-schedule .barber-table-empty { padding: 30px 12px; color: var(--muted); text-align: center; }
+.barber-bottom-grid { grid-template-columns: .9fr 1.1fr; }
+
+.barber-rating-card,
+.barber-reviews-card,
+.barber-shop-card,
+.barber-chat-card { padding: 17px; }
+
+.barber-rating-card h2,
+.barber-reviews-card h2,
+.barber-shop-card h2,
+.barber-chat-card h2 { margin: 2px 0 0; }
+
+.barber-rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 15px 0 12px;
+}
+
+.barber-rating-summary > strong {
+  font: 700 54px/1 'Kalam', cursive;
+}
+
+.barber-rating-summary > div { display: grid; gap: 3px; }
+.barber-rating-summary span { color: #388c50; font-size: 14px; }
+.barber-stars { display: flex; color: #e9a628; }
+.barber-stars .doodle-icon { fill: #ffd76a; }
+
+.barber-rating-bars { display: grid; gap: 5px; }
+.barber-rating-bars > div {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.barber-rating-bars i {
+  height: 8px;
+  overflow: hidden;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: #ebe5d8;
+}
+
+.barber-rating-bars b { display: block; height: 100%; background: var(--yellow); }
+.barber-reviews-card blockquote { margin: 12px 0 0; padding-top: 10px; border-top: 1.5px dashed var(--line); }
+.barber-reviews-card blockquote p { margin: 0 0 6px; color: var(--muted); line-height: 1.3; }
+.barber-reviews-card blockquote footer { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.barber-reviews-card blockquote footer span { color: #b87c19; }
+
+.barber-insights { grid-template-columns: 1fr; }
+.barber-shop-card { position: relative; overflow: hidden; }
+.barber-shop-card::after {
+  content: '';
+  position: absolute;
+  right: -35px;
+  top: -40px;
+  width: 110px;
+  height: 110px;
+  border: 18px solid rgba(239, 159, 69, .16);
+  border-radius: 50%;
+}
+
+.barber-card-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 45% 55% 49% 51% / 55% 43% 57% 45%;
+  background: var(--yellow);
+  transform: rotate(-3deg);
+}
+
+.barber-shop-card > strong { display: block; margin-top: 13px; font: 700 19px 'Kalam', cursive; }
+.barber-shop-card > p { margin: 3px 0 12px; color: var(--muted); line-height: 1.3; }
+.barber-shop-card dl { margin: 0 0 15px; }
+.barber-shop-card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1.5px dashed var(--line); }
+.barber-shop-card dt { color: var(--faint); }
+.barber-shop-card dd { margin: 0; text-align: right; font-weight: 700; }
+
+.barber-chat-all {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.barber-chat-list { margin-top: 8px; }
+.barber-chat-empty {
+  min-height: 130px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+.barber-chat-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 0;
+  border-bottom: 1.5px dashed var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.barber-chat-row:hover .barber-chat-copy strong { text-decoration: underline; }
+.barber-chat-avatar {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--blue);
+  font: 700 13px 'Kalam', cursive;
+}
+
+.barber-chat-row:nth-child(2) .barber-chat-avatar { background: var(--yellow); }
+.barber-chat-row:nth-child(3) .barber-chat-avatar { background: var(--green); }
+.barber-chat-copy { min-width: 0; display: grid; }
+.barber-chat-copy small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.barber-chat-meta { display: grid; justify-items: end; align-self: stretch; color: var(--faint); }
+.barber-chat-meta i { width: 9px; height: 9px; border: 1px solid var(--ink); border-radius: 50%; background: var(--pink); }
+.barber-open-inbox { width: 100%; margin-top: 13px; }
+
+@media (max-width: 1120px) {
+  .barber-dashboard-grid { grid-template-columns: 1fr; }
+  .barber-insights { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 840px) {
+  .barber-bottom-grid,
+  .barber-insights { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+  .barber-rating-summary > strong { font-size: 46px; }
+}

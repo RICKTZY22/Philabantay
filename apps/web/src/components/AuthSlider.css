@@ -49,6 +49,15 @@
 
 .half-signup .field { margin-bottom: 10px; }
 .half-signup .auth-mini-title { margin-bottom: 8px; font-size: 27px; }
+.half-signup .field-error {
+  display: block;
+  margin-top: 5px;
+  color: #b1503d;
+  font-family: 'Kalam', cursive;
+  font-size: 15px;
+  line-height: 1.15;
+}
+.half-signup .field input[aria-invalid='true'] { border-color: #b1503d; }
 
 .auth-slider .half-signup {
   opacity: 0;
@@ -82,6 +91,9 @@
 }
 
 .auth-demo { margin-top: 6px; }
+.auth-social-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.auth-social-row button { padding: 7px 10px; border: 1.5px solid var(--ink); border-radius: 10px 13px 9px 12px; background: var(--paper); color: var(--muted); }
+.auth-social-row button:hover { background: var(--blue); color: var(--ink); }
 
 /* ---- sliding overlay ---- */
 

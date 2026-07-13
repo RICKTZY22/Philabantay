@@ -1,22 +1,23 @@
 // Request/response shapes for the data-access layer. Both the mock (Phase 1)
 // and the Supabase/Express implementation (Phase 2) speak these.
 
-import type { Weekday } from './types'
+import type { OnboardingRole, Weekday } from './types'
 
 export interface SignUpInput {
   email: string
   password: string
   full_name: string
   phone?: string
-  /** Who is signing up: 'customer' (default) or 'barber' (barbershop side). */
-  role?: 'customer' | 'barber'
-  /** Barber-only: short intro shown on their public page. */
-  bio?: string
 }
 
 export interface SignInInput {
   email: string
   password: string
+}
+
+/** One-time role choice after signup. Professional choices are requests only. */
+export interface CompleteRoleOnboardingInput {
+  role: OnboardingRole
 }
 
 export interface AvailabilityRuleInput {

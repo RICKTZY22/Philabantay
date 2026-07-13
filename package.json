@@ -9,11 +9,8 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @barbershop/web",
-    "build": "npm run build --workspace @barbershop/shared && npm run build --workspace @barbershop/web",
+    "build": "npm run typecheck --workspace @barbershop/shared && npm run build --workspace @barbershop/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.0"
   }
 }

@@ -1,8 +1,16 @@
 import { useState, type FormEvent } from 'react'
-import { DataError, SHOP_NAME } from '@barbershop/shared'
+import {
+  DataError,
+  MAX_FULL_NAME_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  SHOP_NAME,
+  validateFullName,
+  validatePassword,
+} from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { useCurtain } from './CurtainTransition'
 import { DEMO_ACCOUNTS } from '../services/mock/seed'
+import { safeInternalPath } from '../lib/security'
 import './AuthSlider.css'
 
 /**
@@ -11,13 +19,14 @@ import './AuthSlider.css'
  */
 export function AuthSlider({
   initialMode = 'signin',
-  from = '/barbers',
+  from = '/dashboard',
 }: {
   initialMode?: 'signin' | 'signup'
   from?: string
 }) {
   const { signIn, signUp } = useAuth()
   const { go } = useCurtain()
+  const safeFrom = safeInternalPath(from)
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode)
 
   // Sign-in feature state: hiwalay para hindi madamay ang signup errors/inputs.
@@ -32,6 +41,7 @@ export function AuthSlider({
   const [phone, setPhone] = useState('')
   const [suPassword, setSuPassword] = useState('')
   const [suError, setSuError] = useState('')
+  const [suFieldErrors, setSuFieldErrors] = useState<{ fullName?: string; password?: string }>({})
   const [suBusy, setSuBusy] = useState(false)
 
   async function submitSignIn(e: FormEvent) {
@@ -39,9 +49,9 @@ export function AuthSlider({
     setSiError('')
     setSiBusy(true)
     try {
-      await signIn({ email: siEmail, password: siPassword })
+      const profile = await signIn({ email: siEmail, password: siPassword })
       // IMPORTANT: auth muna bago curtain navigation para restored na ang guard.
-      go(from)
+      go(profile.onboarding_completed ? safeFrom : roleOnboardingPath(safeFrom))
     } catch (err) {
       setSiError(err instanceof DataError ? err.message : 'Something went wrong.')
       setSiBusy(false)
@@ -51,6 +61,20 @@ export function AuthSlider({
   async function submitSignUp(e: FormEvent) {
     e.preventDefault()
     setSuError('')
+    setSuFieldErrors({})
+
+    // Local rules muna para instant ang feedback bago tumawag sa backend.
+    const nameError = validateFullName(fullName)
+    if (nameError) {
+      setSuFieldErrors({ fullName: nameError })
+      return
+    }
+    const passwordError = validatePassword(suPassword)
+    if (passwordError) {
+      setSuFieldErrors({ password: passwordError })
+      return
+    }
+
     setSuBusy(true)
     try {
       await signUp({
@@ -59,7 +83,8 @@ export function AuthSlider({
         full_name: fullName,
         phone,
       })
-      go(from) // Parehong protected handoff gaya ng sign-in.
+      // Signup intentionally stops at role onboarding; wala pang trusted role.
+      go(roleOnboardingPath(safeFrom))
     } catch (err) {
       setSuError(err instanceof DataError ? err.message : 'Something went wrong.')
       setSuBusy(false)
@@ -75,13 +100,14 @@ export function AuthSlider({
         <span className="auth-mini-title">Sign in</span>
 
         <label className="field">
-          <span>Email</span>
+          <span>Email or phone</span>
           <input
-            type="email"
+            type="text"
             value={siEmail}
             onChange={(e) => setSiEmail(e.target.value)}
-            placeholder="you@email.com"
-            autoComplete="email"
+            placeholder="you@email.com or +63..."
+            autoComplete="username"
+            maxLength={254}
             required
           />
         </label>
@@ -93,6 +119,7 @@ export function AuthSlider({
             onChange={(e) => setSiPassword(e.target.value)}
             placeholder="••••••••"
             autoComplete="current-password"
+            maxLength={MAX_PASSWORD_LENGTH}
             required
           />
         </label>
@@ -102,6 +129,11 @@ export function AuthSlider({
         <button className="btn btn-primary" type="submit" disabled={siBusy}>
           {siBusy ? 'Logging in…' : 'Sign in'}
         </button>
+
+        <div className="auth-social-row" aria-label="Social sign-in options">
+          <button type="button" onClick={() => setSiError('Google sign-in is ready for the Supabase OAuth connection.')}>Google</button>
+          <button type="button" onClick={() => setSiError('Facebook sign-in is ready for the Supabase OAuth connection.')}>Facebook</button>
+        </div>
 
         <div className="auth-demo">
           <div className="divider" />
@@ -133,10 +165,18 @@ export function AuthSlider({
           <span>Full name</span>
           <input
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => {
+              setFullName(e.target.value)
+              setSuFieldErrors((errors) => ({ ...errors, fullName: undefined }))
+            }}
             placeholder="Juan Dela Cruz"
+            autoComplete="name"
+            maxLength={MAX_FULL_NAME_LENGTH}
+            aria-invalid={Boolean(suFieldErrors.fullName)}
+            aria-describedby={suFieldErrors.fullName ? 'signup-name-error' : undefined}
             required
           />
+          {suFieldErrors.fullName && <span id="signup-name-error" className="field-error" role="alert">{suFieldErrors.fullName}</span>}
         </label>
         <label className="field">
           <span>Email</span>
@@ -146,6 +186,7 @@ export function AuthSlider({
             onChange={(e) => setSuEmail(e.target.value)}
             placeholder="you@email.com"
             autoComplete="email"
+            maxLength={254}
             required
           />
         </label>
@@ -155,6 +196,7 @@ export function AuthSlider({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+63 917 000 0000"
+            maxLength={32}
           />
         </label>
         <label className="field">
@@ -162,12 +204,18 @@ export function AuthSlider({
           <input
             type="password"
             value={suPassword}
-            onChange={(e) => setSuPassword(e.target.value)}
-            placeholder="Make it a good one"
+            onChange={(e) => {
+              setSuPassword(e.target.value)
+              setSuFieldErrors((errors) => ({ ...errors, password: undefined }))
+            }}
+            placeholder="hal. Barber@2026"
             autoComplete="new-password"
-            minLength={6}
+            maxLength={MAX_PASSWORD_LENGTH}
+            aria-invalid={Boolean(suFieldErrors.password)}
+            aria-describedby={suFieldErrors.password ? 'signup-password-error' : undefined}
             required
           />
+          {suFieldErrors.password && <span id="signup-password-error" className="field-error" role="alert">{suFieldErrors.password}</span>}
         </label>
 
         {suError && <p className="form-error">{suError}</p>}
@@ -215,6 +263,12 @@ export function AuthSlider({
       </div>
     </div>
   )
+}
+
+/** Encoded + internal path lang para walang open-redirect galing sa query string. */
+function roleOnboardingPath(from: string) {
+  const safeFrom = safeInternalPath(from)
+  return `/onboarding/role?from=${encodeURIComponent(safeFrom)}`
 }
 
 function AuthDoodles() {

@@ -1,7 +1,14 @@
 // Domain types — these mirror the Supabase Postgres schema (Phase 2).
 // The mock data layer (Phase 1) produces these exact shapes so the swap is transparent.
 
-export type Role = 'customer' | 'barber' | 'admin'
+/** Role na totoong may permission na. Hindi ito dapat diretso galing sa form. */
+export type Role = 'customer' | 'barber' | 'shop_owner' | 'admin'
+
+/** Public choice sa onboarding; sadyang walang admin dito. */
+export type OnboardingRole = 'customer' | 'barber' | 'shop_owner'
+
+/** Review state ng professional account request. */
+export type VerificationStatus = 'unverified' | 'not_required' | 'pending' | 'verified' | 'rejected' | 'suspended'
 
 export type AppointmentStatus =
   | 'pending'
@@ -18,11 +25,23 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 /** Extends the auth user. `id` matches the auth user id. */
 export interface Profile {
   id: string
+  /** Granted capability. New accounts always start as customer. */
   role: Role
+  /** Piniling account type; request lang ito hangga't hindi verified. */
+  requested_role: OnboardingRole | null
+  verification_status: VerificationStatus
+  onboarding_completed: boolean
   full_name: string
   phone: string | null
   avatar_url: string | null
   created_at: string
+}
+
+/** Allowlisted identity fields safe for public listings and participant joins. */
+export interface PublicProfile {
+  id: string
+  full_name: string
+  avatar_url: string | null
 }
 
 /** Barber-specific data. `id` equals the profile id (1:1). */
@@ -36,7 +55,7 @@ export interface Barber {
 
 /** A barber joined with its profile — the shape the UI usually wants. */
 export interface BarberWithProfile extends Barber {
-  profile: Profile
+  profile: PublicProfile
 }
 
 export interface Service {
@@ -88,7 +107,35 @@ export interface Appointment {
 export interface AppointmentDetailed extends Appointment {
   service: Service
   barber: BarberWithProfile
-  customer: Profile
+  customer: PublicProfile
+}
+
+/** Live map-pin status. Derived, never stored: open = may bakanteng chair. */
+export type ShopStatus = 'open' | 'busy' | 'closed'
+
+/** A physical barbershop location. Mirrors the Phase 2 `shops` table. */
+export interface Shop {
+  id: string
+  name: string
+  /** Street-level address line shown on cards. */
+  address: string
+  city: string
+  /** WGS84 coordinates for the map pin. */
+  lat: number
+  lng: number
+  /** Average rating 0–5 (one decimal) over `rating_count` reviews. */
+  rating: number
+  rating_count: number
+  /** Barbers whose chairs live in this shop. */
+  barber_ids: string[]
+  created_at: string
+}
+
+/** Shop joined with live derived data — the shape the map/dashboard wants. */
+export interface ShopWithStatus extends Shop {
+  status: ShopStatus
+  /** Barbers free to take a booking right now (subset of barber_ids). */
+  available_barber_count: number
 }
 
 export interface Conversation {
@@ -100,7 +147,7 @@ export interface Conversation {
 }
 
 export interface ConversationDetailed extends Conversation {
-  customer: Profile
+  customer: PublicProfile
   barber: BarberWithProfile
   last_message: Message | null
   unread_count: number

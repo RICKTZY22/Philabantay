@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import type { Role } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { Loading } from './Loading'
 
@@ -7,9 +8,11 @@ import { Loading } from './Loading'
 export function RequireAuth({
   children,
   role,
+  allowIncomplete = false,
 }: {
   children: ReactNode
-  role?: 'barber' | 'admin'
+  role?: Role
+  allowIncomplete?: boolean
 }) {
   const { profile, loading } = useAuth()
   const location = useLocation()
@@ -22,6 +25,12 @@ export function RequireAuth({
 
   // Walang session: tandaan ang pinanggalingan para makabalik after login.
   if (!profile) return <Navigate to="/login" state={{ from }} replace />
+
+  // Bago gumamit ng private features, tapusin muna ang one-time role choice.
+  // Role page lang ang sadyang may `allowIncomplete` para walang redirect loop.
+  if (!allowIncomplete && !profile.onboarding_completed) {
+    return <Navigate to={`/onboarding/role?from=${encodeURIComponent(from)}`} replace />
+  }
 
   // May login pero maling role: huwag i-render kahit saglit ang protected page.
   // NOTE: UX guard lang ito; Supabase RLS pa rin ang totoong security boundary.

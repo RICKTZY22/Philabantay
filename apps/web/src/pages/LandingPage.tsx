@@ -157,7 +157,7 @@ export function LandingPage() {
           <div className="phil-billboard-col phil-billboard-col-wide">
             <AuthSlider
               initialMode={navState?.authMode ?? 'signin'}
-              from={navState?.from ?? '/barbers'}
+              from={navState?.from ?? '/dashboard'}
             />
             <div className="phil-posts">
               <div className="phil-post" />
@@ -452,11 +452,6 @@ function ScatterDoodles() {
           <svg width="40" height="40" viewBox="0 0 40 40"><g stroke={INK} strokeWidth="3.5" strokeLinecap="round"><line x1="20" y1="4" x2="20" y2="36" /><line x1="4" y1="20" x2="36" y2="20" /><line x1="9" y1="9" x2="14" y2="14" /><line x1="31" y1="9" x2="26" y2="14" /><line x1="9" y1="31" x2="14" y2="26" /><line x1="31" y1="31" x2="26" y2="26" /></g></svg>
         </div>
       </div>
-      <div data-anim="doodle" data-depth="45" style={{ position: 'absolute', left: '4%', bottom: 140 }}>
-        <div style={{ animation: 'floatY 3s ease-in-out infinite alternate' }}>
-          <svg width="66" height="26" viewBox="0 0 66 26"><path d="M8 18 Q18 2 31 14 Q32 15 33 15 Q34 15 35 14 Q48 2 58 18 Q48 24 35 17 Q33 16 31 17 Q18 24 8 18 Z" fill={INK} stroke={INK} strokeWidth="2" strokeLinejoin="round" /></svg>
-        </div>
-      </div>
       <div data-anim="doodle" data-depth="55" style={{ position: 'absolute', right: '3%', bottom: 80 }}>
         <div style={{ animation: 'wobble 3.8s ease-in-out infinite alternate' }}>
           <svg width="60" height="60" viewBox="0 0 60 60"><g stroke={INK} strokeWidth="3" strokeLinecap="round"><rect x="8" y="34" width="34" height="12" rx="6" fill="#8d7260" transform="rotate(-35 25 40)" /><rect x="28" y="10" width="26" height="14" rx="3" fill="#f4efe2" transform="rotate(-35 41 17)" /></g></svg>
@@ -476,11 +471,6 @@ function ScatterDoodles() {
       <div data-anim="doodle" data-depth="38" style={{ position: 'absolute', left: '8%', top: '12%' }}>
         <div style={{ animation: 'sparkle 2.8s ease-in-out infinite' }}>
           <svg width="40" height="40" viewBox="0 0 40 40"><path d="M20 3 l4.6 9.8 10.4 1 -7.8 7 2.3 10.5 -9.5 -6 -9.5 6 2.3 -10.5 -7.8 -7 10.4 -1 z" fill="#ffd76a" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" /></svg>
-        </div>
-      </div>
-      <div data-anim="doodle" data-depth="48" style={{ position: 'absolute', right: '12%', bottom: 320 }}>
-        <div style={{ animation: 'floatY 4s ease-in-out infinite alternate' }}>
-          <svg width="56" height="40" viewBox="0 0 56 40"><path d="M6 4 q0 26 22 26 q22 0 22 -26 q-8 12 -22 8 q-14 4 -22 -8 z" fill={INK} stroke={INK} strokeWidth="2" strokeLinejoin="round" /></svg>
         </div>
       </div>
     </>

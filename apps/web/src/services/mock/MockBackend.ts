@@ -1,5 +1,7 @@
 import {
   DataError,
+  validateFullName,
+  validatePassword,
   type Appointment,
   type AppointmentDetailed,
   type AvailabilityOverride,
@@ -15,14 +17,16 @@ import {
   type Message,
   type Profile,
   type SendMessageInput,
+  type Shop,
+  type ShopWithStatus,
   type SignInInput,
   type SignUpInput,
   type Slot,
   type Unsubscribe,
-  type Weekday,
 } from '@barbershop/shared'
 import { buildSeed, type MockDB } from './seed'
-import { computeOpenSlots, effectiveBlocks, isWithinHours } from './availability'
+import { computeOpenSlots, effectiveBlocks, isWithinHours, toISODate } from './availability'
+import { hashPassword, isPasswordHash, verifyPassword } from './passwords'
 
 const DB_KEY = 'bsh_mock_db_v1'
 const SESSION_KEY = 'bsh_session'
@@ -31,8 +35,120 @@ const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v))
 const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`
 const delay = (ms = 80 + Math.random() * 160) => new Promise((r) => setTimeout(r, ms))
 const nowISO = () => new Date().toISOString()
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+function validTimeRange(start: string, end: string): boolean {
+  return TIME_PATTERN.test(start) && TIME_PATTERN.test(end) && start < end
+}
+
+/** Old saved browser data stays usable after adding role onboarding fields. */
+function migrateDB(stored: MockDB): MockDB {
+  if (stored.version < 2) {
+    stored.profiles = stored.profiles.map((profile) => ({
+      ...profile,
+      requested_role: profile.role === 'admin' ? null : profile.role,
+      verification_status: profile.role === 'customer' ? 'not_required' : 'verified',
+      onboarding_completed: true,
+    }))
+    stored.version = 2
+  }
+  if (stored.version < 3) {
+    // v3 nagdagdag ng shops + nationwide barbers. I-merge ang mga bagong seed
+    // entity nang hindi ginagalaw ang existing user data (accounts, bookings).
+    const seed = buildSeed()
+    const mergeById = <T extends { id: string }>(current: T[], incoming: T[]) => {
+      const known = new Set(current.map((x) => x.id))
+      return [...current, ...incoming.filter((x) => !known.has(x.id))]
+    }
+    stored.profiles = mergeById(stored.profiles, seed.profiles)
+    stored.barbers = mergeById(stored.barbers, seed.barbers)
+    stored.rules = mergeById(stored.rules, seed.rules)
+    stored.shops = seed.shops
+    stored.passwords = { ...seed.passwords, ...stored.passwords }
+    stored.emailToId = { ...seed.emailToId, ...stored.emailToId }
+    stored.version = 3
+  }
+  if (stored.version < 4) {
+    // v4 nagdagdag ng per-user favorite shops.
+    stored.favorites = { 'u-customer': ['sh-tondo'] }
+    stored.version = 4
+  }
+  if (stored.version < 5) {
+    // v5 adds the verified shop-owner demo account while preserving existing
+    // browser-created users, bookings, messages, and favorites.
+    const seed = buildSeed()
+    const owner = seed.profiles.find((profile) => profile.id === 'u-owner')
+    if (owner && !stored.profiles.some((profile) => profile.id === owner.id)) {
+      stored.profiles.push(owner)
+    }
+    stored.passwords['owner@demo.test'] = seed.passwords['owner@demo.test']
+    stored.emailToId['owner@demo.test'] = 'u-owner'
+    stored.version = 5
+  }
+  if (stored.version < 6) {
+    // v6: mas tumpak na shop coordinates + bagong South Metro shops/barbers.
+    // Ligtas i-replace ang shops wholesale (read-only sila sa mock backend);
+    // ang user-created data (accounts, bookings, messages) ay hindi ginagalaw.
+    const seed = buildSeed()
+    const mergeById = <T extends { id: string }>(current: T[], incoming: T[]) => {
+      const known = new Set(current.map((x) => x.id))
+      return [...current, ...incoming.filter((x) => !known.has(x.id))]
+    }
+    stored.profiles = mergeById(stored.profiles, seed.profiles)
+    stored.barbers = mergeById(stored.barbers, seed.barbers)
+    stored.rules = mergeById(stored.rules, seed.rules)
+    stored.shops = seed.shops
+    stored.passwords = { ...seed.passwords, ...stored.passwords }
+    stored.emailToId = { ...seed.emailToId, ...stored.emailToId }
+    stored.version = 6
+  }
+  if (stored.version < 7) {
+    // v7 removes the unused admin demo login and replaces all bundled demo
+    // passwords with PBKDF2 verifiers. Browser-created legacy accounts are
+    // upgraded asynchronously as soon as the backend starts.
+    const seed = buildSeed()
+    Object.keys(seed.passwords).forEach((email) => {
+      stored.passwords[email] = seed.passwords[email]
+    })
+    delete stored.passwords['admin@demo.test']
+    delete stored.emailToId['admin@demo.test']
+    stored.profiles = stored.profiles.filter((profile) => profile.id !== 'u-admin')
+    stored.version = 7
+  }
+  return stored
+}
 
 type BroadcastMsg = { type: 'db' } | { type: 'message'; conversationId: string }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isStoredMockDB(value: unknown): value is MockDB {
+  if (!isRecord(value) || !Number.isInteger(value.version)) return false
+  const requiredArrays = [
+    value.profiles,
+    value.barbers,
+    value.services,
+    value.rules,
+    value.overrides,
+    value.appointments,
+    value.conversations,
+    value.messages,
+  ]
+  if (requiredArrays.some((field) => !Array.isArray(field))) return false
+  if (!isRecord(value.passwords) || !isRecord(value.emailToId)) return false
+  if (Number(value.version) >= 3 && !Array.isArray(value.shops)) return false
+  if (Number(value.version) >= 4 && !isRecord(value.favorites)) return false
+  return true
+}
+
+function isBroadcastMsg(value: unknown): value is BroadcastMsg {
+  if (!isRecord(value)) return false
+  if (value.type === 'db') return true
+  return value.type === 'message' && typeof value.conversationId === 'string'
+}
 
 export function createMockBackend(): DataBackend {
   let db: MockDB = loadDB()
@@ -47,7 +163,13 @@ export function createMockBackend(): DataBackend {
   function loadDB(): MockDB {
     try {
       const raw = localStorage.getItem(DB_KEY)
-      if (raw) return JSON.parse(raw) as MockDB
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw)
+        if (!isStoredMockDB(parsed)) throw new Error('Invalid mock database shape.')
+        const stored = migrateDB(parsed)
+        localStorage.setItem(DB_KEY, JSON.stringify(stored))
+        return stored
+      }
     } catch {
       /* ignore */
     }
@@ -64,15 +186,31 @@ export function createMockBackend(): DataBackend {
   function reloadFromStorage() {
     try {
       const raw = localStorage.getItem(DB_KEY)
-      if (raw) db = JSON.parse(raw) as MockDB
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw)
+        if (isStoredMockDB(parsed)) db = migrateDB(parsed)
+      }
     } catch {
       /* ignore */
     }
   }
 
+  const credentialUpgrade = hardenLegacyPasswords()
+
+  async function hardenLegacyPasswords() {
+    const legacy = Object.entries(db.passwords).filter(([, password]) => !isPasswordHash(password))
+    if (legacy.length === 0) return
+    const upgraded = await Promise.all(
+      legacy.map(async ([email, password]) => [email, await hashPassword(password)] as const),
+    )
+    upgraded.forEach(([email, password]) => { db.passwords[email] = password })
+    persist(false)
+  }
+
   if (channel) {
-    channel.onmessage = (e: MessageEvent<BroadcastMsg>) => {
+    channel.onmessage = (e: MessageEvent<unknown>) => {
       const data = e.data
+      if (!isBroadcastMsg(data)) return
       if (data.type === 'db') {
         reloadFromStorage()
       } else if (data.type === 'message') {
@@ -104,10 +242,15 @@ export function createMockBackend(): DataBackend {
 
   // ---- shape builders ----
   const profileById = (id: string) => db.profiles.find((p) => p.id === id)
+  const publicProfile = (profile: Profile) => ({
+    id: profile.id,
+    full_name: profile.full_name,
+    avatar_url: profile.avatar_url,
+  })
   function barberWithProfile(b: Barber): BarberWithProfile {
     const profile = profileById(b.id)
     if (!profile) throw new DataError('not_found', 'Barber profile missing.')
-    return { ...clone(b), profile: clone(profile) }
+    return { ...clone(b), profile: publicProfile(profile) }
   }
   function appointmentDetailed(a: Appointment): AppointmentDetailed {
     const service = db.services.find((s) => s.id === a.service_id)!
@@ -117,7 +260,7 @@ export function createMockBackend(): DataBackend {
       ...clone(a),
       service: clone(service),
       barber: barberWithProfile(barber),
-      customer: clone(customer),
+      customer: publicProfile(customer),
     }
   }
   function conversationDetailed(c: Conversation, viewerId: string): ConversationDetailed {
@@ -128,7 +271,7 @@ export function createMockBackend(): DataBackend {
     const unread = msgs.filter((m) => m.sender_id !== viewerId && m.read_at === null).length
     return {
       ...clone(c),
-      customer: clone(profileById(c.customer_id)!),
+      customer: publicProfile(profileById(c.customer_id)!),
       barber: barberWithProfile(db.barbers.find((b) => b.id === c.barber_id)!),
       last_message: last ? clone(last) : null,
       unread_count: unread,
@@ -139,43 +282,34 @@ export function createMockBackend(): DataBackend {
   const auth: DataBackend['auth'] = {
     async signUp(input: SignUpInput) {
       await delay()
+      await credentialUpgrade
       const email = input.email.trim().toLowerCase()
       if (!email || !input.password) throw new DataError('validation', 'Email and password required.')
+      if (email.length > 254) throw new DataError('validation', 'Email is too long.')
+      if ((input.phone?.trim().length ?? 0) > 32) throw new DataError('validation', 'Phone number is too long.')
+      // Same field rules as the form, enforced sa data layer para hindi
+      // malusutan kahit i-bypass ang UI validation.
+      const nameError = validateFullName(input.full_name)
+      if (nameError) throw new DataError('validation', nameError)
+      const passwordError = validatePassword(input.password)
+      if (passwordError) throw new DataError('validation', passwordError)
       reloadFromStorage()
       if (db.emailToId[email]) throw new DataError('email_taken', 'That email is already registered.')
       const id = uid('u')
-      const role = input.role === 'barber' ? 'barber' : 'customer'
       const profile: Profile = {
         id,
-        role,
-        full_name: input.full_name.trim() || (role === 'barber' ? 'New Barber' : 'New Customer'),
+        // IMPORTANT: signup never grants professional access.
+        role: 'customer',
+        requested_role: null,
+        verification_status: 'unverified',
+        onboarding_completed: false,
+        full_name: input.full_name.trim(),
         phone: input.phone?.trim() || null,
         avatar_url: null,
         created_at: nowISO(),
       }
       db.profiles.push(profile)
-      if (role === 'barber') {
-        // Barbershop signups get a public barber card + default Mon–Sat hours,
-        // so they appear in listings immediately and can refine from the dashboard.
-        db.barbers.push({
-          id,
-          bio: input.bio?.trim() || 'Bagong silya sa Philabantay — book na!',
-          shift_status: 'off',
-          accepting_bookings: true,
-          created_at: nowISO(),
-        })
-        for (const weekday of [1, 2, 3, 4, 5, 6] as Weekday[]) {
-          db.rules.push({
-            id: uid('r'),
-            barber_id: id,
-            weekday,
-            start_time: '10:00',
-            end_time: '19:00',
-            created_at: nowISO(),
-          })
-        }
-      }
-      db.passwords[email] = input.password
+      db.passwords[email] = await hashPassword(input.password)
       db.emailToId[email] = id
       persist()
       setSession(id)
@@ -184,14 +318,56 @@ export function createMockBackend(): DataBackend {
 
     async signIn(input: SignInInput) {
       await delay()
-      const email = input.email.trim().toLowerCase()
+      await credentialUpgrade
+      const identifier = input.email.trim().toLowerCase()
+      if (identifier.length > 254 || input.password.length > 128) {
+        throw new DataError('invalid_credentials', 'Wrong email/phone or password.')
+      }
       reloadFromStorage()
-      const id = db.emailToId[email]
-      if (!id || db.passwords[email] !== input.password) {
-        throw new DataError('invalid_credentials', 'Wrong email or password.')
+      const directId = db.emailToId[identifier]
+      const phoneId = db.profiles.find((profile) => profile.phone?.replace(/\s+/g, '').toLowerCase() === identifier.replace(/\s+/g, ''))?.id
+      const id = directId ?? phoneId
+      const email = Object.entries(db.emailToId).find(([, profileId]) => profileId === id)?.[0]
+      const storedPassword = email ? db.passwords[email] : undefined
+      if (!id || !email || !storedPassword || !(await verifyPassword(input.password, storedPassword))) {
+        throw new DataError('invalid_credentials', 'Wrong email/phone or password.')
+      }
+      if (!isPasswordHash(storedPassword)) {
+        db.passwords[email] = await hashPassword(input.password)
+        persist()
       }
       setSession(id)
       return clone(profileById(id)!)
+    },
+
+    async completeRoleOnboarding(input) {
+      await delay()
+      reloadFromStorage()
+      const profile = requireUser()
+      const allowed = ['customer', 'barber', 'shop_owner'] as const
+      if (!allowed.includes(input.role)) {
+        throw new DataError('validation', 'Hindi valid ang napiling account type.')
+      }
+      // One-time endpoint ito para hindi paulit-ulit makagawa ng applications.
+      if (profile.onboarding_completed) {
+        if (profile.requested_role === input.role) return clone(profile)
+        throw new DataError('forbidden', 'Napili mo na ang account type. Contact support para magpalit.')
+      }
+
+      profile.requested_role = input.role
+      profile.onboarding_completed = true
+      if (input.role === 'customer') {
+        profile.role = 'customer'
+        profile.verification_status = 'not_required'
+      } else {
+        // HUWAG gumawa ng barber/shop record dito. Request lang muna ito;
+        // trusted server/admin review lang ang puwedeng mag-promote ng role.
+        profile.role = 'customer'
+        profile.verification_status = 'pending'
+      }
+      persist()
+      setSession(profile.id)
+      return clone(profile)
     },
 
     async signOut() {
@@ -265,6 +441,70 @@ export function createMockBackend(): DataBackend {
     },
   }
 
+  // ================= ShopService =================
+  /** Same "free right now" test as barbers.availableNow, para iisa ang totoo. */
+  function isOnChair(b: { id: string; shift_status: string }, when: Date): boolean {
+    return (
+      b.shift_status === 'on' &&
+      isWithinHours(
+        when,
+        db.rules.filter((r) => r.barber_id === b.id),
+        db.overrides.filter((o) => o.barber_id === b.id),
+      )
+    )
+  }
+
+  function shopWithStatus(s: Shop): ShopWithStatus {
+    const when = new Date()
+    const staff = db.barbers.filter((b) => s.barber_ids.includes(b.id))
+    const onChair = staff.filter((b) => isOnChair(b, when))
+    const available = onChair.filter((b) => b.accepting_bookings)
+    return {
+      ...clone(s),
+      status: available.length > 0 ? 'open' : onChair.length > 0 ? 'busy' : 'closed',
+      available_barber_count: available.length,
+    }
+  }
+
+  const shops: DataBackend['shops'] = {
+    async list() {
+      await delay()
+      reloadFromStorage()
+      return db.shops.map(shopWithStatus)
+    },
+
+    async get(shopId) {
+      await delay(50)
+      reloadFromStorage()
+      const s = db.shops.find((x) => x.id === shopId)
+      return s ? shopWithStatus(s) : null
+    },
+  }
+
+  // ================= FavoriteService =================
+  const favorites: DataBackend['favorites'] = {
+    async list() {
+      await delay(40)
+      reloadFromStorage()
+      const user = requireUser()
+      return [...(db.favorites[user.id] ?? [])]
+    },
+
+    async toggle(shopId) {
+      await delay(40)
+      const user = requireUser()
+      if (!db.shops.some((s) => s.id === shopId)) {
+        throw new DataError('not_found', 'Walang ganyang barbershop.')
+      }
+      const current = db.favorites[user.id] ?? []
+      db.favorites[user.id] = current.includes(shopId)
+        ? current.filter((id) => id !== shopId)
+        : [...current, shopId]
+      persist()
+      return [...db.favorites[user.id]]
+    },
+  }
+
   // ================= AvailabilityService =================
   const availability: DataBackend['availability'] = {
     async getRules(barberId) {
@@ -284,6 +524,10 @@ export function createMockBackend(): DataBackend {
       const user = requireUser()
       if (!db.barbers.some((b) => b.id === user.id))
         throw new DataError('forbidden', 'Only barbers set availability.')
+      if (rules.length > 14) throw new DataError('validation', 'Too many availability blocks.')
+      if (rules.some((rule) => !Number.isInteger(rule.weekday) || rule.weekday < 0 || rule.weekday > 6 || !validTimeRange(rule.start_time, rule.end_time))) {
+        throw new DataError('validation', 'Invalid availability schedule.')
+      }
       db.rules = db.rules.filter((r) => r.barber_id !== user.id)
       const created: AvailabilityRule[] = rules.map((r) => ({
         id: uid('r'),
@@ -303,6 +547,17 @@ export function createMockBackend(): DataBackend {
       const user = requireUser()
       if (!db.barbers.some((b) => b.id === user.id))
         throw new DataError('forbidden', 'Only barbers set availability.')
+      const overrideDate = new Date(`${input.date}T00:00:00`)
+      if (!DATE_PATTERN.test(input.date) || Number.isNaN(overrideDate.getTime()) || toISODate(overrideDate) !== input.date) {
+        throw new DataError('validation', 'Invalid override date.')
+      }
+      const hasStart = Boolean(input.start_time)
+      const hasEnd = Boolean(input.end_time)
+      if (hasStart !== hasEnd || (input.start_time && input.end_time && !validTimeRange(input.start_time, input.end_time))) {
+        throw new DataError('validation', 'Invalid override hours.')
+      }
+      const reason = input.reason?.trim() || null
+      if (reason && reason.length > 300) throw new DataError('validation', 'Override reason is too long.')
       const override: AvailabilityOverride = {
         id: uid('o'),
         barber_id: user.id,
@@ -310,8 +565,9 @@ export function createMockBackend(): DataBackend {
         is_available: input.is_available,
         start_time: input.start_time ?? null,
         end_time: input.end_time ?? null,
-        reason: input.reason ?? null,
+        reason,
       }
+      db.overrides = db.overrides.filter((candidate) => !(candidate.barber_id === user.id && candidate.date === input.date))
       db.overrides.push(override)
       persist()
       return clone(override)
@@ -329,8 +585,17 @@ export function createMockBackend(): DataBackend {
     async getOpenSlots(barberId, serviceId, date): Promise<Slot[]> {
       await delay()
       reloadFromStorage()
-      const service = db.services.find((s) => s.id === serviceId)
+      const service = db.services.find((s) => s.id === serviceId && s.active)
       if (!service) throw new DataError('not_found', 'Service not found.')
+      const barber = db.barbers.find((candidate) => candidate.id === barberId)
+      const barberProfile = profileById(barberId)
+      if (
+        !barber
+        || !barber.accepting_bookings
+        || !barberProfile
+        || barberProfile.role !== 'barber'
+        || barberProfile.verification_status !== 'verified'
+      ) return []
       return computeOpenSlots(
         date,
         service,
@@ -351,25 +616,58 @@ export function createMockBackend(): DataBackend {
   }
 
   // ================= BookingService =================
+  function validateBookingInput(
+    input: CreateAppointmentInput,
+    user: Profile,
+    ignoredAppointmentId?: string,
+  ) {
+    if (user.role !== 'customer') {
+      throw new DataError('forbidden', 'Use a customer account to book a haircut.')
+    }
+    const barber = db.barbers.find((candidate) => candidate.id === input.barber_id)
+    const barberProfile = profileById(input.barber_id)
+    if (
+      !barber
+      || !barberProfile
+      || barberProfile.role !== 'barber'
+      || barberProfile.verification_status !== 'verified'
+    ) throw new DataError('not_found', 'Barber is not available for booking.')
+    if (!barber.accepting_bookings) {
+      throw new DataError('validation', 'This barber is not accepting bookings right now.')
+    }
+    if (barber.id === user.id) throw new DataError('validation', 'You cannot book your own chair.')
+
+    const service = db.services.find((candidate) => candidate.id === input.service_id && candidate.active)
+    if (!service) throw new DataError('not_found', 'Service not found.')
+    const start = new Date(input.starts_at)
+    if (!Number.isFinite(start.getTime())) throw new DataError('validation', 'Invalid appointment time.')
+    const normalizedStart = start.toISOString()
+    const date = toISODate(start)
+    const available = computeOpenSlots(
+      date,
+      service,
+      db.rules.filter((rule) => rule.barber_id === barber.id),
+      db.overrides.filter((override) => override.barber_id === barber.id),
+      db.appointments.filter((appointment) => appointment.id !== ignoredAppointmentId && appointment.barber_id === barber.id),
+    ).some((slot) => slot.starts_at === normalizedStart)
+    if (!available) throw new DataError('slot_taken', 'That slot is no longer available.')
+
+    const notes = input.notes?.trim() || null
+    if (notes && notes.length > 500) throw new DataError('validation', 'Booking notes are too long.')
+    return {
+      service,
+      start,
+      end: new Date(start.getTime() + service.duration_min * 60_000),
+      notes,
+    }
+  }
+
   const bookings: DataBackend['bookings'] = {
     async create(input: CreateAppointmentInput) {
       await delay()
       const user = requireUser()
       reloadFromStorage()
-      const service = db.services.find((s) => s.id === input.service_id)
-      if (!service) throw new DataError('not_found', 'Service not found.')
-      const start = new Date(input.starts_at)
-      const end = new Date(start.getTime() + service.duration_min * 60_000)
-
-      // The real defense in Phase 2 is a DB exclusion constraint; the mock mirrors it here.
-      const overlap = db.appointments.some(
-        (a) =>
-          a.barber_id === input.barber_id &&
-          (a.status === 'pending' || a.status === 'confirmed') &&
-          start < new Date(a.ends_at) &&
-          end > new Date(a.starts_at),
-      )
-      if (overlap) throw new DataError('slot_taken', 'That time was just booked. Pick another slot.')
+      const { start, end, notes } = validateBookingInput(input, user)
 
       const appt: Appointment = {
         id: uid('a'),
@@ -379,7 +677,7 @@ export function createMockBackend(): DataBackend {
         starts_at: start.toISOString(),
         ends_at: end.toISOString(),
         status: 'pending',
-        notes: input.notes ?? null,
+        notes,
         created_at: nowISO(),
         updated_at: nowISO(),
       }
@@ -388,13 +686,41 @@ export function createMockBackend(): DataBackend {
       return clone(appt)
     },
 
+    async reschedule(appointmentId, input) {
+      await delay()
+      const user = requireUser()
+      reloadFromStorage()
+      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+      if (appointment.customer_id !== user.id) {
+        throw new DataError('forbidden', 'Only the customer can reschedule this appointment.')
+      }
+      if (appointment.status !== 'pending' && appointment.status !== 'confirmed') {
+        throw new DataError('validation', 'Only an active appointment can be rescheduled.')
+      }
+      const { start, end, notes } = validateBookingInput(input, user, appointment.id)
+      appointment.barber_id = input.barber_id
+      appointment.service_id = input.service_id
+      appointment.starts_at = start.toISOString()
+      appointment.ends_at = end.toISOString()
+      appointment.notes = notes
+      appointment.status = 'pending'
+      appointment.updated_at = nowISO()
+      persist()
+      return clone(appointment)
+    },
+
     async cancel(appointmentId) {
       await delay()
       const user = requireUser()
+      reloadFromStorage()
       const appt = db.appointments.find((a) => a.id === appointmentId)
       if (!appt) throw new DataError('not_found', 'Appointment not found.')
       if (appt.customer_id !== user.id && appt.barber_id !== user.id)
         throw new DataError('forbidden', 'Not your appointment.')
+      if (appt.status !== 'pending' && appt.status !== 'confirmed') {
+        throw new DataError('validation', 'Only an active appointment can be cancelled.')
+      }
       appt.status = 'cancelled'
       appt.updated_at = nowISO()
       persist()
@@ -414,10 +740,25 @@ export function createMockBackend(): DataBackend {
     async setStatus(appointmentId, status) {
       await delay()
       const user = requireUser()
+      reloadFromStorage()
       const appt = db.appointments.find((a) => a.id === appointmentId)
       if (!appt) throw new DataError('not_found', 'Appointment not found.')
       if (appt.barber_id !== user.id)
         throw new DataError('forbidden', 'Only the barber can change status.')
+      if (status === appt.status) return clone(appt)
+      const allowed: Record<Appointment['status'], Appointment['status'][]> = {
+        pending: ['confirmed', 'cancelled'],
+        confirmed: ['completed', 'cancelled', 'no_show'],
+        completed: [],
+        cancelled: [],
+        no_show: [],
+      }
+      if (!allowed[appt.status].includes(status)) {
+        throw new DataError('validation', `Cannot change ${appt.status} to ${status}.`)
+      }
+      if ((status === 'completed' || status === 'no_show') && Date.now() < new Date(appt.starts_at).getTime()) {
+        throw new DataError('validation', 'The appointment has not started yet.')
+      }
       appt.status = status
       appt.updated_at = nowISO()
       persist()
@@ -441,10 +782,19 @@ export function createMockBackend(): DataBackend {
       await delay()
       const user = requireUser()
       reloadFromStorage()
-      // customer opens with a barber; if a barber somehow calls, treat them as barber side
-      const isBarber = db.barbers.some((b) => b.id === user.id)
-      const customerId = isBarber ? barberId : user.id
-      const theBarberId = isBarber ? user.id : barberId
+      if (user.role !== 'customer') {
+        throw new DataError('forbidden', 'Only customers can start a new barber conversation.')
+      }
+      const targetBarber = db.barbers.find((barber) => barber.id === barberId)
+      const targetProfile = profileById(barberId)
+      if (
+        !targetBarber
+        || !targetProfile
+        || targetProfile.role !== 'barber'
+        || targetProfile.verification_status !== 'verified'
+      ) throw new DataError('not_found', 'Barber not found.')
+      const customerId = user.id
+      const theBarberId = targetBarber.id
       let convo = db.conversations.find(
         (c) => c.customer_id === customerId && c.barber_id === theBarberId,
       )
@@ -472,7 +822,7 @@ export function createMockBackend(): DataBackend {
       return db.messages
         .filter((m) => m.conversation_id === conversationId)
         .sort((a, b) => a.created_at.localeCompare(b.created_at))
-        .slice(-limit)
+        .slice(-Math.min(200, Math.max(1, Math.floor(limit))))
         .map(clone)
     },
 
@@ -485,6 +835,7 @@ export function createMockBackend(): DataBackend {
         throw new DataError('forbidden', 'Not your conversation.')
       const body = input.body.trim()
       if (!body) throw new DataError('validation', 'Message is empty.')
+      if (body.length > 2_000) throw new DataError('validation', 'Message is too long.')
       const msg: Message = {
         id: uid('m'),
         conversation_id: convo.id,
@@ -505,6 +856,11 @@ export function createMockBackend(): DataBackend {
     async markRead(conversationId) {
       await delay(40)
       const user = requireUser()
+      reloadFromStorage()
+      const conversation = db.conversations.find((candidate) => candidate.id === conversationId)
+      if (!conversation || (conversation.customer_id !== user.id && conversation.barber_id !== user.id)) {
+        throw new DataError('forbidden', 'Not your conversation.')
+      }
       let touched = false
       db.messages
         .filter(
@@ -521,6 +877,12 @@ export function createMockBackend(): DataBackend {
     },
 
     subscribe(conversationId, cb): Unsubscribe {
+      const user = requireUser()
+      reloadFromStorage()
+      const conversation = db.conversations.find((candidate) => candidate.id === conversationId)
+      if (!conversation || (conversation.customer_id !== user.id && conversation.barber_id !== user.id)) {
+        throw new DataError('forbidden', 'Not your conversation.')
+      }
       let set = msgListeners.get(conversationId)
       if (!set) {
         set = new Set()
@@ -534,7 +896,7 @@ export function createMockBackend(): DataBackend {
     },
   }
 
-  return { auth, barbers, availability, services, bookings, chat }
+  return { auth, barbers, availability, services, bookings, chat, shops, favorites }
 }
 
 // Re-export so pages can compute "next open slot" previews without a round trip if desired.

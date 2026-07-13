@@ -1,0 +1,168 @@
+/* Doodle-styled Leaflet map. Ang base tiles ay minu-mute para bumagay sa
+   paper theme, at ang mga pin ay hand-drawn teardrops na may status color. */
+
+.shop-map {
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+  border: 2px solid var(--ink);
+  border-radius: 16px 20px 14px 22px / 20px 14px 22px 16px;
+  box-shadow: 4px 5px 0 var(--shadow);
+  background: var(--paper-soft);
+  /* Leaflet panes default to high z-index; keep the whole map under the navbar. */
+  z-index: 0;
+  isolation: isolate;
+}
+
+/* Lambutin ang kulay ng tiles para parang guhit sa lumang papel. */
+.shop-map .leaflet-tile-pane {
+  filter: grayscale(0.4) sepia(0.15) saturate(0.85) contrast(0.92) brightness(1.03);
+}
+
+.shop-map .leaflet-control-zoom a {
+  font-family: 'Patrick Hand', cursive;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.shop-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(253, 247, 238, 0.85);
+}
+
+/* ---- Pins ---- */
+
+.shop-pin-wrap {
+  background: none;
+  border: none;
+}
+
+.shop-pin {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 46px;
+}
+
+/* Teardrop: rounded square na naka-rotate, klasikong trick. */
+.shop-pin-dot {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--ink);
+  border-radius: 58% 62% 60% 0;
+  transform: rotate(-45deg);
+  box-shadow: 2px 2px 0 var(--shadow);
+  transition: transform 0.15s ease;
+}
+
+/* Inner dot para may "eye" ang pin, parang tinusok ng ballpen. */
+.shop-pin-dot::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1.5px solid var(--ink);
+}
+
+.shop-pin.is-open .shop-pin-dot { background: #7ecf7a; }
+.shop-pin.is-busy .shop-pin-dot { background: #f5c95c; }
+.shop-pin.is-closed .shop-pin-dot { background: var(--danger); }
+
+/* Live pulse para sa open shops — subtle lang, alam ng user na "live" ito. */
+.shop-pin.is-open::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 3px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(72, 155, 68, 0.55);
+  animation: shop-pin-pulse 2s ease-out infinite;
+}
+
+@keyframes shop-pin-pulse {
+  0% { transform: scale(0.75); opacity: 0.9; }
+  70% { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-pin.is-open::before { animation: none; opacity: 0; }
+}
+
+.shop-pin.is-selected .shop-pin-dot {
+  transform: rotate(-45deg) scale(1.3);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+/* Bilang ng bakanteng barbers — maliit na scribble badge sa kanto. */
+.shop-pin-count {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 1.5px solid var(--ink);
+  border-radius: 50% 45% 55% 48%;
+}
+
+/* ---- "Ikaw dito" user marker ---- */
+
+.user-pin-wrap { background: none; border: none; }
+
+.user-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.user-pin-dot {
+  width: 16px;
+  height: 16px;
+  background: #5a9bd8;
+  border: 2.5px solid var(--ink);
+  border-radius: 52% 48% 55% 45%;
+  box-shadow: 0 0 0 5px rgba(90, 155, 216, 0.25);
+}
+
+.user-pin-label {
+  font-family: 'Gochi Hand', cursive;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--paper-soft);
+  border: 1.5px solid var(--ink);
+  border-radius: 8px 10px 7px 11px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* Hover tooltip sa doodle handwriting. */
+.shop-tooltip {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper-soft);
+  border: 1.5px solid var(--ink);
+  border-radius: 10px 12px 8px 14px;
+  box-shadow: 2px 3px 0 var(--shadow);
+  padding: 3px 10px;
+}
+
+.shop-tooltip::before { display: none; }

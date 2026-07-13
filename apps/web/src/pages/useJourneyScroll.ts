@@ -1,8 +1,4 @@
 import { useEffect, type RefObject } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-
-gsap.registerPlugin(ScrollTrigger)
 
 /**
  * Choreography ng How It Works: card reveals, parallax doodles, at scissors na
@@ -19,10 +15,47 @@ export function useJourneyScroll(
 ) {
   useEffect(() => {
     const root = rootRef.current
+    const hero = root?.querySelector<HTMLElement>('.phil-hero-main')
+    if (!root || !hero) return undefined
+
+    // Walang visual na binabago: pini-freeze lang ang looping CSS doodles kapag
+    // nasa ibang tab o malayo na sa viewport ang buong hero/street section.
+    const syncPageVisibility = () => {
+      root.dataset.animationPaused = document.hidden ? 'true' : 'false'
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      hero.dataset.animationPaused = entry?.isIntersecting ? 'false' : 'true'
+    }, { rootMargin: '160px 0px' })
+
+    syncPageVisibility()
+    observer.observe(hero)
+    document.addEventListener('visibilitychange', syncPageVisibility)
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', syncPageVisibility)
+      delete root.dataset.animationPaused
+      delete hero.dataset.animationPaused
+    }
+  }, [rootRef])
+
+  useEffect(() => {
+    const root = rootRef.current
     if (!root) return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
-    const ctx = gsap.context(() => {
+    let cancelled = false
+    let cleanup: (() => void) | undefined
+
+    // IMPORTANT: post-paint dynamic import ito. Pareho pa rin ang choreography,
+    // pero hindi na kailangang i-parse ang GSAP bago lumabas ang auth billboard.
+    void Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([
+      { gsap },
+      { ScrollTrigger },
+    ]) => {
+      if (cancelled) return
+      gsap.registerPlugin(ScrollTrigger)
+
+      const ctx = gsap.context(() => {
       const title = root.querySelector('[data-anim="s2title"]')
       if (title) {
         gsap.fromTo(title, { y: 70, opacity: 0, rotation: -2 }, { y: 0, opacity: 1, rotation: 0, duration: 0.9, ease: 'power2.out', scrollTrigger: { trigger: title, start: 'top 88%' } })
@@ -177,8 +210,15 @@ export function useJourneyScroll(
           },
         )
       }
-    }, root)
+      }, root)
+      cleanup = () => ctx.revert()
+    }).catch(() => {
+      // Enhancement lang ang GSAP; kompleto at visible pa rin ang static layout.
+    })
 
-    return () => ctx.revert()
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [audience])
 }

@@ -1,3 +1,11 @@
+.appointments-page { width: 100%; }
+.appointments-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.appointments-head h1 { margin: 3px 0 0; }
+.appointments-tabs { display: flex; padding: 3px; border: 2px solid var(--ink); border-radius: 13px; background: var(--paper-soft); }
+.appointments-tabs button { padding: 7px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); }
+.appointments-tabs button.is-active { background: var(--yellow); color: var(--ink); font-weight: 700; }
+.appointments-tabs button span { display: inline-grid; place-items: center; min-width: 21px; height: 21px; margin-left: 5px; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper-soft); }
+
 .appt-list {
   display: grid;
   gap: 14px;
@@ -6,7 +14,7 @@
 
 .appt-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.4fr auto auto;
+  grid-template-columns: 1.15fr 1.35fr auto auto;
   gap: 16px;
   align-items: center;
   background: var(--paper-soft);
@@ -14,14 +22,25 @@
 
 .appt-when { display: flex; align-items: center; gap: 10px; }
 .appt-what { display: grid; }
+.appt-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.appt-review { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 2px dashed var(--line); color: var(--muted); }
+.appt-review > div { display: flex; }
+.appt-review button { padding: 2px; border: 0; background: transparent; color: var(--line); }
+.appt-review button.is-rated { color: #d99a1b; }
 
 @media (max-width: 680px) {
+  .appointments-page { width: 100%; }
+  .appointments-head { align-items: stretch; flex-direction: column; }
+  .appointments-tabs { width: 100%; }
+  .appointments-tabs button { flex: 1; }
   .appt-row {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       'when status'
-      'what cancel';
+      'what actions';
   }
   .appt-when { grid-area: when; }
   .appt-what { grid-area: what; }
+  .appt-actions { grid-area: actions; }
+  .appt-review { justify-content: space-between; }
 }

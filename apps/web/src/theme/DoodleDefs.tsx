@@ -67,6 +67,16 @@ export function DoodleDefs() {
         <symbol id="i-send" viewBox="0 0 24 24">
           <path d="M3 12 L21 4 l-6 16 -4 -6 z M11 14 l4 -6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         </symbol>
+        <symbol id="i-home" viewBox="0 0 24 24">
+          <path d="M4 11.5 L12 4 l8 7.5 M6 10 v10 h12 V10 M10 20 v-6 h4 v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        </symbol>
+        <symbol id="i-gear" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 3 v3 M12 18 v3 M3 12 h3 M18 12 h3 M5.6 5.6 l2.1 2.1 M16.3 16.3 l2.1 2.1 M18.4 5.6 l-2.1 2.1 M7.7 16.3 l-2.1 2.1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </symbol>
+        <symbol id="i-heart" viewBox="0 0 24 24">
+          <path d="M12 20 C5 14.5 3.5 9.5 6.5 6.8 C8.8 4.7 11.3 6.2 12 8 C12.7 6.2 15.2 4.7 17.5 6.8 C20.5 9.5 19 14.5 12 20 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        </symbol>
         <symbol id="i-pole" viewBox="0 0 24 24">
           <rect x="8" y="3" width="8" height="18" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
           <path d="M9 6 l6 4 M9 10 l6 4 M9 14 l6 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -79,6 +89,7 @@ export function DoodleDefs() {
 const KNOWN = [
   'scissors', 'comb', 'razor', 'chair', 'clock', 'calendar',
   'chat', 'user', 'star', 'check', 'plus', 'arrow', 'x', 'send', 'pole',
+  'home', 'gear', 'heart',
 ] as const
 
 export type DoodleIconName = (typeof KNOWN)[number]

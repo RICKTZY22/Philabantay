@@ -1,0 +1,196 @@
+/* Global hamburger + drawer ng signed-in users. Malaki ang button, may
+   morph-to-X animation, at dumudulas ang drawer mula sa kanan. */
+
+/* ---- Burger button ---- */
+.app-burger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 56px;
+  height: 56px;
+  padding: 14px 13px;
+  flex: none;
+  background: var(--paper-soft);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px 13px 17px 14px / 13px 17px 14px 16px;
+  box-shadow: 3px 4px 0 var(--shadow);
+  cursor: pointer;
+  /* Nasa loob ng sticky header bar (tingnan ang .app-header.is-sticky), kaya
+     laging abot habang nag-scroll pero HINDI tumatakip sa content. `relative` +
+     mataas na z-index para magamit din bilang close button kapag bukas ang drawer. */
+  position: relative;
+  z-index: 80;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* Sticky header bar ng signed-in app pages. Solid na paper background para
+   malinis na dumadaan ang content sa ilalim (hindi random overlap). */
+.app-header.is-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--paper-soft);
+  box-shadow: 0 8px 16px -12px rgba(43, 42, 40, 0.55);
+}
+
+.app-burger:hover { transform: translateY(-2px); box-shadow: 4px 6px 0 var(--shadow); }
+.app-burger:active { transform: translateY(0); box-shadow: 2px 2px 0 var(--shadow); }
+.app-burger:focus-visible {
+  outline: 4px solid color-mix(in srgb, var(--yellow) 75%, white);
+  outline-offset: 4px;
+}
+
+.app-burger span {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--ink);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.25, 1.1), opacity 160ms ease;
+}
+
+/* Konting kiling para hand-drawn pa rin ang dating kahit nakasara. */
+.app-burger span:nth-child(1) { transform: rotate(-2deg); }
+.app-burger span:nth-child(2) { transform: rotate(1.5deg); }
+.app-burger span:nth-child(3) { transform: rotate(-1deg); width: 78%; align-self: flex-start; }
+
+/* Morph to X. */
+.app-burger.is-open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+.app-burger.is-open span:nth-child(2) { opacity: 0; transform: translateX(8px); }
+.app-burger.is-open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); width: 100%; }
+
+/* ---- Drawer + backdrop (laging naka-mount; CSS ang animation) ---- */
+.app-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  visibility: hidden;
+  /* Panatilihin ang visibility hanggang matapos ang exit transition. */
+  transition: visibility 0s 300ms;
+}
+
+.app-menu.is-open {
+  pointer-events: auto;
+  visibility: visible;
+  transition: visibility 0s;
+}
+
+.app-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(43, 42, 40, 0.38);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.app-menu.is-open .app-menu-backdrop { opacity: 1; }
+
+.app-menu-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(340px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 92px 20px max(24px, env(safe-area-inset-bottom));
+  background:
+    linear-gradient(rgba(43, 43, 43, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 43, 43, .025) 1px, transparent 1px),
+    var(--paper-soft);
+  background-size: 26px 26px;
+  border-left: 3px solid var(--ink);
+  box-shadow: -6px 0 0 var(--shadow);
+  transform: translateX(105%);
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.25, 1);
+  overflow-y: auto;
+}
+
+.app-menu.is-open .app-menu-drawer { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-burger span,
+  .app-menu-backdrop,
+  .app-menu-drawer { transition: none; }
+}
+
+/* ---- Drawer content ---- */
+.app-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 2px dashed var(--line);
+  border-radius: 14px 11px 15px 12px;
+  background: rgba(255, 255, 255, .3);
+}
+
+.app-menu-user > div { min-width: 0; }
+.app-menu-user strong {
+  display: block;
+  overflow: hidden;
+  font-family: 'Kalam', cursive;
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-menu-user span { color: var(--faint); font-size: 0.85rem; }
+
+.app-menu-links { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.app-menu-link {
+  width: 100%;
+  min-height: 50px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 15px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.15rem;
+  color: var(--muted);
+  text-decoration: none;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 13px 11px 14px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.app-menu-link:hover { background: var(--paper); color: var(--ink); transform: translateX(-2px); }
+.app-menu-link:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.app-menu-link.active {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--yellow);
+  border-color: var(--ink);
+  box-shadow: 2px 3px 0 var(--shadow);
+}
+
+.app-menu-pending { align-self: flex-start; margin: 10px 4px 0; }
+
+.app-menu-signout {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 2px dashed var(--line);
+  border-radius: 0;
+  color: var(--faint);
+}
+
+.app-menu-signout:hover { color: var(--danger); background: var(--paper); }
+
+@media (max-width: 420px) {
+  .app-menu-drawer { width: min(340px, 94vw); padding-inline: 16px; }
+}
