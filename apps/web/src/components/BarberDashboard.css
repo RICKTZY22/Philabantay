@@ -1,165 +1,113 @@
-.barber-board {
-  --barber-accent: #ef9f45;
-  background: #f4f1e8;
+.barber-jobs-page,
+.barber-home-page { display: grid; gap: 20px; padding: 8px 0 36px; }
+
+/* NOTE: ang .barber-paper-stack utilities ay nasa theme/doodle.css na —
+   ginagamit din sila ng schedule page (DashboardPage). */
+
+.barber-jobs-hero,
+.barber-home-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 24px 28px; border: 2.5px solid var(--ink); border-radius: 20px 28px 18px 24px;
+  background: var(--paper-soft); box-shadow: 5px 7px 0 var(--shadow);
+}
+.barber-jobs-hero h1,
+.barber-home-hero h1 { margin: 5px 0; font-size: clamp(2rem, 4vw, 3.25rem); }
+.barber-jobs-hero p,
+.barber-home-hero p { margin: 0; color: var(--muted); }
+.barber-profile-state,
+.barber-shop-live { display: flex; align-items: center; gap: 12px; min-width: 230px; padding: 14px 16px; border: 2px solid var(--ink); border-radius: 14px 18px 13px 17px; background: var(--yellow); }
+.barber-profile-state div,
+.barber-shop-live div { display: grid; }
+.barber-profile-state span,
+.barber-shop-live small { color: var(--muted); }
+
+.barber-flow-message { padding: 12px 16px; border: 2px solid var(--ink); border-radius: 12px; background: var(--yellow); }
+.barber-jobs-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px 16px; border: 2px dashed var(--line); border-radius: 14px; background: color-mix(in srgb, var(--blue) 28%, var(--paper-soft)); }
+.barber-jobs-toolbar > div { display: grid; grid-template-columns: auto auto; gap: 1px 8px; align-items: center; }
+.barber-jobs-toolbar > div > span:last-child { grid-column: 2; color: var(--muted); }
+.barber-location-dot { width: 12px; height: 12px; border: 2px solid var(--ink); border-radius: 50%; background: var(--faint); }
+.barber-location-dot.is-on { background: #70c77a; }
+.barber-location-dot.is-asking { background: var(--yellow); animation: barber-pulse 1.1s ease-in-out infinite alternate; }
+@keyframes barber-pulse { to { transform: scale(1.3); } }
+
+.barber-jobs-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, .75fr); gap: 18px; min-height: 470px; }
+.barber-hiring-map { min-height: 470px; }
+.barber-hiring-map .shop-map { min-height: 470px; }
+.barber-hiring-list { display: flex; flex-direction: column; gap: 9px; padding: 18px; overflow: auto; border: 2.5px solid var(--ink); border-radius: 18px 23px 16px 20px; background: var(--blue); box-shadow: 4px 6px 0 var(--shadow); }
+.barber-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.barber-section-heading h2 { margin: 3px 0; font-size: 1.65rem; }
+.barber-section-heading p { margin: 2px 0 0; color: var(--muted); }
+.barber-hiring-row { position: relative; display: grid; gap: 3px; width: 100%; padding: 12px 13px; text-align: left; color: var(--ink); border: 2px solid var(--ink); border-radius: 12px 15px 11px 14px; background: var(--paper-soft); box-shadow: 2px 3px 0 var(--shadow); }
+.barber-hiring-row:hover,
+.barber-hiring-row.is-selected { transform: translate(-1px, -1px); background: var(--yellow); box-shadow: 4px 5px 0 var(--shadow); }
+.barber-hiring-row-top { display: flex; justify-content: space-between; gap: 10px; }
+.barber-hiring-row > span:not(.barber-hiring-row-top),
+.barber-hiring-row small { color: var(--muted); }
+.barber-application { position: absolute; right: 10px; bottom: 9px; padding: 2px 7px; color: var(--ink); font-style: normal; border: 1.5px solid var(--ink); border-radius: 8px; background: var(--pink); }
+.barber-application.is-accepted { background: #bfe5bd; }
+.barber-application.is-declined { background: #efb6af; }
+
+.barber-job-actions { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, .6fr); gap: 18px; }
+.barber-job-details,
+.barber-join-card { padding: 22px; }
+.barber-role-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+.barber-role-strip > div { display: grid; padding: 10px; border: 1.5px dashed var(--line); border-radius: 10px; }
+.barber-role-strip span { color: var(--muted); }
+.barber-requirements { display: grid; gap: 8px; padding: 0; list-style: none; }
+.barber-requirements li { display: flex; align-items: center; gap: 8px; }
+.barber-join-card { background: color-mix(in srgb, var(--purple) 28%, var(--paper-soft)); }
+.barber-join-card h2 { margin: 6px 0; }
+.barber-join-card form { display: grid; gap: 7px; margin-top: 18px; }
+.barber-code-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.barber-code-row input { min-width: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+.barber-join-card details { margin-top: 14px; color: var(--muted); }
+
+.barber-shop-live { background: var(--paper); }
+.barber-shop-live > span { width: 16px; height: 16px; border: 2px solid var(--ink); border-radius: 50%; background: var(--faint); }
+.barber-shop-live.is-open > span { background: #70c77a; }
+.barber-shop-live.is-busy > span { background: var(--yellow); }
+.barber-home-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.barber-home-stat { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px; padding: 16px 18px; border: 2.5px solid var(--ink); border-radius: 15px 20px 14px 18px; box-shadow: 4px 5px 0 var(--shadow); }
+.barber-home-stat.is-blue { background: var(--blue); }
+.barber-home-stat.is-yellow { background: var(--yellow); }
+.barber-home-stat.is-pink { background: var(--pink); }
+.barber-home-stat strong { font: 700 2rem/1 'Kalam', cursive; }
+.barber-home-stat span { color: var(--muted); }
+.barber-home-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 22px; align-items: start; }
+.barber-home-card { padding: 20px; border: 2.5px solid var(--ink); border-radius: 17px 23px 16px 21px; background: var(--paper-soft); box-shadow: 4px 6px 0 var(--shadow); }
+.barber-shift-list,
+.barber-booking-list { display: grid; gap: 9px; margin-top: 14px; }
+.barber-shift-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 11px; border-top: 1.5px dashed var(--line); }
+.barber-shift-day { display: grid; place-items: center; width: 48px; height: 46px; border: 2px solid var(--ink); border-radius: 10px 14px 9px 12px; background: var(--blue); font-weight: 700; }
+.barber-shift-row > div { display: grid; }
+.barber-shift-row > div span { color: var(--muted); }
+.barber-booking-row { display: grid; grid-template-columns: 105px 1fr; align-items: center; gap: 12px; padding: 12px; background: rgba(255, 253, 247, .92); border: 1.5px solid var(--ink); border-radius: 11px 14px 10px 13px; }
+.barber-booking-row time,
+.barber-booking-row > div { display: grid; }
+.barber-booking-row span { color: var(--muted); }
+.barber-home-empty { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 90px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .barber-jobs-layout,
+  .barber-job-actions,
+  .barber-home-grid { grid-template-columns: 1fr; }
+  .barber-hiring-list { max-height: 360px; }
 }
 
-.barber-rail {
-  background:
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .22) 0 10px, transparent 10px 20px),
-    var(--barber-accent);
+@media (max-width: 640px) {
+  .barber-jobs-hero,
+  .barber-home-hero,
+  .barber-jobs-toolbar { align-items: stretch; flex-direction: column; padding: 18px; }
+  .barber-profile-state,
+  .barber-shop-live { min-width: 0; }
+  .barber-home-stats,
+  .barber-role-strip { grid-template-columns: 1fr; }
+  .barber-code-row,
+  .barber-booking-row { grid-template-columns: 1fr; }
+  .barber-hiring-map,
+  .barber-hiring-map .shop-map { min-height: 390px; }
 }
 
-.barber-profile-chip > span { background: var(--pink); }
-.barber-dashboard-grid { grid-template-columns: minmax(0, 1fr) 315px; }
-.barber-schedule table { min-width: 690px; }
-.barber-schedule td:nth-child(3) { color: var(--muted); }
-.barber-schedule .barber-table-empty { padding: 30px 12px; color: var(--muted); text-align: center; }
-.barber-bottom-grid { grid-template-columns: .9fr 1.1fr; }
-
-.barber-rating-card,
-.barber-reviews-card,
-.barber-shop-card,
-.barber-chat-card { padding: 17px; }
-
-.barber-rating-card h2,
-.barber-reviews-card h2,
-.barber-shop-card h2,
-.barber-chat-card h2 { margin: 2px 0 0; }
-
-.barber-rating-summary {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 15px 0 12px;
-}
-
-.barber-rating-summary > strong {
-  font: 700 54px/1 'Kalam', cursive;
-}
-
-.barber-rating-summary > div { display: grid; gap: 3px; }
-.barber-rating-summary span { color: #388c50; font-size: 14px; }
-.barber-stars { display: flex; color: #e9a628; }
-.barber-stars .doodle-icon { fill: #ffd76a; }
-
-.barber-rating-bars { display: grid; gap: 5px; }
-.barber-rating-bars > div {
-  display: grid;
-  grid-template-columns: 12px 1fr;
-  align-items: center;
-  gap: 8px;
-  color: var(--faint);
-  font-size: 13px;
-}
-
-.barber-rating-bars i {
-  height: 8px;
-  overflow: hidden;
-  border: 1.5px solid var(--ink);
-  border-radius: 999px;
-  background: #ebe5d8;
-}
-
-.barber-rating-bars b { display: block; height: 100%; background: var(--yellow); }
-.barber-reviews-card blockquote { margin: 12px 0 0; padding-top: 10px; border-top: 1.5px dashed var(--line); }
-.barber-reviews-card blockquote p { margin: 0 0 6px; color: var(--muted); line-height: 1.3; }
-.barber-reviews-card blockquote footer { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
-.barber-reviews-card blockquote footer span { color: #b87c19; }
-
-.barber-insights { grid-template-columns: 1fr; }
-.barber-shop-card { position: relative; overflow: hidden; }
-.barber-shop-card::after {
-  content: '';
-  position: absolute;
-  right: -35px;
-  top: -40px;
-  width: 110px;
-  height: 110px;
-  border: 18px solid rgba(239, 159, 69, .16);
-  border-radius: 50%;
-}
-
-.barber-card-icon {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 10px;
-  border: 2px solid var(--ink);
-  border-radius: 45% 55% 49% 51% / 55% 43% 57% 45%;
-  background: var(--yellow);
-  transform: rotate(-3deg);
-}
-
-.barber-shop-card > strong { display: block; margin-top: 13px; font: 700 19px 'Kalam', cursive; }
-.barber-shop-card > p { margin: 3px 0 12px; color: var(--muted); line-height: 1.3; }
-.barber-shop-card dl { margin: 0 0 15px; }
-.barber-shop-card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1.5px dashed var(--line); }
-.barber-shop-card dt { color: var(--faint); }
-.barber-shop-card dd { margin: 0; text-align: right; font-weight: 700; }
-
-.barber-chat-all {
-  width: 35px;
-  height: 35px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--blue);
-  color: var(--ink);
-}
-
-.barber-chat-list { margin-top: 8px; }
-.barber-chat-empty {
-  min-height: 130px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 8px;
-  color: var(--muted);
-  text-align: center;
-}
-.barber-chat-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 0;
-  border-bottom: 1.5px dashed var(--line);
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.barber-chat-row:hover .barber-chat-copy strong { text-decoration: underline; }
-.barber-chat-avatar {
-  width: 39px;
-  height: 39px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--blue);
-  font: 700 13px 'Kalam', cursive;
-}
-
-.barber-chat-row:nth-child(2) .barber-chat-avatar { background: var(--yellow); }
-.barber-chat-row:nth-child(3) .barber-chat-avatar { background: var(--green); }
-.barber-chat-copy { min-width: 0; display: grid; }
-.barber-chat-copy small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
-.barber-chat-meta { display: grid; justify-items: end; align-self: stretch; color: var(--faint); }
-.barber-chat-meta i { width: 9px; height: 9px; border: 1px solid var(--ink); border-radius: 50%; background: var(--pink); }
-.barber-open-inbox { width: 100%; margin-top: 13px; }
-
-@media (max-width: 1120px) {
-  .barber-dashboard-grid { grid-template-columns: 1fr; }
-  .barber-insights { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 840px) {
-  .barber-bottom-grid,
-  .barber-insights { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 650px) {
-  .barber-rating-summary > strong { font-size: 46px; }
+@media (prefers-reduced-motion: reduce) {
+  .barber-location-dot.is-asking { animation: none; }
 }

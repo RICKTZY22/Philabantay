@@ -1,15 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import {
   DataError,
+  MAX_EMAIL_LENGTH,
   MAX_FULL_NAME_LENGTH,
+  MAX_PHONE_LENGTH,
   MAX_PASSWORD_LENGTH,
   SHOP_NAME,
+  validateEmail,
   validateFullName,
   validatePassword,
+  validatePhone,
 } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { useCurtain } from './CurtainTransition'
-import { DEMO_ACCOUNTS } from '../services/mock/seed'
+import { DEMO_ACCOUNTS } from '../config/demoAccounts'
 import { safeInternalPath } from '../lib/security'
 import './AuthSlider.css'
 
@@ -41,7 +45,12 @@ export function AuthSlider({
   const [phone, setPhone] = useState('')
   const [suPassword, setSuPassword] = useState('')
   const [suError, setSuError] = useState('')
-  const [suFieldErrors, setSuFieldErrors] = useState<{ fullName?: string; password?: string }>({})
+  const [suFieldErrors, setSuFieldErrors] = useState<{
+    fullName?: string
+    email?: string
+    phone?: string
+    password?: string
+  }>({})
   const [suBusy, setSuBusy] = useState(false)
 
   async function submitSignIn(e: FormEvent) {
@@ -64,14 +73,14 @@ export function AuthSlider({
     setSuFieldErrors({})
 
     // Local rules muna para instant ang feedback bago tumawag sa backend.
-    const nameError = validateFullName(fullName)
-    if (nameError) {
-      setSuFieldErrors({ fullName: nameError })
-      return
+    const errors = {
+      fullName: validateFullName(fullName) ?? undefined,
+      email: validateEmail(suEmail) ?? undefined,
+      phone: validatePhone(phone) ?? undefined,
+      password: validatePassword(suPassword) ?? undefined,
     }
-    const passwordError = validatePassword(suPassword)
-    if (passwordError) {
-      setSuFieldErrors({ password: passwordError })
+    if (Object.values(errors).some(Boolean)) {
+      setSuFieldErrors(errors)
       return
     }
 
@@ -183,21 +192,35 @@ export function AuthSlider({
           <input
             type="email"
             value={suEmail}
-            onChange={(e) => setSuEmail(e.target.value)}
+            onChange={(e) => {
+              setSuEmail(e.target.value)
+              setSuFieldErrors((errors) => ({ ...errors, email: undefined }))
+            }}
             placeholder="you@email.com"
             autoComplete="email"
-            maxLength={254}
+            maxLength={MAX_EMAIL_LENGTH}
+            aria-invalid={Boolean(suFieldErrors.email)}
+            aria-describedby={suFieldErrors.email ? 'signup-email-error' : undefined}
             required
           />
+          {suFieldErrors.email && <span id="signup-email-error" className="field-error" role="alert">{suFieldErrors.email}</span>}
         </label>
         <label className="field">
           <span>Phone <span className="faint">(optional)</span></span>
           <input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value)
+              setSuFieldErrors((errors) => ({ ...errors, phone: undefined }))
+            }}
             placeholder="+63 917 000 0000"
-            maxLength={32}
+            maxLength={MAX_PHONE_LENGTH + 6}
+            inputMode="tel"
+            autoComplete="tel"
+            aria-invalid={Boolean(suFieldErrors.phone)}
+            aria-describedby={suFieldErrors.phone ? 'signup-phone-error' : undefined}
           />
+          {suFieldErrors.phone && <span id="signup-phone-error" className="field-error" role="alert">{suFieldErrors.phone}</span>}
         </label>
         <label className="field">
           <span>Password</span>
@@ -243,7 +266,7 @@ export function AuthSlider({
             <span className="brand-pole" aria-hidden="true" /> {SHOP_NAME}
           </div>
           <h2>Glad to see you!</h2>
-          <p>Walk in scruffy, walk out sharp — log in to book chairs and chat with your barber.</p>
+          <p>Walk in scruffy, walk out sharp — log in to book chairs and chat with the shop.</p>
           <p className="auth-overlay-sub">Wala ka pang account?</p>
           <button type="button" className="btn" onClick={() => setMode('signup')}>
             Sign up {'->'}

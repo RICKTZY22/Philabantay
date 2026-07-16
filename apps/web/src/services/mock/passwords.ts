@@ -4,6 +4,9 @@ const SALT_BYTES = 16
 const KEY_BYTES = 32
 const encoder = new TextEncoder()
 
+/** Fixed verifier used only to equalize unknown-account sign-in timing. */
+export const DUMMY_PASSWORD_HASH = 'pbkdf2-sha256$600000$WpdrefrxJ6PrLxNVuA0sbA==$kDZZKnfPAR98KSn3ubDkSULeVUDQ7uwC1M2/LTItc2o='
+
 export function isPasswordHash(value: string): boolean {
   return value.startsWith(`${FORMAT}$`)
 }

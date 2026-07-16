@@ -26,8 +26,8 @@ export function initials(name: string): string {
     .toUpperCase()
 }
 
-export function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
+export function relativeTime(iso: string, nowEpochMs = Date.now()): string {
+  const diff = nowEpochMs - new Date(iso).getTime()
   const min = Math.round(diff / 60000)
   if (min < 1) return 'just now'
   if (min < 60) return `${min}m ago`

@@ -3,12 +3,20 @@ import type {
   AvailabilityOverride,
   AvailabilityRule,
   Barber,
+  BarberAbsence,
+  BarberEmployment,
   Conversation,
   Message,
   Profile,
+  BugReport,
+  Review,
+  HiringListing,
+  BarberApplication,
   Service,
+  ShiftChangeRequest,
   Shop,
 } from '@barbershop/shared'
+import { localDateKey } from '../../lib/date'
 
 /** The full persisted shape of the mock database. */
 export interface MockDB {
@@ -28,6 +36,18 @@ export interface MockDB {
   shops: Shop[]
   /** user id -> favorite shop ids */
   favorites: Record<string, string[]>
+  /** user id -> favorite barber ids */
+  favoriteBarbers: Record<string, string[]>
+  reviews: Review[]
+  bugReports: BugReport[]
+  hiringListings: HiringListing[]
+  barberApplications: BarberApplication[]
+  /** Private shop-issued codes. Never return this collection to UI callers. */
+  shopJoinCodes: Record<string, string>
+  /** One record per shop stint; the active one has ended_at null. */
+  employments: BarberEmployment[]
+  absences: BarberAbsence[]
+  shiftChangeRequests: ShiftChangeRequest[]
 }
 
 const NOW = '2026-01-01T00:00:00.000Z'
@@ -39,6 +59,11 @@ function profile(
   full_name: string,
   phone: string | null = null,
 ): Profile {
+  const avatar_url = role === 'barber'
+    ? 'doodle:barber-1'
+    : role === 'shop_owner'
+      ? 'doodle:owner-1'
+      : 'doodle:customer-1'
   return {
     id,
     role,
@@ -46,16 +71,20 @@ function profile(
     verification_status: role === 'customer' ? 'not_required' : 'verified',
     onboarding_completed: true,
     full_name,
+    email: `${id.replace(/^u-/, '')}@demo.test`,
     phone,
-    avatar_url: null,
+    location: id === 'u-customer' ? 'Parañaque City' : null,
+    avatar_url,
     created_at: NOW,
   }
 }
 
-function barber(id: string, bio: string, on = false, accepting = true): Barber {
+function barber(id: string, bio: string, on = false, accepting = true, rating = 4.8, rating_count = 64): Barber {
   return {
     id,
     bio,
+    rating,
+    rating_count,
     shift_status: on ? 'on' : 'off',
     accepting_bookings: accepting,
     created_at: NOW,
@@ -90,8 +119,25 @@ function shop(
   rating: number,
   rating_count: number,
   barber_ids: string[],
+  owner_id: string | null = null,
 ): Shop {
-  return { id, name, address, city, lat, lng, rating, rating_count, barber_ids, created_at: NOW }
+  return { id, owner_id, name, address, city, lat, lng, rating, rating_count, barber_ids, created_at: NOW }
+}
+
+/**
+ * Demo dates relative to the real clock para laging makatotohanan ang
+ * attendance/calendar demo (hindi puwedeng fixed constant dahil tumatakbo
+ * ang oras). Iniiwasan ang Sunday dahil walang naka-schedule doon.
+ */
+function demoDate(offsetDays: number, skipSunday = true): string {
+  const date = new Date()
+  date.setDate(date.getDate() + offsetDays)
+  if (skipSunday && date.getDay() === 0) date.setDate(date.getDate() + (offsetDays < 0 ? -1 : 1))
+  return localDateKey(date)
+}
+
+function employment(id: string, barber_id: string, shop_id: string, hiredDaysAgo: number): BarberEmployment {
+  return { id, barber_id, shop_id, hired_at: demoDate(-hiredDaysAgo, false), ended_at: null }
 }
 
 export function buildSeed(): MockDB {
@@ -160,7 +206,7 @@ export function buildSeed(): MockDB {
   // Kapag Supabase phase na, ang totoong shops ay igegeocode mula sa address
   // nila sa registration — huwag manu-manong maglagay ng coords doon.
   const shops: Shop[] = [
-    shop('sh-tondo', 'Philabantay Tondo Original', '1442 Juan Luna St, Gagalangin, Tondo', 'Manila', 14.6169, 120.9692, 4.8, 214, ['u-miguel', 'u-ramon', 'u-jules']),
+    shop('sh-tondo', 'Philabantay Tondo Original', '1442 Juan Luna St, Gagalangin, Tondo', 'Manila', 14.6169, 120.9692, 4.8, 214, ['u-miguel', 'u-ramon', 'u-jules'], 'u-owner'),
     shop('sh-norte', 'Norte Fade Club', '88 Timog Ave, South Triangle', 'Quezon City', 14.636, 121.0348, 4.6, 158, ['u-paolo']),
     shop('sh-baguio', 'Session Road Cuts', '110 Session Rd', 'Baguio', 16.4119, 120.5964, 4.9, 302, ['u-kiko']),
     shop('sh-cebu', 'Sugbu Chair Co.', '21 Colon St', 'Cebu City', 10.2966, 123.9018, 4.7, 189, ['u-jayjay']),
@@ -174,36 +220,94 @@ export function buildSeed(): MockDB {
     shop('sh-poblacion', 'Poblacion Fade Room', 'P. Burgos St, Poblacion', 'Makati', 14.5658, 121.0313, 4.7, 142, ['u-marco']),
   ]
 
+  const hiringListings: HiringListing[] = [
+    {
+      shop_id: 'sh-maginhawa',
+      role_title: 'Junior barber',
+      employment_type: 'full_time',
+      requirements: ['Basic fade and scissor-cut skills', 'Available on weekends', 'Portfolio or three sample cuts'],
+      open_positions: 2,
+      accepting_applications: true,
+      updated_at: NOW,
+    },
+    {
+      shop_id: 'sh-bfhomes',
+      role_title: 'Southside barber',
+      employment_type: 'part_time',
+      requirements: ['At least one year chair experience', 'Comfortable with fades and beard trims', 'Lives near South Metro'],
+      open_positions: 1,
+      accepting_applications: true,
+      updated_at: NOW,
+    },
+    {
+      shop_id: 'sh-norte',
+      role_title: 'Chair-rental barber',
+      employment_type: 'chair_rental',
+      requirements: ['Own barber kit', 'Existing client base preferred', 'Valid government ID'],
+      open_positions: 1,
+      accepting_applications: true,
+      updated_at: NOW,
+    },
+  ]
+
+  // A past cut keeps the History + rating flow testable on the demo customer.
+  const appointments: Appointment[] = [{
+    id: 'a-demo-completed',
+    customer_id: 'u-customer',
+    barber_id: 'u-miguel',
+    service_id: 's-fade',
+    starts_at: '2026-01-10T06:00:00.000Z',
+    ends_at: '2026-01-10T06:45:00.000Z',
+    status: 'completed',
+    notes: 'Low fade, clean sides.',
+    created_at: '2026-01-08T02:00:00.000Z',
+    updated_at: '2026-01-10T07:00:00.000Z',
+  }]
+
+  // Employment stints for every seeded roster member. Miguel (demo barber)
+  // gets a realistic history: 8-month tenure, a few absences, at isang
+  // pending shift change request para kitang-kita ang request status UI.
+  const employments: BarberEmployment[] = [
+    employment('emp-miguel', 'u-miguel', 'sh-tondo', 240),
+    employment('emp-ramon', 'u-ramon', 'sh-tondo', 420),
+    employment('emp-jules', 'u-jules', 'sh-tondo', 150),
+    employment('emp-paolo', 'u-paolo', 'sh-norte', 380),
+    employment('emp-kiko', 'u-kiko', 'sh-baguio', 500),
+    employment('emp-jayjay', 'u-jayjay', 'sh-cebu', 300),
+    employment('emp-nino', 'u-nino', 'sh-iloilo', 260),
+    employment('emp-bogs', 'u-bogs', 'sh-davao', 200),
+    employment('emp-dante', 'u-dante', 'sh-bfhomes', 330),
+    employment('emp-lito', 'u-lito', 'sh-laspinas', 450),
+    employment('emp-marco', 'u-marco', 'sh-poblacion', 170),
+  ]
+
+  const absences: BarberAbsence[] = [
+    { id: 'abs-miguel-1', barber_id: 'u-miguel', shop_id: 'sh-tondo', date: demoDate(-2), reason: 'Sick day' },
+    { id: 'abs-miguel-2', barber_id: 'u-miguel', shop_id: 'sh-tondo', date: demoDate(-9), reason: 'Family errand' },
+    { id: 'abs-miguel-3', barber_id: 'u-miguel', shop_id: 'sh-tondo', date: demoDate(-46), reason: null },
+  ]
+
+  const shiftChangeRequests: ShiftChangeRequest[] = [{
+    id: 'scr-miguel-1',
+    barber_id: 'u-miguel',
+    shop_id: 'sh-tondo',
+    date: demoDate(3),
+    message: 'Request: half day lang po, may enrollment ng anak.',
+    status: 'pending',
+    created_at: NOW,
+    updated_at: NOW,
+  }]
+
   return {
-    version: 7,
+    version: 15,
     passwords: {
       'customer@demo.test': DEMO_PASSWORD_HASH,
       'miguel@demo.test': DEMO_PASSWORD_HASH,
-      'ramon@demo.test': DEMO_PASSWORD_HASH,
-      'jules@demo.test': DEMO_PASSWORD_HASH,
-      'paolo@demo.test': DEMO_PASSWORD_HASH,
-      'kiko@demo.test': DEMO_PASSWORD_HASH,
-      'jayjay@demo.test': DEMO_PASSWORD_HASH,
-      'nino@demo.test': DEMO_PASSWORD_HASH,
-      'bogs@demo.test': DEMO_PASSWORD_HASH,
-      'dante@demo.test': DEMO_PASSWORD_HASH,
-      'lito@demo.test': DEMO_PASSWORD_HASH,
-      'marco@demo.test': DEMO_PASSWORD_HASH,
       'owner@demo.test': DEMO_PASSWORD_HASH,
     },
     emailToId: {
       'customer@demo.test': 'u-customer',
       'miguel@demo.test': 'u-miguel',
-      'ramon@demo.test': 'u-ramon',
-      'jules@demo.test': 'u-jules',
-      'paolo@demo.test': 'u-paolo',
-      'kiko@demo.test': 'u-kiko',
-      'jayjay@demo.test': 'u-jayjay',
-      'nino@demo.test': 'u-nino',
-      'bogs@demo.test': 'u-bogs',
-      'dante@demo.test': 'u-dante',
-      'lito@demo.test': 'u-lito',
-      'marco@demo.test': 'u-marco',
       'owner@demo.test': 'u-owner',
     },
     profiles,
@@ -211,17 +315,24 @@ export function buildSeed(): MockDB {
     services,
     rules,
     overrides: [],
-    appointments: [],
+    appointments,
     conversations: [],
     messages: [],
     shops,
     // May isang paunang favorite ang demo customer para hindi empty ang section.
     favorites: { 'u-customer': ['sh-tondo'] },
+    favoriteBarbers: { 'u-customer': ['u-miguel'] },
+    reviews: [],
+    bugReports: [],
+    hiringListings,
+    barberApplications: [],
+    shopJoinCodes: {
+      TONDO26: 'sh-tondo',
+      SOUTH26: 'sh-bfhomes',
+      MAGIN26: 'sh-maginhawa',
+    },
+    employments,
+    absences,
+    shiftChangeRequests,
   }
 }
-
-export const DEMO_ACCOUNTS = [
-  { label: 'Customer', email: 'customer@demo.test', password: 'demo1234' },
-  { label: 'Barber (Miguel)', email: 'miguel@demo.test', password: 'demo1234' },
-  { label: 'Shop Owner (Elena)', email: 'owner@demo.test', password: 'demo1234' },
-]

@@ -1,0 +1,109 @@
+/* Shared framed "board" shell — decorative teal rail + top bar. Keeps the
+   customer, barber, and owner dashboards on one hand-drawn visual language. */
+
+.doodle-board-wrap { width: 100%; margin: 4px 0 48px; }
+
+.doodle-board {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  border-radius: 30px 19px 34px 22px / 22px 34px 19px 30px;
+  background: #edf5f2;
+  box-shadow: 10px 12px 0 rgba(43, 43, 43, 0.18);
+}
+
+/* ---- Decorative rail (no nav buttons — just branding) ---- */
+.doodle-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 10px;
+  border-right: 3px solid var(--ink);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .2) 0 10px, transparent 10px 20px),
+    #28bfc2;
+}
+
+.doodle-rail-mark {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 18px;
+}
+
+.doodle-rail-mark .brand-pole { width: 10px; height: 27px; }
+.doodle-rail-scissors { margin-top: auto; color: #164c50; transform: rotate(-12deg); }
+
+/* ---- Workspace + top bar ---- */
+.doodle-workspace { min-width: 0; padding: 20px; }
+
+.doodle-topbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 330px) 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.doodle-topbar-spacer { display: block; }
+
+/* Anchor ng optional results dropdown sa ilalim ng search box. */
+.doodle-search-slot { position: relative; min-width: 0; }
+
+.doodle-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 12px 16px 11px 14px / 15px 11px 16px 12px;
+  background: var(--paper-soft);
+  box-shadow: 2px 3px 0 var(--shadow);
+}
+
+.doodle-search input { width: 100%; border: 0; outline: 0; background: transparent; font: inherit; }
+.doodle-live { display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); }
+.doodle-live-dot { width: 10px; height: 10px; border: 2px solid var(--ink); border-radius: 50%; background: #55c77a; }
+.doodle-live-dot.is-yellow { background: var(--yellow); }
+.doodle-live-dot.is-red { background: var(--danger); }
+.doodle-chip { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+
+.doodle-chip > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--yellow);
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .doodle-board { grid-template-columns: 1fr; }
+  .doodle-rail {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-right: 0;
+    border-bottom: 3px solid var(--ink);
+  }
+  .doodle-rail-scissors { margin: 0; }
+  .doodle-workspace { padding: 16px; }
+  .doodle-topbar { grid-template-columns: 1fr auto; }
+  .doodle-live { display: none; }
+  .doodle-topbar-spacer { display: none; }
+}
+
+@media (max-width: 640px) {
+  .doodle-workspace { padding: 12px; }
+  .doodle-topbar { grid-template-columns: 1fr; }
+  .doodle-chip { grid-row: 1; justify-content: flex-end; }
+  .doodle-search { grid-row: 2; }
+}

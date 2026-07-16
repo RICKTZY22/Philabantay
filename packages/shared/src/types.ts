@@ -32,8 +32,25 @@ export interface Profile {
   verification_status: VerificationStatus
   onboarding_completed: boolean
   full_name: string
+  /** Private sign-in/contact email. Never include this in PublicProfile. */
+  email: string
   phone: string | null
+  /** User-entered city/municipality label, not precise GPS coordinates. */
+  location: string | null
   avatar_url: string | null
+  created_at: string
+}
+
+export type BugCategory = 'visual' | 'booking' | 'map' | 'chat' | 'account' | 'other'
+
+/** Private support report created by the signed-in user. */
+export interface BugReport {
+  id: string
+  user_id: string
+  category: BugCategory
+  summary: string
+  description: string
+  page_url: string | null
   created_at: string
 }
 
@@ -48,6 +65,9 @@ export interface PublicProfile {
 export interface Barber {
   id: string
   bio: string | null
+  /** Aggregate customer score, updated whenever a completed cut is rated. */
+  rating: number
+  rating_count: number
   shift_status: ShiftStatus
   accepting_bookings: boolean
   created_at: string
@@ -89,6 +109,9 @@ export interface AvailabilityOverride {
   reason: string | null
 }
 
+/** Public availability shape; private day-off notes never leave barber tools. */
+export type PublicAvailabilityOverride = Omit<AvailabilityOverride, 'reason'>
+
 export interface Appointment {
   id: string
   customer_id: string
@@ -108,6 +131,7 @@ export interface AppointmentDetailed extends Appointment {
   service: Service
   barber: BarberWithProfile
   customer: PublicProfile
+  shop: Shop
 }
 
 /** Live map-pin status. Derived, never stored: open = may bakanteng chair. */
@@ -116,6 +140,8 @@ export type ShopStatus = 'open' | 'busy' | 'closed'
 /** A physical barbershop location. Mirrors the Phase 2 `shops` table. */
 export interface Shop {
   id: string
+  /** Verified owner account responsible for roster and join-code controls. */
+  owner_id: string | null
   name: string
   /** Street-level address line shown on cards. */
   address: string
@@ -138,9 +164,88 @@ export interface ShopWithStatus extends Shop {
   available_barber_count: number
 }
 
+export type EmploymentType = 'full_time' | 'part_time' | 'chair_rental'
+export type BarberApplicationStatus = 'pending' | 'accepted' | 'declined'
+
+/** Public hiring notice attached to a shop. Join codes are intentionally absent. */
+export interface HiringListing {
+  shop_id: string
+  role_title: string
+  employment_type: EmploymentType
+  requirements: string[]
+  open_positions: number
+  accepting_applications: boolean
+  updated_at: string
+}
+
+export interface HiringShop extends ShopWithStatus {
+  hiring: HiringListing
+}
+
+/** A barber's application; approval is controlled by the shop in production. */
+export interface BarberApplication {
+  id: string
+  barber_id: string
+  shop_id: string
+  status: BarberApplicationStatus
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * One stint at one shop. Attendance, absences, and shift change requests are
+ * scoped to the ACTIVE employment record — leaving a shop closes the record
+ * (ended_at) and the next shop starts a fresh history.
+ */
+export interface BarberEmployment {
+  id: string
+  barber_id: string
+  shop_id: string
+  /** ISO date (YYYY-MM-DD) the barber joined the shop roster. */
+  hired_at: string
+  /** ISO date the stint ended (resigned / moved shop); null habang active. */
+  ended_at: string | null
+}
+
+/** A day the barber missed a scheduled shift at their shop. */
+export interface BarberAbsence {
+  id: string
+  barber_id: string
+  shop_id: string
+  /** ISO date (YYYY-MM-DD) */
+  date: string
+  reason: string | null
+}
+
+export type ShiftChangeRequestStatus = 'pending' | 'approved' | 'declined'
+
+/**
+ * Barber-initiated request to adjust one day's shift. The owner decides;
+ * barbers never edit an assigned day directly.
+ */
+export interface ShiftChangeRequest {
+  id: string
+  barber_id: string
+  shop_id: string
+  /** ISO date (YYYY-MM-DD) of the shift the barber wants changed. */
+  date: string
+  message: string
+  status: ShiftChangeRequestStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface ShopJoinCodeDetails {
+  shop: ShopWithStatus
+  code: string
+}
+
 export interface Conversation {
   id: string
   customer_id: string
+  /** Public chat target. Customers start conversations with a shop, not a barber. */
+  shop_id: string
+  /** Internal shop representative who receives/replies to the thread. */
   barber_id: string
   created_at: string
   last_message_at: string
@@ -148,6 +253,7 @@ export interface Conversation {
 
 export interface ConversationDetailed extends Conversation {
   customer: PublicProfile
+  shop: Shop
   barber: BarberWithProfile
   last_message: Message | null
   unread_count: number
@@ -168,4 +274,18 @@ export interface Slot {
   starts_at: string
   /** ISO timestamp */
   ends_at: string
+}
+
+/** One customer's rating for one completed appointment. */
+export interface Review {
+  id: string
+  appointment_id: string
+  customer_id: string
+  barber_id: string
+  shop_id: string
+  barber_rating: number
+  shop_rating: number
+  comment: string | null
+  created_at: string
+  updated_at: string
 }

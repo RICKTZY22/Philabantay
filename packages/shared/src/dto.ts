@@ -1,7 +1,7 @@
 // Request/response shapes for the data-access layer. Both the mock (Phase 1)
 // and the Supabase/Express implementation (Phase 2) speak these.
 
-import type { OnboardingRole, Weekday } from './types'
+import type { BugCategory, OnboardingRole, Weekday } from './types'
 
 export interface SignUpInput {
   email: string
@@ -18,6 +18,27 @@ export interface SignInInput {
 /** One-time role choice after signup. Professional choices are requests only. */
 export interface CompleteRoleOnboardingInput {
   role: OnboardingRole
+}
+
+/** Safe, user-editable profile fields. Role and verification are excluded. */
+export interface UpdateProfileInput {
+  full_name?: string
+  email?: string
+  phone?: string | null
+  location?: string | null
+  avatar_url?: string
+}
+
+export interface ChangePasswordInput {
+  current_password: string
+  new_password: string
+}
+
+export interface CreateBugReportInput {
+  category: BugCategory
+  summary: string
+  description: string
+  page_url?: string
 }
 
 export interface AvailabilityRuleInput {
@@ -42,9 +63,27 @@ export interface CreateAppointmentInput {
   notes?: string
 }
 
+export interface RateAppointmentInput {
+  appointment_id: string
+  barber_rating: number
+  shop_rating: number
+  comment?: string
+}
+
 export interface SendMessageInput {
   conversation_id: string
   body: string
+}
+
+export interface JoinShopInput {
+  code: string
+}
+
+/** Barber request to change one day's shift; the owner approves/denies. */
+export interface ShiftChangeRequestInput {
+  /** ISO date (YYYY-MM-DD) ng shift na gustong baguhin. */
+  date: string
+  message: string
 }
 
 /** Error thrown by any data-layer implementation for expected failures. */

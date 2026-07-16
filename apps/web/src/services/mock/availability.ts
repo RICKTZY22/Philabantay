@@ -6,6 +6,7 @@ import {
   type Service,
   type Slot,
 } from '@barbershop/shared'
+import { localDateKey, parseLocalDateKey } from '../../lib/date'
 
 /**
  * Pure availability math for the mock. Times are treated as the device's local
@@ -19,7 +20,7 @@ interface Block {
 
 function atTime(date: string, hhmm: string): Date {
   const [h, m] = hhmm.split(':').map(Number)
-  const d = new Date(`${date}T00:00:00`)
+  const d = parseLocalDateKey(date) ?? new Date(Number.NaN)
   d.setHours(h, m, 0, 0)
   return d
 }
@@ -39,11 +40,21 @@ export function effectiveBlocks(
     // available override without explicit hours → fall through to weekly rules
   }
 
-  const weekday = new Date(`${date}T00:00:00`).getDay()
-  return rules
+  const weekday = parseLocalDateKey(date)?.getDay()
+  const blocks = rules
     .filter((r) => r.weekday === weekday)
     .map((r) => ({ start: atTime(date, r.start_time), end: atTime(date, r.end_time) }))
     .sort((a, b) => a.start.getTime() - b.start.getTime())
+
+  return blocks.reduce<Block[]>((merged, block) => {
+    const previous = merged.at(-1)
+    if (!previous || block.start > previous.end) {
+      merged.push(block)
+      return merged
+    }
+    if (block.end > previous.end) previous.end = block.end
+    return merged
+  }, [])
 }
 
 const ACTIVE: Appointment['status'][] = ['pending', 'confirmed']
@@ -66,6 +77,7 @@ export function computeOpenSlots(
     .map((a) => [new Date(a.starts_at).getTime(), new Date(a.ends_at).getTime()] as const)
 
   const slots: Slot[] = []
+  const emittedStarts = new Set<number>()
   for (const block of blocks) {
     const blockStart = block.start.getTime()
     const blockEnd = block.end.getTime()
@@ -73,7 +85,8 @@ export function computeOpenSlots(
       const end = t + durationMs
       if (t < now) continue
       const overlaps = booked.some(([bs, be]) => t < be && end > bs)
-      if (overlaps) continue
+      if (overlaps || emittedStarts.has(t)) continue
+      emittedStarts.add(t)
       slots.push({ starts_at: new Date(t).toISOString(), ends_at: new Date(end).toISOString() })
     }
   }
@@ -86,15 +99,8 @@ export function isWithinHours(
   rules: AvailabilityRule[],
   overrides: AvailabilityOverride[],
 ): boolean {
-  const date = toISODate(when)
+  const date = localDateKey(when)
   return effectiveBlocks(date, rules, overrides).some(
-    (b) => when >= b.start && when <= b.end,
+    (b) => when >= b.start && when < b.end,
   )
-}
-
-export function toISODate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }

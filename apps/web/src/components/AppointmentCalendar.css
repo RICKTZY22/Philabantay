@@ -1,0 +1,192 @@
+.cut-calendar {
+  position: relative;
+  padding: 18px 16px 16px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--yellow) 30%, var(--paper-soft));
+  border: 3px solid var(--ink);
+  border-radius: 16px 12px 18px 14px / 13px 18px 12px 17px;
+  box-shadow: 5px 6px 0 var(--shadow);
+  transform: rotate(-.25deg);
+}
+
+.cut-calendar::after {
+  content: '';
+  position: absolute;
+  width: 68px;
+  height: 18px;
+  top: -5px;
+  left: 50%;
+  background: rgba(246, 202, 92, .5);
+  border: 1px solid rgba(47, 45, 42, .18);
+  transform: translateX(-50%) rotate(2deg);
+  pointer-events: none;
+}
+
+.cut-calendar-head,
+.cut-calendar-head h2,
+.cut-calendar-nav { display: flex; align-items: center; }
+.cut-calendar-head { justify-content: space-between; gap: 10px; }
+.cut-calendar-head h2 { gap: 7px; margin: 2px 0 0; font-size: 1.25rem; }
+.cut-calendar-kicker { color: #16878d; font: 11px/1 'Gochi Hand', cursive; letter-spacing: 1px; }
+.cut-calendar-all { color: var(--muted); font-size: .88rem; }
+
+.cut-calendar-nav { justify-content: space-between; gap: 8px; margin-top: 14px; }
+.cut-calendar-nav strong { font: 700 1.05rem/1 'Kalam', cursive; }
+.cut-calendar-nav button,
+.cut-calendar-today {
+  color: var(--ink);
+  background: var(--paper-soft);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+}
+.cut-calendar-nav button { width: 30px; height: 28px; padding: 0; border-radius: 9px 12px 8px 11px; font-size: 18px; line-height: 1; }
+.cut-calendar-nav button:hover,
+.cut-calendar-today:hover { background: var(--blue); }
+.cut-calendar-today { display: block; margin: 10px auto 12px; padding: 4px 10px; border-radius: 10px 8px 11px 9px; font-size: 12px; }
+
+.cut-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cut-calendar-weekday { padding-bottom: 3px; color: var(--faint); text-align: center; font-size: 11px; }
+.cut-calendar-blank { min-height: 34px; }
+.cut-calendar-day {
+  position: relative;
+  min-width: 0;
+  min-height: 34px;
+  padding: 4px 2px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .5);
+  border: 1.5px solid transparent;
+  border-radius: 8px 10px 7px 9px;
+  font: 15px/1 'Patrick Hand', cursive;
+  cursor: pointer;
+}
+.cut-calendar-day:hover { border-color: var(--ink); background: var(--paper-soft); }
+.cut-calendar-day.is-today { color: var(--ink); border: 2px dashed var(--ink); font-weight: 700; }
+.cut-calendar-day.is-selected { color: var(--ink); background: var(--blue); border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); }
+.cut-calendar-day.has-cuts:not(.is-selected) { background: color-mix(in srgb, var(--pink) 55%, var(--paper-soft)); }
+.cut-calendar-day i {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  color: var(--ink);
+  background: var(--pink);
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  font: normal 9px/1 'Kalam', cursive;
+}
+
+.cut-calendar-agenda { margin-top: 13px; padding-top: 11px; border-top: 2px dashed var(--line); }
+.cut-calendar-agenda h3 { margin: 0 0 7px; font-size: .98rem; }
+.cut-calendar-agenda > p { margin: 0; color: var(--faint); font-size: .87rem; }
+.cut-calendar-booking {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 8px;
+  color: var(--ink);
+  background: var(--paper-soft);
+  border: 2px solid var(--ink);
+  border-radius: 10px 13px 9px 12px;
+  text-decoration: none;
+}
+.cut-calendar-booking:hover { background: var(--blue); }
+.cut-calendar-booking > span:nth-child(2) { display: grid; min-width: 0; }
+.cut-calendar-booking strong,
+.cut-calendar-booking small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cut-calendar-booking small { color: var(--muted); }
+.cut-calendar-booking em { color: var(--faint); font-size: 11px; font-style: normal; }
+.cut-calendar-time { padding: 3px 5px; background: var(--yellow); border: 1px solid var(--ink); border-radius: 7px 9px 6px 8px; font-size: 11px; white-space: nowrap; }
+.cut-calendar-time.is-completed { background: var(--green); }
+.cut-calendar-time.is-no_show { background: var(--pink); }
+
+@media (max-width: 960px) {
+  .cut-calendar { transform: none; }
+}
+
+.cut-calendar.is-large {
+  width: 100%;
+  padding: 14px 16px 16px;
+  transform: none;
+}
+.cut-calendar.is-large .cut-calendar-kicker { font-size: 14px; }
+.cut-calendar.is-large .cut-calendar-head h2 { font-size: 1.65rem; }
+.cut-calendar.is-large .cut-calendar-nav { max-width: 360px; margin: 8px auto 0; }
+.cut-calendar.is-large .cut-calendar-nav strong { font-size: 1.45rem; }
+.cut-calendar.is-large .cut-calendar-nav button { width: 36px; height: 34px; font-size: 22px; }
+.cut-calendar.is-large .cut-calendar-today { margin: 6px auto 8px; padding: 3px 11px; font-size: 14px; }
+.cut-calendar.is-large .cut-calendar-grid { gap: 4px; }
+.cut-calendar.is-large .cut-calendar-weekday { padding-bottom: 2px; font-size: 15px; font-weight: 700; }
+.cut-calendar.is-large .cut-calendar-day {
+  display: block;
+  height: 50px;
+  min-height: 0;
+  padding: 3px;
+  overflow: hidden;
+  text-align: left;
+}
+.cut-calendar.is-large .cut-calendar-day.is-today {
+  color: var(--ink);
+  background: var(--blue);
+  border: 3px solid var(--ink);
+  box-shadow: inset 0 0 0 2px var(--paper-soft), 3px 3px 0 var(--ink);
+}
+.cut-calendar.is-large .cut-calendar-day.is-today .cut-calendar-date-button::after {
+  content: 'TODAY';
+  padding: 1px 5px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 1px solid var(--ink);
+  border-radius: 6px 8px 5px 7px;
+  font: 700 9px/1.2 'Kalam', cursive;
+}
+.cut-calendar.is-large .cut-calendar-today {
+  position: absolute;
+  top: 17px;
+  right: 18px;
+  margin: 0;
+}
+.cut-calendar-date-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px 2px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: 700 1.1rem 'Kalam', cursive;
+}
+.cut-calendar-date-button i { position: static; flex: 0 0 auto; }
+.cut-calendar-day-events { display: grid; gap: 2px; }
+.cut-calendar-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px;
+  width: 100%;
+  padding: 1px 4px;
+  overflow: hidden;
+  color: var(--ink);
+  text-align: left;
+  background: var(--blue);
+  border: 1.5px solid var(--ink);
+  border-radius: 7px 10px 6px 9px;
+  box-shadow: 1px 2px 0 rgba(47, 45, 42, .25);
+}
+.cut-calendar-event:hover { filter: brightness(.97); transform: translateY(-1px); }
+.cut-calendar-event strong { font-size: 10px; white-space: nowrap; }
+.cut-calendar-event span { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.cut-calendar-event.is-completed { background: var(--green); }
+.cut-calendar-event.is-cancelled,
+.cut-calendar-event.is-no_show { color: var(--muted); background: color-mix(in srgb, var(--pink) 48%, var(--paper-soft)); text-decoration: line-through; }
+.cut-calendar-event.is-pending { background: var(--yellow); }
+.cut-calendar-more { padding-left: 3px; color: var(--faint); font-size: 11px; }
+
+@media (max-width: 760px) {
+  .cut-calendar.is-large { min-width: 720px; padding: 14px; }
+}

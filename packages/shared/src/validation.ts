@@ -7,10 +7,14 @@ const NAME_PATTERN = /^[\p{L} '.-]+$/u
 
 /** Special character = kahit anong hindi letra, hindi numero, at hindi space. */
 const SPECIAL_CHAR = /[^\p{L}\p{N}\s]/u
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_PATTERN = /^\+?[0-9]{7,15}$/
 
 export const MIN_PASSWORD_LENGTH = 6
 export const MAX_PASSWORD_LENGTH = 128
 export const MAX_FULL_NAME_LENGTH = 80
+export const MAX_EMAIL_LENGTH = 254
+export const MAX_PHONE_LENGTH = 16
 
 /**
  * Suriin ang pangalan sa sign-up. Nagbabalik ng error message kapag mali, o
@@ -38,6 +42,32 @@ export function validatePassword(password: string): string | null {
   }
   if (!SPECIAL_CHAR.test(password)) {
     return 'Magdagdag ng special character sa password (hal. ! @ # $ %).'
+  }
+  return null
+}
+
+/** Normalize phone numbers before comparing or storing them. */
+export function normalizePhone(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  const hasLeadingPlus = trimmed.startsWith('+')
+  const digits = trimmed.replace(/\D/g, '')
+  return `${hasLeadingPlus ? '+' : ''}${digits}`
+}
+
+export function validateEmail(raw: string): string | null {
+  const email = raw.trim().toLowerCase()
+  if (!email) return 'Pakilagay ang email address.'
+  if (email.length > MAX_EMAIL_LENGTH) return `Hanggang ${MAX_EMAIL_LENGTH} character lang ang email.`
+  if (!EMAIL_PATTERN.test(email)) return 'Maglagay ng valid email address.'
+  return null
+}
+
+export function validatePhone(raw: string): string | null {
+  const phone = normalizePhone(raw)
+  if (!phone) return null
+  if (phone.length > MAX_PHONE_LENGTH || !PHONE_PATTERN.test(phone)) {
+    return 'Maglagay ng valid phone number na may 7 hanggang 15 digits.'
   }
   return null
 }

@@ -22,3 +22,9 @@ npm run dev        # starts the Vite dev server (apps/web)
 ```
 
 Copy `.env.example` to `.env` if you want to override defaults. In Phase 1 the app defaults to the mock backend, so no env is required.
+
+## Project guides
+
+- [Code patterns](docs/CODE-PATTERNS.md)
+- [Security contract](docs/SECURITY.md)
+- [Role and location guardrails](docs/ROLE-AND-LOCATION-GUARDRAILS.md)

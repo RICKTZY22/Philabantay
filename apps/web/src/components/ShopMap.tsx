@@ -38,6 +38,40 @@ function pinIcon(shop: ShopWithStatus, selected: boolean): L.DivIcon {
   })
 }
 
+/** Hover preview card — DOM via textContent lang, never HTML strings. */
+function shopPreviewCard(shop: ShopWithStatus): HTMLElement {
+  const card = document.createElement('span')
+  card.className = 'shop-preview'
+
+  const name = document.createElement('strong')
+  name.className = 'shop-preview-name'
+  name.textContent = shop.name
+
+  const ratingRow = document.createElement('span')
+  ratingRow.className = 'shop-preview-rating'
+  const stars = document.createElement('span')
+  stars.className = 'shop-preview-stars'
+  const lit = Math.max(0, Math.min(5, Math.round(shop.rating)))
+  stars.textContent = '★'.repeat(lit) + '☆'.repeat(5 - lit)
+  const score = document.createElement('span')
+  score.textContent = `${shop.rating.toFixed(1)} (${shop.rating_count})`
+  ratingRow.append(stars, score)
+
+  const meta = document.createElement('span')
+  meta.className = `shop-preview-meta is-${shop.status}`
+  const statusLabel = shop.status === 'open'
+    ? `Open — ${shop.available_barber_count} free`
+    : shop.status === 'busy' ? 'Busy' : 'Closed'
+  meta.textContent = `${shop.city} · ${statusLabel}`
+
+  const hint = document.createElement('span')
+  hint.className = 'shop-preview-hint'
+  hint.textContent = 'I-click para sa full details'
+
+  card.append(name, ratingRow, meta, hint)
+  return card
+}
+
 export type UserLocation = GeoPoint
 
 interface ShopMapProps {
@@ -50,14 +84,22 @@ interface ShopMapProps {
   resetKey: number
   /** Kapag alam ang puwesto ng user, doon agad nakatutok ang map. */
   userLocation?: UserLocation | null
+  /**
+   * Rich hover preview (rating, status). Customer discovery lang ang
+   * nagpapasa nito; ang hiring map ng barber ay simpleng name tooltip.
+   */
+  hoverPreview?: boolean
 }
 
-export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, userLocation }: ShopMapProps) {
+export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, userLocation, hoverPreview = false }: ShopMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersRef = useRef(new Map<string, L.Marker>())
   const userMarkerRef = useRef<L.Marker | null>(null)
+  const shopsRef = useRef(shops)
+  const selectedMarkerIdRef = useRef<string | null>(selectedId)
   const onSelectRef = useRef(onSelect)
+  shopsRef.current = shops
   onSelectRef.current = onSelect
   const shopSignature = shops
     .map((shop) => `${shop.id}:${shop.lat}:${shop.lng}:${shop.status}:${shop.available_barber_count}:${shop.name}`)
@@ -76,7 +118,11 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
       center: PH_CENTER,
       zoom: 5,
       zoomSnap: 0.5,
-      scrollWheelZoom: false, // page scroll muna; click/tap para mag-zoom
+      // Full direct interaction: wheel/trackpad zoom, pinch zoom, at drag pan,
+      // bukod pa sa +/- buttons.
+      scrollWheelZoom: true,
+      touchZoom: true,
+      dragging: true,
       attributionControl: true,
     })
     map.attributionControl.setPrefix(false)
@@ -99,7 +145,8 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
     }
   }, [])
 
-  // Rebuild markers when shop data or selection changes (mura lang ito sa <50 pins).
+  // Rebuild only when shop data changes. Selection updates the affected icons
+  // in the smaller effect below, so a pin click never tears down every marker.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -107,25 +154,47 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
     markersRef.current.forEach((m) => m.remove())
     markersRef.current.clear()
 
-    shops.forEach((shop) => {
+    shopsRef.current.forEach((shop) => {
       const marker = L.marker([shop.lat, shop.lng], {
-        icon: pinIcon(shop, shop.id === selectedId),
+        icon: pinIcon(shop, shop.id === selectedMarkerIdRef.current),
         keyboard: true,
         alt: `${shop.name} — ${shop.status}`,
       })
-      // Leaflet treats string tooltip content as HTML. textContent keeps future
-      // backend-provided shop names from becoming an injection surface.
-      const tooltip = document.createElement('span')
-      tooltip.textContent = shop.name
-      marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -40], className: 'shop-tooltip' })
+      // Hover = mabilis na notebook preview (customer map); click pa rin ang
+      // full details. Leaflet treats string tooltip content as HTML —
+      // textContent keeps future backend-provided shop names from becoming an
+      // injection surface.
+      if (hoverPreview) {
+        marker.bindTooltip(shopPreviewCard(shop), {
+          direction: 'top',
+          offset: [0, -44],
+          opacity: 1,
+          className: 'shop-tooltip is-preview',
+        })
+      } else {
+        const tooltip = document.createElement('span')
+        tooltip.textContent = shop.name
+        marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -40], className: 'shop-tooltip' })
+      }
       marker.on('click', () => onSelectRef.current(shop.id))
       marker.addTo(map)
       const markerElement = marker.getElement()
       markerElement?.setAttribute('aria-label', `${shop.name} — ${shop.status}`)
-      markerElement?.setAttribute('title', shop.name)
       markersRef.current.set(shop.id, marker)
     })
 
+  }, [hoverPreview, shopSignature])
+
+  useEffect(() => {
+    const previousId = selectedMarkerIdRef.current
+    const ids = new Set([previousId, selectedId])
+    ids.forEach((id) => {
+      if (!id) return
+      const shop = shopsRef.current.find((candidate) => candidate.id === id)
+      const marker = markersRef.current.get(id)
+      if (shop && marker) marker.setIcon(pinIcon(shop, id === selectedId))
+    })
+    selectedMarkerIdRef.current = selectedId
   }, [selectedId, shopSignature])
 
   // "Ikaw dito" marker. Viewport behavior lives in one effect below so the

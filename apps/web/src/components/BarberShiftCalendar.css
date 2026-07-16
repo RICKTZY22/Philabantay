@@ -1,0 +1,117 @@
+/* Barber shift calendar — month grid na may doodle notebook feel. */
+
+.bsc { display: grid; gap: 12px; }
+
+.bsc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bsc-head strong { font: 700 1.15rem 'Kalam', cursive; }
+
+.bsc-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.bsc-weekday { color: var(--faint); font-size: .72rem; text-align: center; }
+
+.bsc-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  color: var(--ink);
+  background: rgba(255, 253, 247, .8);
+  border: 1.5px solid var(--line);
+  border-radius: 8px 11px 7px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.bsc-cell.is-blank { background: transparent; border-color: transparent; cursor: default; }
+.bsc-cell.is-scheduled { background: color-mix(in srgb, var(--green) 40%, var(--paper-soft)); border-color: var(--ink); }
+.bsc-cell.is-absent { background: color-mix(in srgb, var(--pink) 55%, var(--paper-soft)); border-color: var(--ink); }
+.bsc-cell.is-prehire { opacity: .45; }
+.bsc-cell.is-today { box-shadow: inset 0 0 0 2px var(--ink); }
+.bsc-cell.is-selected { background: var(--yellow); border-color: var(--ink); box-shadow: 2px 3px 0 var(--ink); }
+.bsc-cell:hover:not(.is-blank) { border-color: var(--ink); }
+
+.bsc-daynum { font-size: .82rem; }
+
+.bsc-happy {
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  width: 17px;
+  height: 17px;
+}
+.bsc-happy circle:first-of-type { fill: var(--yellow); stroke: var(--ink); stroke-width: 2; }
+.bsc-happy-eye { fill: var(--ink); stroke: none; }
+.bsc-happy-smile { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+
+.bsc-absent-label {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  padding: 0 3px;
+  background: var(--pink);
+  border: 1px solid var(--ink);
+  border-radius: 5px;
+  font-size: 8px;
+  line-height: 1.3;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.bsc-request-dot {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+}
+.bsc-request-dot.is-pending { background: var(--yellow); }
+.bsc-request-dot.is-approved { background: var(--green); }
+.bsc-request-dot.is-declined { background: var(--danger); }
+
+/* ---- Selected day card ---- */
+.bsc-day-card {
+  display: grid;
+  gap: 7px;
+  padding: 13px 14px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(91, 151, 175, .12) 26px 27px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  border: 2px solid var(--ink);
+  border-radius: 11px 15px 10px 14px;
+}
+.bsc-day-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bsc-day-card > header strong { font: 700 1.02rem 'Kalam', cursive; }
+
+.bsc-milestone { display: flex; align-items: center; gap: 7px; margin: 0; }
+.bsc-milestone .bsc-happy { position: static; width: 21px; height: 21px; flex: none; }
+
+.bsc-shift-time { display: flex; align-items: center; gap: 7px; margin: 0; font-weight: 700; }
+.bsc-day-card .muted { margin: 0; font-size: .9rem; }
+
+.bsc-request-status { display: grid; gap: 4px; padding-top: 6px; border-top: 1.5px dashed var(--line); }
+.bsc-request-status .pill { width: fit-content; }
+
+.bsc-request-form { display: grid; gap: 5px; padding-top: 7px; border-top: 1.5px dashed var(--line); }
+.bsc-request-form label { font-size: .85rem; }
+.bsc-request-form > div { display: flex; gap: 7px; }
+.bsc-request-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  background: rgba(255, 253, 247, .92);
+  border: 1.8px solid var(--ink);
+  border-radius: 8px 11px 7px 10px;
+}
+.bsc-form-ok { margin: 0; color: #367044; }

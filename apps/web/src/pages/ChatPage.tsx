@@ -1,8 +1,19 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { ConversationDetailed, Message } from '@barbershop/shared'
+import { DataError, type ConversationDetailed, type Message } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useAuth } from '../features/auth/AuthContext'
+import { useCurrentTime } from '../hooks/useCurrentTime'
 import { Avatar } from '../components/Avatar'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { Loading } from '../components/Loading'
@@ -15,50 +26,120 @@ export function ChatPage() {
   const { profile } = useAuth()
   const { conversationId } = useParams<{ conversationId: string }>()
   const navigate = useNavigate()
+  const nowEpochMs = useCurrentTime()
+  // Notebook styling per role: customer = warm cream/yellow, barber = cool
+  // green "shop desk" scheme para agad makita kung aling side ka. Owners keep
+  // the plain look.
+  const isPlainCustomer = profile?.role === 'customer'
+    && profile.requested_role !== 'barber'
+    && profile.requested_role !== 'shop_owner'
+  const notebookRole = isPlainCustomer ? 'customer' : profile?.role === 'barber' ? 'barber' : undefined
 
   const [conversations, setConversations] = useState<ConversationDetailed[] | null>(null)
+  const [query, setQuery] = useState('')
+  const [loadError, setLoadError] = useState('')
 
   const loadConversations = useCallback(() => {
-    backend.chat.listConversations().then(setConversations)
+    setLoadError('')
+    backend.chat.listConversations().then(
+      setConversations,
+      () => setLoadError('Hindi ma-load ang conversations. Subukan i-refresh ang page.'),
+    )
   }, [backend])
 
   useEffect(() => {
     loadConversations()
   }, [loadConversations])
 
-  const canOpenThread = Boolean(
-    conversationId && conversations?.some((conversation) => conversation.id === conversationId),
-  )
+  const selectedConversation = conversationId
+    ? conversations?.find((conversation) => conversation.id === conversationId)
+    : undefined
+  const filteredConversations = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    if (!conversations || !needle) return conversations
+    return conversations.filter((conversation) => {
+      const displayName = profile?.id === conversation.customer_id
+        ? conversation.shop.name
+        : conversation.customer.full_name
+      return displayName.toLowerCase().includes(needle)
+        || conversation.last_message?.body.toLowerCase().includes(needle)
+    })
+  }, [conversations, profile?.id, query])
+
+  const handleThreadRead = useCallback((id: string) => {
+    setConversations((current) => current?.map((conversation) => (
+      conversation.id === id ? { ...conversation, unread_count: 0 } : conversation
+    )) ?? null)
+  }, [])
+
+  const handleThreadMessage = useCallback((message: Message) => {
+    setConversations((current) => {
+      if (!current) return current
+      return current
+        .map((conversation) => conversation.id === message.conversation_id
+          ? {
+              ...conversation,
+              last_message: message,
+              last_message_at: message.created_at,
+              unread_count: 0,
+            }
+          : conversation)
+        .sort((left, right) => right.last_message_at.localeCompare(left.last_message_at))
+    })
+  }, [])
+
+  const closeThread = useCallback(() => navigate('/chat'), [navigate])
 
   return (
-    <div className="chat-layout">
+    <div className="chat-layout" data-notebook={notebookRole}>
       <aside className={`chat-inbox ${conversationId ? 'has-open' : ''}`}>
-        <h2><DoodleIcon name="chat" size={24} /> Messages</h2>
-        {conversations === null ? (
+        <div className="chat-inbox-head">
+          <span className="chat-kicker">SHOP DESK</span>
+          <h1><DoodleIcon name="chat" size={25} /> Messages</h1>
+          <p>Diretso sa barbershop team ang usapan mo.</p>
+        </div>
+        <label className="chat-search">
+          <DoodleIcon name="search" size={17} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search shops or messages"
+            aria-label="Search conversations"
+          />
+        </label>
+        {loadError ? (
+          <p className="form-error" role="alert">{loadError}</p>
+        ) : conversations === null ? (
           <Loading label="Loading chats…" />
         ) : conversations.length === 0 ? (
           <p className="muted">
-            No conversations yet. Open a barber and hit <strong>Message</strong> to start one.
+            Wala pang conversation. Pumili ng shop sa map at pindutin ang <strong>Chat shop</strong>.
           </p>
+        ) : filteredConversations?.length === 0 ? (
+          <p className="muted">Walang chat na tugma sa search mo.</p>
         ) : (
           <div className="convo-list">
-            {conversations.map((c) => {
-              const other = profile?.id === c.customer_id ? c.barber.profile : c.customer
+            {filteredConversations?.map((conversation) => {
+              const customerView = profile?.id === conversation.customer_id
+              const displayName = customerView ? conversation.shop.name : conversation.customer.full_name
               return (
                 <Link
-                  key={c.id}
-                  to={`/chat/${routeSegment(c.id)}`}
-                  className={`convo-item ${c.id === conversationId ? 'active' : ''}`}
+                  key={conversation.id}
+                  to={`/chat/${routeSegment(conversation.id)}`}
+                  className={`convo-item ${conversation.id === conversationId ? 'active' : ''}`}
                 >
-                  <Avatar name={other.full_name} size={44} />
+                  <Avatar name={displayName} size={44} />
                   <div className="convo-meta">
                     <div className="spread">
-                      <strong>{other.full_name}</strong>
-                      {c.unread_count > 0 && <span className="pill pill-pink unread">{c.unread_count}</span>}
+                      <strong>{displayName}</strong>
+                      <time>{relativeTime(conversation.last_message_at, nowEpochMs)}</time>
                     </div>
-                    <span className="muted convo-preview">
-                      {c.last_message ? c.last_message.body : 'Say hello 👋'}
-                    </span>
+                    <div className="spread convo-preview-row">
+                      <span className="muted convo-preview">
+                        {conversation.last_message ? conversation.last_message.body : 'Start the conversation 👋'}
+                      </span>
+                      {conversation.unread_count > 0 && <span className="pill pill-pink unread">{conversation.unread_count}</span>}
+                    </div>
                   </div>
                 </Link>
               )
@@ -70,23 +151,25 @@ export function ChatPage() {
       <section className={`chat-thread ${conversationId ? 'has-open' : ''}`}>
         {conversationId && conversations === null ? (
           <Loading label="Checking conversation…" />
-        ) : canOpenThread && conversationId ? (
+        ) : selectedConversation ? (
           <Thread
-            key={conversationId}
-            conversationId={conversationId}
-            onActivity={loadConversations}
-            onBack={() => navigate('/chat')}
+            key={selectedConversation.id}
+            conversation={selectedConversation}
+            onMessage={handleThreadMessage}
+            onRead={handleThreadRead}
+            onBack={closeThread}
           />
         ) : conversationId ? (
           <div className="chat-empty">
             <DoodleIcon name="chat" size={64} />
             <p className="muted">Conversation not found or you do not have access.</p>
-            <button className="btn btn-sm" type="button" onClick={() => navigate('/chat')}>Back to inbox</button>
+            <button className="btn btn-sm" type="button" onClick={closeThread}>Back to inbox</button>
           </div>
         ) : (
           <div className="chat-empty">
             <DoodleIcon name="scissors" size={64} />
-            <p className="muted">Pick a conversation to start chatting.</p>
+            <strong>Pumili ng shop conversation</strong>
+            <p className="muted">Dito mo makakausap ang barbershop tungkol sa schedule, presyo, at cut request.</p>
           </div>
         )}
       </section>
@@ -94,112 +177,187 @@ export function ChatPage() {
   )
 }
 
-function Thread({
-  conversationId,
-  onActivity,
+const Thread = memo(function Thread({
+  conversation,
+  onMessage,
+  onRead,
   onBack,
 }: {
-  conversationId: string
-  onActivity: () => void
+  conversation: ConversationDetailed
+  onMessage: (message: Message) => void
+  onRead: (conversationId: string) => void
   onBack: () => void
 }) {
   const backend = useBackend()
   const { profile } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
-  const [convo, setConvo] = useState<ConversationDetailed | null>(null)
-  const [draft, setDraft] = useState('')
   const [ready, setReady] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [loadError, setLoadError] = useState('')
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const conversationId = conversation.id
 
   useEffect(() => {
     let active = true
+    backend.chat.getMessages(conversationId).then(
+      (loadedMessages) => {
+        if (!active) return
+        setMessages(loadedMessages)
+        setReady(true)
+        void backend.chat.markRead(conversationId)
+          .then(() => onRead(conversationId))
+          .catch(() => undefined)
+      },
+      () => {
+        if (!active) return
+        setLoadError('Hindi ma-load ang messages sa conversation na ito.')
+        setReady(true)
+      },
+    )
 
-    // Resolve the conversation header from the inbox list.
-    backend.chat.listConversations().then((list) => {
-      if (active) setConvo(list.find((c) => c.id === conversationId) ?? null)
-    })
-
-    backend.chat.getMessages(conversationId).then((msgs) => {
-      if (!active) return
-      setMessages(msgs)
-      setReady(true)
-      backend.chat.markRead(conversationId).then(onActivity)
-    })
-
-    const unsub = backend.chat.subscribe(conversationId, (msg) => {
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
-      // Mark read if the incoming message is from the other party.
-      if (msg.sender_id !== profile?.id) backend.chat.markRead(conversationId).then(onActivity)
-      else onActivity()
+    const unsubscribe = backend.chat.subscribe(conversationId, (message) => {
+      setMessages((current) => current.some((candidate) => candidate.id === message.id)
+        ? current
+        : [...current, message])
+      onMessage(message)
+      if (message.sender_id !== profile?.id) {
+        void backend.chat.markRead(conversationId)
+          .then(() => onRead(conversationId))
+          .catch(() => undefined)
+      }
     })
 
     return () => {
       active = false
-      unsub()
+      unsubscribe()
     }
-  }, [backend, conversationId, profile?.id, onActivity])
+  }, [backend, conversationId, onMessage, onRead, profile?.id])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const body = bodyRef.current
+    if (body) body.scrollTop = body.scrollHeight
   }, [messages])
 
-  async function send(e: FormEvent) {
-    e.preventDefault()
-    const body = draft.trim()
-    if (!body) return
-    setDraft('')
-    await backend.chat.sendMessage({ conversation_id: conversationId, body })
-    // The new message arrives via the subscription callback.
-  }
-
-  const other =
-    convo && profile?.id === convo.customer_id ? convo.barber.profile : convo?.customer
+  const customerView = profile?.id === conversation.customer_id
+  const displayName = customerView ? conversation.shop.name : conversation.customer.full_name
 
   if (!ready) return <Loading label="Opening chat…" />
 
   return (
     <div className="thread">
       <header className="thread-head">
-        <button className="btn btn-ghost btn-sm thread-back" onClick={onBack}>←</button>
-        {other && <Avatar name={other.full_name} size={40} />}
-        <strong>{other?.full_name ?? 'Conversation'}</strong>
+        <button className="btn btn-ghost btn-sm thread-back" type="button" onClick={onBack} aria-label="Back to inbox">←</button>
+        <Avatar name={displayName} size={42} />
+        <div className="thread-identity">
+          <strong>{displayName}</strong>
+          <span>{customerView
+            ? `${conversation.shop.address}, ${conversation.shop.city}`
+            : `Customer · ${conversation.shop.name}`}</span>
+        </div>
+        {customerView && (
+          <Link className="btn btn-sm thread-shop-link" to={`/shops/${routeSegment(conversation.shop.id)}`}>Shop details</Link>
+        )}
       </header>
 
-      <div className="thread-body">
-        {messages.length === 0 && (
-          <p className="faint center">No messages yet. Break the ice!</p>
-        )}
-        {messages.map((m) => {
-          const mine = m.sender_id === profile?.id
-          return (
-            <div key={m.id} className={`bubble-row ${mine ? 'mine' : 'theirs'}`}>
-              <div className="bubble">
-                <span>{m.body}</span>
-                <time className="bubble-time">{timeOfDay(m.created_at)}</time>
-              </div>
-            </div>
-          )
-        })}
-        <div ref={bottomRef} />
-      </div>
+      {loadError
+        ? <div className="chat-empty"><p className="form-error" role="alert">{loadError}</p></div>
+        : <MessageList bodyRef={bodyRef} messages={messages} profileId={profile?.id} displayName={displayName} />}
 
+      <MessageComposer conversationId={conversationId} disabled={Boolean(loadError)} />
+    </div>
+  )
+})
+
+const MessageList = memo(function MessageList({
+  bodyRef,
+  messages,
+  profileId,
+  displayName,
+}: {
+  bodyRef: RefObject<HTMLDivElement | null>
+  messages: Message[]
+  profileId?: string
+  displayName: string
+}) {
+  const rows = useMemo(() => messages.map((message, index) => ({
+    message,
+    mine: message.sender_id === profileId,
+    showDay: index > 0
+      && new Date(messages[index - 1].created_at).toDateString() !== new Date(message.created_at).toDateString(),
+    day: new Date(message.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }),
+    time: timeOfDay(message.created_at),
+  })), [messages, profileId])
+
+  return (
+    <div className="thread-body" ref={bodyRef}>
+      <div className="chat-day-divider"><span>Shop conversation</span></div>
+      {messages.length === 0 && (
+        <div className="chat-welcome-note">
+          <DoodleIcon name="chat" size={23} />
+          <strong>Kamusta!</strong>
+          <span>Magtanong tungkol sa slots, services, presyo, o sabihin ang peg mong gupit.</span>
+        </div>
+      )}
+      {rows.map(({ message, mine, showDay, day, time }) => (
+        <Fragment key={message.id}>
+          {showDay && <div className="chat-day-divider"><span>{day}</span></div>}
+          <div className={`bubble-row ${mine ? 'mine' : 'theirs'}`}>
+            {!mine && <Avatar name={displayName} size={30} />}
+            <div className="bubble">
+              <span>{message.body}</span>
+              <time className="bubble-time">{time}</time>
+            </div>
+          </div>
+        </Fragment>
+      ))}
+    </div>
+  )
+})
+
+function MessageComposer({ conversationId, disabled }: { conversationId: string; disabled: boolean }) {
+  const backend = useBackend()
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
+
+  async function send(event: FormEvent) {
+    event.preventDefault()
+    const body = draft.trim()
+    if (!body || sending || disabled) return
+    setSending(true)
+    setSendError('')
+    setDraft('')
+    try {
+      await backend.chat.sendMessage({ conversation_id: conversationId, body })
+      // The new message arrives through the active thread subscription.
+    } catch (error) {
+      setDraft((current) => current || body)
+      setSendError(error instanceof DataError ? error.message : 'Hindi na-send ang message. Subukan ulit.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="thread-compose">
+      <div className="chat-quick-replies" aria-label="Quick replies">
+        {['May available slot?', 'Magkano ang haircut?', 'On the way na ako'].map((reply) => (
+          <button type="button" key={reply} disabled={disabled} onClick={() => setDraft(reply)}>{reply}</button>
+        ))}
+      </div>
       <form className="thread-input" onSubmit={send}>
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Type a message…"
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Message the shop…"
           aria-label="Message"
           maxLength={2_000}
+          disabled={disabled}
         />
-        <button className="btn btn-primary" type="submit" disabled={!draft.trim()}>
+        <button className="btn btn-primary" type="submit" disabled={!draft.trim() || sending || disabled} aria-label="Send message">
           <DoodleIcon name="send" size={20} />
         </button>
       </form>
-
-      <p className="faint chat-foot">
-        Last active {convo ? relativeTime(convo.last_message_at) : 'now'} · open this in a second tab
-        as the other person to see live delivery.
-      </p>
+      {sendError && <p className="form-error thread-send-error" role="alert">{sendError}</p>}
     </div>
   )
 }

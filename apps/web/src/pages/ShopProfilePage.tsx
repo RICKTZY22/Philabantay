@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { BarberWithProfile, Service, ShopWithStatus } from '@barbershop/shared'
+import { DataError, type BarberWithProfile, type Service, type ShopWithStatus } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useAuth } from '../features/auth/AuthContext'
 import { Avatar } from '../components/Avatar'
@@ -28,6 +28,7 @@ export function ShopProfilePage() {
   const [loaded, setLoaded] = useState(false)
   const [queuePosition, setQueuePosition] = useState<number | null>(null)
   const [openingChat, setOpeningChat] = useState(false)
+  const [chatError, setChatError] = useState('')
 
   useEffect(() => {
     if (!shopId) return
@@ -75,16 +76,18 @@ export function ShopProfilePage() {
 
   async function chatWithShop() {
     if (!shopId) return
-    const barber = dutyBarbers[0] ?? shopBarbers[0]
-    if (!barber || openingChat) return
+    if (shopBarbers.length === 0 || openingChat) return
     if (!profile) {
       navigate('/login', { state: { from: `/shops/${routeSegment(shopId)}` } })
       return
     }
     setOpeningChat(true)
+    setChatError('')
     try {
-      const conversation = await backend.chat.openConversation(barber.id)
+      const conversation = await backend.chat.openConversation(shopId)
       navigate(`/chat/${routeSegment(conversation.id)}`)
+    } catch (error) {
+      setChatError(error instanceof DataError ? error.message : 'Hindi mabuksan ang shop chat. Subukan ulit.')
     } finally {
       setOpeningChat(false)
     }
@@ -121,6 +124,7 @@ export function ShopProfilePage() {
               <DoodleIcon name="chat" size={19} /> {openingChat ? 'Opening...' : 'Chat shop'}
             </button>
           </div>
+          {chatError && <p className="form-error" role="alert">{chatError}</p>}
         </div>
         <div className="shop-gallery" aria-label="Shop photo preview">
           <div className="shop-photo is-front"><span>Shop front</span></div>

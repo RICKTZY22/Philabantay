@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { DoodleDefs } from '../theme/DoodleDefs'
@@ -11,6 +11,14 @@ import { RouteErrorBoundary } from './RouteErrorBoundary'
 export function Layout() {
   const { profile } = useAuth()
   const location = useLocation()
+  const [headerVisible, setHeaderVisible] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Route changes should open at the top instead of inheriting the scroll
+  // position of a long dashboard/map page.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
   // May sariling auth billboard ang landing, kaya chill at malinis lang ang nav doon.
   const onLanding = location.pathname === '/'
   // Signed-in app pages: naka-pin ang header bar sa taas para laging abot ang
@@ -23,6 +31,7 @@ export function Layout() {
   const useWideWorkspace =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
+    location.pathname === '/schedule' ||
     location.pathname === '/appointments' ||
     location.pathname.startsWith('/chat') ||
     location.pathname.startsWith('/barbers')
@@ -30,22 +39,78 @@ export function Layout() {
   // billboard (may login form iyon). Kaya iiwas tayong ihatid sila pabalik sa
   // login page kapag pinindot ang brand title.
   const brandTo = profile ? '/dashboard' : '/'
+  // Customer chat screen: walang Philabantay wordmark sa header para malinis
+  // ang Shop Desk view. Barber at owner chat views are intentionally untouched.
+  const isCustomerRole = profile?.role === 'customer'
+    && profile.requested_role !== 'barber'
+    && profile.requested_role !== 'shop_owner'
+  const hideBrand = isCustomerRole && location.pathname.startsWith('/chat')
+
+  useEffect(() => {
+    setHeaderVisible(true)
+    if (!stickyHeader) return
+
+    let lastY = Math.max(0, window.scrollY)
+    let travel = 0
+    let direction = 0
+
+    const onScroll = () => {
+      const currentY = Math.max(0, window.scrollY)
+      const delta = currentY - lastY
+      const nextDirection = Math.sign(delta)
+
+      if (menuOpen || currentY <= 24) {
+        setHeaderVisible(true)
+        travel = 0
+        direction = nextDirection
+        lastY = currentY
+        return
+      }
+
+      if (nextDirection !== 0 && nextDirection !== direction) travel = 0
+      if (nextDirection !== 0) direction = nextDirection
+      travel += delta
+
+      // Ignore trackpad/cursor-wheel jitter. Hide only after a deliberate
+      // downward move, then reveal a little faster on the way back up.
+      if (currentY > 96 && travel >= 30) {
+        setHeaderVisible(false)
+        travel = 0
+      } else if (travel <= -18) {
+        setHeaderVisible(true)
+        travel = 0
+      }
+
+      lastY = currentY
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [location.pathname, menuOpen, stickyHeader])
 
   return (
     <CurtainProvider>
     <div className="app-shell">
       <div className="bg-pattern" aria-hidden="true" />
       <DoodleDefs />
-      <header className={`container app-header${stickyHeader ? ' is-sticky' : ''}${useWideWorkspace ? ' is-dashboard-wide' : ''}`}>
+      <header
+        className={`container app-header${stickyHeader ? ' is-sticky' : ''}${stickyHeader && !headerVisible ? ' is-hidden' : ''}${useWideWorkspace ? ' is-dashboard-wide' : ''}`}
+        onFocusCapture={() => setHeaderVisible(true)}
+      >
         <nav className="site-nav">
-          <Link to={brandTo} className="brand">
-            <span className="brand-pole" aria-hidden="true" />
-            {SHOP_NAME}
-          </Link>
+          {hideBrand ? (
+            // Spacer keeps the hamburger right-aligned (space-between layout).
+            <span aria-hidden="true" />
+          ) : (
+            <Link to={brandTo} className="brand">
+              <span className="brand-pole" aria-hidden="true" />
+              {SHOP_NAME}
+            </Link>
+          )}
           <div className="nav-links">
             {/* Signed in: isang malaking hamburger lang ang buong navigation. */}
             {profile ? (
-              <AppMenu />
+              <AppMenu onOpenChange={setMenuOpen} />
             ) : (
               !onLanding && (
                 <>
@@ -75,12 +140,6 @@ export function Layout() {
           </RouteErrorBoundary>
         </div>
       </main>
-
-      <footer className="site-footer">
-        <div className="container">
-          {SHOP_NAME} · a hand-drawn place for good haircuts
-        </div>
-      </footer>
     </div>
     </CurtainProvider>
   )

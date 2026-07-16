@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { DataError, type ShopJoinCodeDetails } from '@barbershop/shared'
+import { useBackend } from '../services/backend'
 import { DoodleIcon, type DoodleIconName } from '../theme/DoodleDefs'
+import { DoodleBoard } from './DoodleBoard'
 import './ShopOwnerDashboard.css'
 
 interface ShopOwnerDashboardProps {
@@ -15,21 +18,23 @@ const RESERVATIONS = [
   { customer: 'Ben Flores', service: 'Signature fade', time: '2:00 - 3:00', status: 'cancelled', barber: 'Miguel' },
 ] as const
 
-const RAIL_ITEMS: Array<{ icon: DoodleIconName; label: string }> = [
-  { icon: 'chair', label: 'Overview' },
-  { icon: 'calendar', label: 'Reservations' },
-  { icon: 'user', label: 'Team' },
-  { icon: 'scissors', label: 'Services' },
-  { icon: 'chat', label: 'Messages' },
-  { icon: 'star', label: 'Reviews' },
-]
-
 const SERVICE_FILTERS = ['All cuts', 'Haircut', 'Beard trim', 'Hair color', 'Razor shave'] as const
 
 /** Shop-owner preview. Static sample data muna habang wala pang Supabase tables. */
 export function ShopOwnerDashboard({ ownerName, pending }: ShopOwnerDashboardProps) {
+  const backend = useBackend()
   const [query, setQuery] = useState('')
   const [serviceFilter, setServiceFilter] = useState<(typeof SERVICE_FILTERS)[number]>('All cuts')
+  const [joinCode, setJoinCode] = useState<ShopJoinCodeDetails | null>(null)
+  const [joinCodeError, setJoinCodeError] = useState('')
+  const [rotatingCode, setRotatingCode] = useState(false)
+
+  useEffect(() => {
+    if (pending) return
+    backend.employment.getMyShopJoinCode().then(setJoinCode).catch((error) => {
+      setJoinCodeError(error instanceof DataError ? error.message : 'Hindi ma-load ang team join code.')
+    })
+  }, [backend, pending])
   const filteredReservations = useMemo(() => {
     const needle = query.trim().toLowerCase()
     return RESERVATIONS.filter((reservation) => {
@@ -44,59 +49,29 @@ export function ShopOwnerDashboard({ ownerName, pending }: ShopOwnerDashboardPro
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  return (
-    <div className="owner-board-wrap">
-      <div className="owner-board" id="owner-overview">
-        <aside className="owner-rail" aria-label="Shop dashboard sections">
-          <div className="owner-rail-mark" aria-hidden="true">
-            <span className="brand-pole" />
-            <strong>PB</strong>
-          </div>
-          <div className="owner-rail-links">
-            {RAIL_ITEMS.map((item, index) => {
-              const targetId = index === 0
-                ? 'owner-overview'
-                : index === 1 || index === 3
-                  ? 'owner-reservations'
-                  : null
-              return (
-                <button
-                  type="button"
-                  className={index === 0 ? 'is-active' : ''}
-                  aria-label={item.label}
-                  title={targetId ? item.label : `${item.label} coming soon`}
-                  disabled={!targetId}
-                  onClick={() => targetId && scrollToSection(targetId)}
-                  key={item.label}
-                >
-                  <DoodleIcon name={item.icon} size={21} />
-                </button>
-              )
-            })}
-          </div>
-          <DoodleIcon name="scissors" size={28} className="owner-rail-scissors" />
-        </aside>
+  async function rotateJoinCode() {
+    setRotatingCode(true)
+    setJoinCodeError('')
+    try {
+      setJoinCode(await backend.employment.rotateMyShopJoinCode())
+    } catch (error) {
+      setJoinCodeError(error instanceof DataError ? error.message : 'Hindi makagawa ng bagong join code.')
+    } finally {
+      setRotatingCode(false)
+    }
+  }
 
-        <div className="owner-workspace">
-          <header className="owner-topbar">
-            <label className="owner-search">
-              <DoodleIcon name="scissors" size={17} />
-              <input
-                aria-label="Search reservations"
-                placeholder="Search reservations..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-            <div className="owner-shop-name">
-              <span className="owner-live-dot" />
-              <span>Philabantay demo shop</span>
-            </div>
-            <div className="owner-profile-chip">
-              <span>{initials(ownerName)}</span>
-              <strong>{ownerName}</strong>
-            </div>
-          </header>
+  return (
+    <DoodleBoard
+      userName={ownerName}
+      centerLabel="Philabantay demo shop"
+      search={{
+        value: query,
+        onChange: setQuery,
+        placeholder: 'Search reservations...',
+        ariaLabel: 'Search reservations',
+      }}
+    >
 
           {pending && (
             <div className="owner-preview-banner" role="status">
@@ -107,6 +82,21 @@ export function ShopOwnerDashboard({ ownerName, pending }: ShopOwnerDashboardPro
               </div>
               <span className="pill pill-pink">Pending</span>
             </div>
+          )}
+
+          {!pending && (joinCode || joinCodeError) && (
+            <section className="owner-join-code-card" aria-labelledby="owner-join-code-title">
+              <DoodleIcon name="user" size={28} />
+              <div>
+                <span className="owner-card-kicker">team access</span>
+                <h2 id="owner-join-code-title">Barber join code</h2>
+                <p>{joinCode ? `Ibigay ito sa barber na hired na sa ${joinCode.shop.name}.` : joinCodeError}</p>
+              </div>
+              {joinCode && <code>{joinCode.code}</code>}
+              <button type="button" className="btn btn-sm" disabled={rotatingCode} onClick={() => void rotateJoinCode()}>
+                {rotatingCode ? 'Generating...' : 'Generate new code'}
+              </button>
+            </section>
           )}
 
           <div className="owner-dashboard-grid">
@@ -208,9 +198,7 @@ export function ShopOwnerDashboard({ ownerName, pending }: ShopOwnerDashboardPro
               </section>
             </aside>
           </div>
-        </div>
-      </div>
-    </div>
+    </DoodleBoard>
   )
 }
 
@@ -267,8 +255,4 @@ function BarberChairDoodle() {
       <path className="chair-spark" d="M200 35 V55 M190 45 H210 M194 39 L206 51 M206 39 L194 51" />
     </svg>
   )
-}
-
-function initials(name: string) {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'SO'
 }

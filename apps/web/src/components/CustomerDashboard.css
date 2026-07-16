@@ -1,30 +1,87 @@
 /* Customer dashboard — clean edition. Puting cards na may manipis na doodle
    borders; ang navigation ay nasa global hamburger (AppMenu), wala dito. */
 
-/* Shared wide workspace keeps the dashboard aligned with the global header. */
-.cd-shell {
-  margin: 4px 0 48px;
+/* ---- Search results dropdown (naka-anchor sa search bar sa topbar) ---- */
+.cd-search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  display: grid;
+  gap: 6px;
+  width: max(100%, 300px);
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 12px 16px 11px 14px / 15px 11px 16px 12px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(91, 151, 175, .12) 28px 29px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  box-shadow: 5px 6px 0 rgba(30, 28, 25, .35);
 }
+
+.cd-search-results-head {
+  padding: 0 3px 2px;
+  color: #16878d;
+  font: 12px/1 'Gochi Hand', cursive;
+  letter-spacing: 1px;
+}
+
+.cd-search-results button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--ink);
+  background: rgba(255, 253, 247, .92);
+  border: 1.5px solid var(--ink);
+  border-radius: 9px 12px 8px 11px;
+  box-shadow: 2px 3px 0 var(--shadow);
+  cursor: pointer;
+}
+
+.cd-search-results button:hover { background: var(--yellow); transform: translateX(2px); }
+.cd-search-results .cd-dot { flex: none; }
+
+.cd-search-result-name { display: grid; min-width: 0; flex: 1; }
+.cd-search-result-name strong,
+.cd-search-result-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-search-result-name small { color: var(--faint); font-size: .78rem; }
+
+.cd-search-result-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font: 700 13px/1 'Kalam', cursive;
+}
+.cd-search-result-rating .is-lit { color: #d99a1b; }
 
 /* ---- Main column ---- */
 .cd-main { display: grid; gap: 26px; min-width: 0; }
 
 .cd-overview {
-  display: grid;
-  grid-template-columns: minmax(230px, 1fr) minmax(360px, 1fr);
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 28px;
-  padding: 8px 4px 2px;
+  gap: 18px;
+  padding: 18px 22px 16px;
+  background: var(--paper-soft);
+  border-radius: 18px;
 }
 
-.cd-head { display: flex; align-items: center; gap: 14px; }
+.cd-head { flex: none; width: 238px; }
 .cd-head h1 {
   margin: 0;
-  font-size: clamp(1.9rem, 2.6vw, 2.4rem);
-  line-height: .92;
+  font-size: 30px;
+  line-height: 1.02;
+  letter-spacing: -0.5px;
   transform: rotate(-1deg);
 }
-.cd-head-sub { max-width: 270px; margin: 8px 0 0; color: var(--muted); font-size: 1rem; }
+.cd-head-sub { margin: 7px 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.25; }
 
 /* ---- Loading ---- */
 .cd-loading {
@@ -71,53 +128,135 @@
 
 .cd-empty { margin: 0; }
 
-/* ---- Stat cards: clean, puti, maliit na icon chip ---- */
+/* ---- Stat cards: badge icon floats above the card's top edge ---- */
 .cd-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  max-width: 560px;
+  display: flex;
+  gap: 11px;
+  flex: 1;
+  max-width: 760px;
 }
 
 .cd-stat {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
-  min-height: 80px;
-  padding: 14px 16px;
+  min-height: 86px;
+  padding: 17px 8px 9px;
   border: 3px solid var(--ink);
   border-radius: 16px 14px 17px 15px / 14px 17px 15px 16px;
   box-shadow: 4px 4px 0 var(--ink);
   color: var(--ink);
   text-decoration: none;
+  text-align: center;
   transition: border-color 160ms ease;
-  /* Avoid GPU compositing artifacts when these cards become very wide. */
+  /* Avoid GPU compositing artifacts on rotated cards. */
   isolation: isolate;
+  position: relative;
 }
+
+/* Alternating tilt, matching the hand-placed feel of the rest of the theme. */
+.cd-stats .cd-stat:nth-child(1) { transform: rotate(-1deg); }
+.cd-stats .cd-stat:nth-child(2) { transform: rotate(1deg); }
+.cd-stats .cd-stat:nth-child(3) { transform: rotate(1deg); }
+.cd-stats .cd-stat:nth-child(4) { transform: rotate(-1deg); }
 
 a.cd-stat:hover { border-color: #16878d; }
 a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offset: 3px; }
 .cd-stat.cd-stat-blue { background: var(--blue); }
 .cd-stat.cd-stat-pink { background: var(--pink); }
 
-.cd-stat strong { display: block; font: 700 30px/1 'Kalam', cursive; }
-.cd-stat-label { color: var(--muted); font-size: 0.95rem; }
+/* Dashadong slots pa lang — walang totoong datos, sadyang placeholder. */
+.cd-stat.cd-stat-placeholder { border-style: dashed; }
+.cd-stat-placeholder-a { background: #e7eab4; }
+.cd-stat-placeholder-b { background: var(--purple); }
 
-.cd-stat-icon {
-  width: 40px;
-  height: 40px;
+.cd-profile-avatar {
+  position: relative;
+  flex: none;
+  display: block;
+  padding-bottom: 12px;
+  margin-left: auto;
+  margin-right: clamp(32px, 5vw, 96px);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.cd-profile-avatar-frame {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 5px 5px 0 var(--shadow);
+  transform: rotate(1deg);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.cd-profile-avatar-frame .doodle-avatar {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.cd-profile-avatar-label {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  padding: 3px 10px;
+  background: var(--paper-soft);
+  border: 2px solid var(--ink);
+  border-radius: 9px 7px 10px 8px;
+  font: 0.8rem/1.1 'Gochi Hand', cursive;
+  white-space: nowrap;
+  transform: translateX(-50%) rotate(-2deg);
+}
+
+.cd-profile-avatar:hover .cd-profile-avatar-frame {
+  transform: rotate(-1deg) translateY(-2px);
+  box-shadow: 7px 7px 0 var(--shadow);
+}
+
+.cd-profile-avatar:hover .cd-profile-avatar-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cd-stat strong { display: block; margin-top: 5px; font: 700 25px/1 'Kalam', cursive; }
+.cd-stat-label { margin-top: 4px; color: var(--muted); font-size: 0.78rem; }
+
+.cd-stat-badge {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
   flex: none;
   display: grid;
   place-items: center;
   border: 2.5px solid var(--ink);
-  border-radius: 48% 52% 45% 55% / 55% 45% 55% 45%;
-  background: var(--paper-soft);
+  border-radius: 50%;
+  background: #fff;
 }
 
-/* Filtered SVG + transformed wide parent can render as a black rectangle in
-   Chromium. The irregular chip border already carries the doodle character. */
-.cd-stat-icon .doodle-icon { filter: none; }
+.cd-stat-badge.is-dashed { border-style: dashed; }
+
+.cd-stat-diamond {
+  width: 13px;
+  height: 13px;
+  border: 2.4px dashed var(--ink);
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+
+/* Filtered SVG + rotated card can render as a black rectangle in Chromium.
+   The plain circular badge already carries the doodle character. */
+.cd-stat-badge .doodle-icon { filter: none; }
 
 /* ---- Map + side panel ---- */
 .cd-map-grid {
@@ -240,10 +379,68 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 }
 
 .cd-shop-popup {
-  width: min(1060px, 100%);
+  width: min(1120px, 100%);
   max-height: min(82vh, 720px);
   overflow-y: auto;
-  background: color-mix(in srgb, var(--yellow) 12%, var(--paper));
+  padding: 30px 24px 24px 58px;
+  background:
+    radial-gradient(circle at 18px 20px, var(--paper-soft) 0 5px, var(--ink) 5.5px 7px, transparent 7.5px) 0 0 / 38px 42px repeat-y,
+    linear-gradient(90deg, transparent 42px, rgba(216, 102, 102, .35) 43px 44px, transparent 45px),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 151, 175, .14) 32px 33px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  box-shadow: 9px 11px 0 rgba(30, 28, 25, .55);
+}
+
+.cd-shop-popup::after {
+  content: 'SHOP NOTES';
+  position: absolute;
+  top: 10px;
+  left: 62px;
+  color: rgba(22, 135, 141, .72);
+  font: 10px/1 'Gochi Hand', cursive;
+  letter-spacing: 1.4px;
+  transform: rotate(-1deg);
+}
+
+.cd-shop-popup .cd-shop-main,
+.cd-shop-popup .cd-shop-services,
+.cd-shop-popup .cd-shop-staff {
+  position: relative;
+  padding: 14px 16px;
+  background: rgba(255, 253, 247, .82);
+  border: 2px solid var(--ink);
+  border-radius: 10px 14px 9px 13px / 13px 9px 14px 10px;
+  box-shadow: 3px 4px 0 var(--shadow);
+}
+.cd-shop-popup .cd-shop-main { transform: rotate(-.25deg); }
+.cd-shop-popup .cd-shop-services { transform: rotate(.2deg); }
+.cd-shop-popup .cd-shop-staff { transform: rotate(-.15deg); }
+
+.cd-shop-popup .cd-shop-services,
+.cd-shop-popup .cd-shop-staff { border-left: 2px solid var(--ink); }
+
+.cd-shop-popup .cd-shop-services::before,
+.cd-shop-popup .cd-shop-staff::before {
+  position: absolute;
+  top: -10px;
+  left: 15px;
+  padding: 2px 8px;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 1.5px solid var(--ink);
+  font: 11px/1 'Gochi Hand', cursive;
+  letter-spacing: .7px;
+  transform: rotate(-1deg);
+}
+.cd-shop-popup .cd-shop-services::before { content: 'MENU'; }
+.cd-shop-popup .cd-shop-staff::before { content: 'CREW ON DUTY'; background: var(--green); }
+
+.cd-shop-popup .cd-shop-location-actions .btn-blue { margin-left: auto; }
+.cd-shop-popup .cd-staff-row {
+  padding: 8px;
+  background: color-mix(in srgb, var(--green) 18%, var(--paper-soft));
+  border: 1.5px dashed var(--ink);
+  border-radius: 10px 13px 9px 12px;
 }
 
 .cd-shop-popup-close {
@@ -307,6 +504,7 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 
 .cd-staff-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cd-staff-actions { display: flex; gap: 7px; }
+.cd-staff-empty-note { padding-top: 6px; border-top: 1px dashed var(--line); font-size: .85rem; }
 
 @keyframes cd-shop-card-in {
   from { opacity: 0; transform: translateY(18px) scale(.97) rotate(-.25deg); }
@@ -422,17 +620,6 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
   flex: none;
 }
 
-/* ---- Favorites ---- */
-.cd-fav-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.cd-favorites-side .cd-fav-grid { grid-template-columns: 1fr; }
-.cd-favorites-side .cd-card-head h2 { font-size: 1.2rem; }
-.cd-favorites-side { background: var(--pink); transform: rotate(-.35deg); }
-
 .cd-engagement { display: grid; align-content: start; }
 .cd-engagement-wide {
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
@@ -454,43 +641,16 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 .cd-notification-link { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--muted); }
 .cd-notification-link .doodle-icon:last-child { margin-left: auto; }
 
-.cd-fav-card {
-  position: relative;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 12px 15px 10px 14px / 14px 10px 15px 12px;
-}
-
-.cd-fav-card > .cd-heart {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1;
-}
-
-.cd-fav-body {
-  display: grid;
-  gap: 6px;
-  width: 100%;
-  padding: 13px 46px 13px 14px;
-  text-align: left;
-  font-family: 'Patrick Hand', cursive;
-  color: var(--ink);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.cd-fav-body strong { font-family: 'Kalam', cursive; font-size: 1.02rem; }
-.cd-fav-meta { color: var(--faint); font-size: 0.87rem; }
-.cd-fav-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-
 /* ---- Responsive ---- */
 @media (max-width: 960px) {
-  .cd-overview { grid-template-columns: 1fr; gap: 22px; }
+  .cd-overview { flex-direction: column; align-items: stretch; gap: 20px; }
+  .cd-head { width: auto; }
   .cd-head h1 br { display: none; }
   .cd-head-sub { max-width: none; }
-  .cd-stats { grid-template-columns: repeat(2, 1fr); max-width: none; }
+  .cd-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; }
+  .cd-profile-avatar { position: absolute; top: 18px; right: 22px; margin: 0; }
+  .cd-profile-avatar-frame { width: 112px; height: 112px; }
+  .cd-profile-avatar-frame .doodle-avatar { --avatar-size: 112px !important; }
   .cd-map-grid { grid-template-columns: 1fr; }
   .cd-shop-card { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); }
   .cd-shop-staff { grid-column: 1 / -1; padding: 14px 0 0; border-left: 0; border-top: 2px dashed var(--line); }
@@ -506,10 +666,13 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 
 @media (max-width: 640px) {
   .cd-main { gap: 18px; }
-  .cd-overview { padding-inline: 0; }
-  .cd-stats { gap: 10px; }
-  .cd-stat { min-height: 72px; padding: 11px 13px; }
-  .cd-stat-icon { width: 36px; height: 36px; }
+  .cd-overview { padding: 18px 16px; }
+  .cd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .cd-profile-avatar { position: static; justify-self: center; margin: 0; }
+  .cd-profile-avatar-frame { width: 126px; height: 126px; }
+  .cd-profile-avatar-frame .doodle-avatar { --avatar-size: 126px !important; }
+  .cd-stat { min-height: 96px; padding: 20px 8px 12px; }
+  .cd-stat-badge { width: 30px; height: 30px; top: -15px; }
   .cd-stat strong { font-size: 24px; }
   .cd-card { padding: 17px 15px; }
   .cd-discovery-head h2 { font-size: 1.55rem; }
@@ -517,6 +680,7 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
   .cd-shop-card { grid-template-columns: 1fr; }
   .cd-shop-popup-backdrop { padding: 12px; }
   .cd-shop-popup { max-height: 88vh; padding: 50px 16px 18px; }
+  .cd-shop-popup::after { left: 18px; }
   .cd-shop-services,
   .cd-shop-staff { grid-column: auto; padding: 14px 0 0; border-left: 0; border-top: 2px dashed var(--line); }
   .cd-shop-section-title { padding-right: 0; }
@@ -529,6 +693,5 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 }
 
 @media (max-width: 430px) {
-  .cd-stat { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .cd-stat-label { font-size: .9rem; }
+  .cd-stat-label { font-size: .75rem; }
 }

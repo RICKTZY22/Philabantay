@@ -52,7 +52,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 174,
+    strictPort: true,
     // Vite injects an inline Fast Refresh bootstrap and uses WebSockets only
     // during development. Production preview stays on the strict policy below.
     headers: {

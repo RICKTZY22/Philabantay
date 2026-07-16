@@ -16,9 +16,9 @@ const OPTIONS: Array<{
   {
     role: 'barber',
     title: 'Barber',
-    kicker: 'I-manage ang chair mo',
-    description: 'Para sa barbers na sasali sa verified shop at tatanggap ng bookings.',
-    note: 'For verification',
+    kicker: 'Humanap ng shop',
+    description: 'Tingnan ang hiring map o sumali sa employer gamit ang private shop code.',
+    note: 'Shop required',
   },
   {
     role: 'shop_owner',
@@ -31,7 +31,7 @@ const OPTIONS: Array<{
     role: 'customer',
     title: 'Customer',
     kicker: 'Maghanap at mag-book',
-    description: 'Tingnan ang available chairs, mag-book, at kausapin ang barber mo.',
+    description: 'Tingnan ang available chairs, mag-book, at kausapin ang barbershop.',
     note: 'Active agad',
   },
 ]
@@ -118,6 +118,21 @@ export function RoleSelectionPage() {
   }
 
   if (pendingProfessional) {
+    if (profile.requested_role === 'barber') {
+      return (
+        <section className="role-onboarding role-status" aria-labelledby="role-status-title">
+          <div className="status-stamp"><DoodleIcon name="search" size={54} /></div>
+          <span className="eyebrow">Open to work</span>
+          <h1 id="role-status-title">Hiring map na ang susunod.</h1>
+          <p>Wala ka pang shop affiliation. Pumili ng hiring shop at mag-apply, o gamitin ang code na ibinigay ng employer mo.</p>
+          <div className="role-safety-note">
+            <DoodleIcon name="check" size={26} />
+            <span>Magiging registered barber ka lang pagkatapos ma-validate ang shop membership.</span>
+          </div>
+          <button className="btn btn-primary" onClick={() => go('/dashboard')}>Open hiring map</button>
+        </section>
+      )
+    }
     const label = profile.requested_role === 'shop_owner' ? 'shop owner' : 'barber'
     return (
       <section className="role-onboarding role-status" aria-labelledby="role-status-title">
@@ -143,7 +158,7 @@ export function RoleSelectionPage() {
         <div className="status-stamp is-done"><DoodleIcon name="check" size={54} /></div>
         <span className="eyebrow">Account ready</span>
         <h1 id="role-complete-title">Nakapili ka na.</h1>
-        <p>Customer account ang active sa profile mo.</p>
+        <p>{profile.role === 'barber' ? 'Registered barber account ang active sa profile mo.' : profile.role === 'shop_owner' ? 'Shop owner account ang active sa profile mo.' : 'Customer account ang active sa profile mo.'}</p>
         <button className="btn btn-primary" onClick={() => go('/dashboard')}>Tuloy sa dashboard</button>
       </section>
     )
@@ -155,7 +170,7 @@ export function RoleSelectionPage() {
         <div>
           <span className="eyebrow">One last step</span>
           <h1 id="role-title">Paano mo gagamitin ang Philabantay?</h1>
-          <p>Pili ka muna. Professional accounts dadaan sa verification bago maging public.</p>
+          <p>Pili ka muna. Barber accounts hahanap o sasali muna sa employer bago maging public.</p>
         </div>
         <div className="role-heading-doodle" aria-hidden="true">
           <DoodleIcon name="pole" size={54} />
@@ -189,7 +204,7 @@ export function RoleSelectionPage() {
       <div className="role-submit-row">
         <div className="role-safety-note">
           <DoodleIcon name="check" size={26} />
-          <span>Hindi puwedeng i-self-approve ang barber o shop owner role.</span>
+          <span>Shop membership code ang nag-a-activate sa barber tools; owner verification ay hiwalay.</span>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="btn btn-primary" disabled={!selected || busy} onClick={continueOnboarding}>
@@ -199,7 +214,9 @@ export function RoleSelectionPage() {
               ? 'Pumili muna'
               : selected === 'customer'
                 ? 'Start booking'
-                : 'Submit for verification'}
+                : selected === 'barber'
+                  ? 'Open hiring map'
+                  : 'Submit for verification'}
           {!busy && <DoodleIcon name="arrow" size={22} />}
         </button>
       </div>

@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { CompleteRoleOnboardingInput, Profile, SignInInput, SignUpInput } from '@barbershop/shared'
+import type { ChangePasswordInput, CompleteRoleOnboardingInput, Profile, SignInInput, SignUpInput, UpdateProfileInput } from '@barbershop/shared'
 import { useBackend } from '../../services/backend'
 
 interface AuthState {
@@ -17,6 +17,8 @@ interface AuthState {
   signIn: (input: SignInInput) => Promise<Profile>
   signUp: (input: SignUpInput) => Promise<Profile>
   completeRoleOnboarding: (input: CompleteRoleOnboardingInput) => Promise<Profile>
+  updateProfile: (input: UpdateProfileInput) => Promise<Profile>
+  changePassword: (input: ChangePasswordInput) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -63,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn: (input) => backend.auth.signIn(input),
     signUp: (input) => backend.auth.signUp(input),
     completeRoleOnboarding: (input) => backend.auth.completeRoleOnboarding(input),
+    updateProfile: (input) => backend.auth.updateProfile(input),
+    changePassword: (input) => backend.auth.changePassword(input),
     signOut: () => backend.auth.signOut(),
   }
 

@@ -1,16 +1,23 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import type {
-  AppointmentDetailed,
-  BarberWithProfile,
-  ConversationDetailed,
-  Service,
-  ShopWithStatus,
+import {
+  DataError,
+  isUpcomingAppointment,
+  type AppointmentDetailed,
+  type BarberWithProfile,
+  type ConversationDetailed,
+  type Service,
+  type ShopWithStatus,
 } from '@barbershop/shared'
-import type { UserLocation } from './ShopMap'
 import { useBackend } from '../services/backend'
+import { useCurrentTime } from '../hooks/useCurrentTime'
+import { useLiveLocation } from '../hooks/useLiveLocation'
+import { NEARBY_DISCOVERY_RADIUS_KM } from '../config/discovery'
 import { Avatar } from './Avatar'
+import { AppointmentCalendar } from './AppointmentCalendar'
+import { DoodleAvatar } from './DoodleAvatar'
+import { DoodleBoard } from './DoodleBoard'
+import { ModalPortal } from './ModalPortal'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { money } from '../lib/format'
 import { googleDrivingDirectionsUrl, straightLineKm } from '../lib/geo'
@@ -48,9 +55,19 @@ const DISCOVERY_META: Record<string, DiscoveryMeta> = {
   'sh-poblacion': { price: 'premium', serviceIds: ['s-fade', 's-shave', 's-combo'], waitMinutes: 20 },
 }
 
-/** Hidden geographic boundary for "Near me"; never shown as travel distance. */
-const NEARBY_RADIUS_KM = 10
 const NEAREST_LIST_LIMIT = 7
+const MANILA_HOUR = new Intl.DateTimeFormat('en-PH', {
+  hour: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'Asia/Manila',
+})
+
+function getManilaGreeting(now = new Date()) {
+  const hour = Number(MANILA_HOUR.format(now))
+  if (hour >= 5 && hour < 12) return 'Magandang umaga'
+  if (hour >= 12 && hour < 18) return 'Magandang hapon'
+  return 'Magandang gabi'
+}
 
 const STATUS_LABEL: Record<ShopWithStatus['status'], string> = {
   open: 'Open — may bakante',
@@ -64,6 +81,20 @@ const STATUS_PILL: Record<ShopWithStatus['status'], string> = {
   closed: 'pill pill-off',
 }
 
+type BarberStatus = 'free' | 'busy' | 'off'
+
+const BARBER_STATUS_LABEL: Record<BarberStatus, string> = {
+  free: 'Free',
+  busy: 'Busy',
+  off: 'Off',
+}
+
+const BARBER_STATUS_PILL: Record<BarberStatus, string> = {
+  free: 'pill pill-on',
+  busy: 'pill pill-busy',
+  off: 'pill pill-off',
+}
+
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="cd-stars" aria-label={`${rating} out of 5 stars`}>
@@ -74,9 +105,11 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
-export function CustomerDashboard({ firstName }: { firstName: string }) {
+export function CustomerDashboard({ firstName, avatarId }: { firstName: string; avatarId: string | null }) {
   const backend = useBackend()
   const navigate = useNavigate()
+  const nowEpochMs = useCurrentTime()
+  const greeting = getManilaGreeting(new Date(nowEpochMs))
 
   const [shops, setShops] = useState<ShopWithStatus[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -95,15 +128,13 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
   const [serviceFilter, setServiceFilter] = useState('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const modalReturnFocusRef = useRef<HTMLElement | null>(null)
-  const modalCloseRef = useRef<HTMLButtonElement | null>(null)
-  const [openingChatWith, setOpeningChatWith] = useState<string | null>(null)
+  const [openingShopChat, setOpeningShopChat] = useState(false)
+  const [shopActionError, setShopActionError] = useState('')
   const [referralCopied, setReferralCopied] = useState(false)
+  const [query, setQuery] = useState('')
 
-  // Auto-locate: pagbukas pa lang, alam na ng map kung nasaan ka.
-  const [userLoc, setUserLoc] = useState<UserLocation | null>(null)
-  const [locState, setLocState] = useState<'asking' | 'on' | 'off'>('asking')
-  const [locationAttempt, setLocationAttempt] = useState(0)
+  // One live GPS stream keeps both nearby filtering and the map viewport fresh.
+  const { location: userLoc, status: locState, retry: retryLiveLocation } = useLiveLocation()
 
   useEffect(() => {
     let active = true
@@ -136,37 +167,10 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   }, [backend, loadAttempt])
 
   useEffect(() => {
-    if (!('geolocation' in navigator)) {
-      setLocState('off')
-      setAreaMode('all')
-      setSortMode((current) => current === 'nearest' ? 'rating' : current)
-      return
-    }
-
-    let active = true
-    let hasFix = false
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        if (!active) return
-        hasFix = true
-        setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setLocState('on')
-      },
-      (error) => {
-        if (!active || (hasFix && error.code !== error.PERMISSION_DENIED)) return
-        setUserLoc(null)
-        setLocState('off')
-        setAreaMode((current) => current === 'nearby' ? 'all' : current)
-        setSortMode((current) => current === 'nearest' ? 'rating' : current)
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 },
-    )
-
-    return () => {
-      active = false
-      navigator.geolocation.clearWatch(watchId)
-    }
-  }, [locationAttempt])
+    if (locState !== 'off' || userLoc) return
+    setAreaMode((current) => current === 'nearby' ? 'all' : current)
+    setSortMode((current) => current === 'nearest' ? 'rating' : current)
+  }, [locState, userLoc])
 
   // Compute each private geographic radius once per GPS/shop update. Values
   // drive filtering/order only and are never presented as travel distance.
@@ -178,7 +182,7 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   const nearbyShops = useMemo(() => {
     if (!shops || !proximityByShopId) return null
     return [...shops]
-      .filter((shop) => (proximityByShopId.get(shop.id) ?? Infinity) <= NEARBY_RADIUS_KM)
+      .filter((shop) => (proximityByShopId.get(shop.id) ?? Infinity) <= NEARBY_DISCOVERY_RADIUS_KM)
       .sort((a, b) => (proximityByShopId.get(a.id) ?? Infinity) - (proximityByShopId.get(b.id) ?? Infinity))
   }, [proximityByShopId, shops])
 
@@ -186,6 +190,11 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
     return nearbyShops ? new Set(nearbyShops.map((shop) => shop.id)) : null
   }, [nearbyShops])
 
+  const searchNeedle = query.trim().toLowerCase()
+
+  // Ang Discover map/list ay filters lang (Near me, status, price, service);
+  // hindi ito ginagalaw ng text search. May sariling results dropdown ang
+  // search sa ilalim ng search bar.
   const filteredShops = useMemo(() => {
     if (!shops) return []
     const result = shops.filter((shop) => {
@@ -207,73 +216,70 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
     })
   }, [shops, areaMode, filter, nearbyShopIds, priceFilter, proximityByShopId, serviceFilter, sortMode])
 
-  // The shop popup should only open from an explicit pin/card selection.
-  // Escape provides the same dismiss action as the visible close button.
-  useEffect(() => {
-    if (!selectedId) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedId(null)
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [selectedId])
-
-  // Keep the page behind the modal stationary and non-interactive. Restore
-  // both page state and keyboard focus when the user closes it.
-  useEffect(() => {
-    if (!selectedId || viewMode !== 'map') return
-    const previousOverflow = document.body.style.overflow
-    const appShell = document.querySelector<HTMLElement>('.app-shell')
-    const previousInert = appShell?.inert ?? false
-    modalReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    document.body.style.overflow = 'hidden'
-    if (appShell) appShell.inert = true
-    window.requestAnimationFrame(() => modalCloseRef.current?.focus())
-    return () => {
-      document.body.style.overflow = previousOverflow
-      if (appShell) appShell.inert = previousInert
-      const returnTarget = modalReturnFocusRef.current
-      modalReturnFocusRef.current = null
-      window.requestAnimationFrame(() => {
-        if (returnTarget?.isConnected) returnTarget.focus()
-        else document.querySelector<HTMLElement>('.shop-map')?.focus()
+  // Nationwide text match para sa search dropdown — name hits muna, tapos
+  // rating. Hindi ito gumagamit ng GPS proximity kailanman.
+  const searchResults = useMemo(() => {
+    if (!shops || !searchNeedle) return []
+    return shops
+      .filter((shop) => [shop.name, shop.city, shop.address]
+        .some((value) => value.toLowerCase().includes(searchNeedle)))
+      .sort((a, b) => {
+        const aNameHit = a.name.toLowerCase().includes(searchNeedle) ? 0 : 1
+        const bNameHit = b.name.toLowerCase().includes(searchNeedle) ? 0 : 1
+        if (aNameHit !== bNameHit) return aNameHit - bNameHit
+        return b.rating - a.rating
       })
-    }
-  }, [selectedId, viewMode])
+      .slice(0, 8)
+  }, [shops, searchNeedle])
+
+  const closeShopDetails = useCallback(() => setSelectedId(null), [])
 
   const stats = useMemo(() => {
-    const now = Date.now()
     const upcoming = bookings.filter(
-      (b) => new Date(b.starts_at).getTime() > now && (b.status === 'pending' || b.status === 'confirmed'),
+      (booking) => isUpcomingAppointment(booking, nowEpochMs),
     )
     const unread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
     return {
       upcoming: upcoming.length,
       unread,
     }
-  }, [bookings, conversations])
-
-  // May GPS: hidden 10km radius lang. Walang GPS: top-rated ang ipinapakita.
-  const sideShops = useMemo(() => {
-    if (nearbyShops) {
-      const visibleIds = new Set(filteredShops.map((shop) => shop.id))
-      return nearbyShops.filter((shop) => visibleIds.has(shop.id)).slice(0, NEAREST_LIST_LIMIT)
-    }
-    return [...filteredShops].sort((a, b) => b.rating - a.rating).slice(0, NEAREST_LIST_LIMIT)
-  }, [filteredShops, nearbyShops])
-
-  const favoriteShops = useMemo(
-    () => (shops ?? []).filter((s) => favoriteIds.includes(s.id)),
-    [shops, favoriteIds],
-  )
+  }, [bookings, conversations, nowEpochMs])
 
   const selectedShop = shops?.find((s) => s.id === selectedId) ?? null
   const completedCuts = bookings.filter((booking) => booking.status === 'completed').length
   const loyaltyProgress = completedCuts % 10
   const availableIds = useMemo(() => new Set(availableBarbers.map((b) => b.id)), [availableBarbers])
+
+  // Barber-first side list. May GPS: pinakamalapit na barbers (via shop nila)
+  // muna, free-now bago busy. Walang GPS: top-rated barbers ang ipinapakita.
+  const sideBarbers = useMemo(() => {
+    if (!shops) return []
+    const visibleShopIds = new Set(filteredShops.map((shop) => shop.id))
+    const rows = allBarbers.flatMap((barber) => {
+      const shop = shops.find((candidate) => candidate.barber_ids.includes(barber.id))
+      if (!shop || !visibleShopIds.has(shop.id)) return []
+      const status: BarberStatus = availableIds.has(barber.id)
+        ? 'free'
+        : barber.shift_status === 'off' ? 'off' : 'busy'
+      return [{ barber, shop, status, km: proximityByShopId?.get(shop.id) ?? Infinity }]
+    })
+    const availabilityRank: Record<BarberStatus, number> = { free: 0, busy: 1, off: 2 }
+    rows.sort((a, b) => {
+      if (proximityByShopId && a.km !== b.km) return a.km - b.km
+      if (availabilityRank[a.status] !== availabilityRank[b.status]) {
+        return availabilityRank[a.status] - availabilityRank[b.status]
+      }
+      return b.barber.rating - a.barber.rating
+    })
+    return rows.slice(0, NEAREST_LIST_LIMIT)
+  }, [allBarbers, availableIds, filteredShops, proximityByShopId, shops])
+  const selectedShopStaff = useMemo(
+    () => allBarbers.filter((barber) => selectedShop?.barber_ids.includes(barber.id)),
+    [allBarbers, selectedShop],
+  )
   const selectedShopBarbers = useMemo(
-    () => allBarbers.filter((barber) => selectedShop?.barber_ids.includes(barber.id) && availableIds.has(barber.id)),
-    [allBarbers, availableIds, selectedShop],
+    () => selectedShopStaff.filter((barber) => availableIds.has(barber.id)),
+    [selectedShopStaff, availableIds],
   )
   const selectedShopServices = useMemo(() => {
     if (!selectedShop) return []
@@ -284,14 +290,17 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
       .filter((service): service is Service => Boolean(service))
   }, [selectedShop, services])
 
-  async function openChat(barberId: string) {
-    if (openingChatWith) return
-    setOpeningChatWith(barberId)
+  async function openShopChat(shopId: string) {
+    if (openingShopChat) return
+    setOpeningShopChat(true)
+    setShopActionError('')
     try {
-      const convo = await backend.chat.openConversation(barberId)
+      const convo = await backend.chat.openConversation(shopId)
       navigate(`/chat/${routeSegment(convo.id)}`)
+    } catch (error) {
+      setShopActionError(error instanceof DataError ? error.message : 'Hindi mabuksan ang shop chat. Subukan ulit.')
     } finally {
-      setOpeningChatWith(null)
+      setOpeningShopChat(false)
     }
   }
 
@@ -311,6 +320,17 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
     setMapResetKey((key) => key + 1)
   }
 
+  function pickSearchResult(shop: ShopWithStatus) {
+    setViewMode('map')
+    // Kung labas sa kasalukuyang "Near me" radius ang napili, lumipat sa
+    // All PH para may pin ito sa mapa sa likod ng detail popup.
+    if (areaMode === 'nearby' && nearbyShopIds && !nearbyShopIds.has(shop.id)) {
+      setAreaMode('all')
+    }
+    setSelectedId(shop.id)
+    setQuery('')
+  }
+
   function chooseArea(nextArea: AreaMode) {
     setSelectedId(null)
     setAreaMode(nextArea)
@@ -318,12 +338,10 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   }
 
   function retryLocation() {
-    setUserLoc(null)
-    setLocState('asking')
+    retryLiveLocation()
     setAreaMode('nearby')
     setSortMode('nearest')
     setMapResetKey((key) => key + 1)
-    setLocationAttempt((attempt) => attempt + 1)
   }
 
   if (!shops && loadError) {
@@ -348,41 +366,85 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="cd-shell">
+    <DoodleBoard
+      userName={firstName}
+      centerLabel="Philabantay live map"
+      showUserChip={false}
+      search={{
+        value: query,
+        onChange: setQuery,
+        placeholder: 'Search barbershops...',
+        ariaLabel: 'Search barbershops',
+        panel: searchNeedle ? (
+          <div className="cd-search-results" aria-label="Shop search results">
+            <span className="cd-search-results-head">
+              {searchResults.length === 0
+                ? 'Walang shop na tugma.'
+                : `${searchResults.length} shop${searchResults.length === 1 ? '' : 's'} na tugma`}
+            </span>
+            {searchResults.map((shop) => (
+              <button type="button" key={shop.id} onClick={() => pickSearchResult(shop)}>
+                <i className={`cd-dot is-${shop.status}`} aria-hidden="true" />
+                <span className="cd-search-result-name">
+                  <strong>{shop.name}</strong>
+                  <small>{shop.address}, {shop.city}</small>
+                </span>
+                <span className="cd-search-result-rating">
+                  <DoodleIcon name="star" size={13} className="is-lit" /> {shop.rating.toFixed(1)}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : undefined,
+      }}
+    >
       <div className="cd-main">
         {/* Greeting at useful stats lang; tinanggal ang redundant live-count cards. */}
-        <section className="cd-overview" aria-label="Dashboard overview">
+        <section className="cd-overview" id="cd-overview" aria-label="Dashboard overview">
           <header className="cd-head">
             <div>
-              <h1>Kamusta,<br />{firstName}!</h1>
-              <p className="cd-head-sub">
-                {locState === 'on' && 'Nakatutok ang mapa sa kinaroroonan mo.'}
-                {locState === 'asking' && 'Hinahanap ang lokasyon mo para sa mas mabilis na paghahanap…'}
-                {locState === 'off' && 'Buong Pilipinas ang tanaw — i-allow ang location para tumutok sa\'yo.'}
-              </p>
+              <h1>{greeting},<br />{firstName}!</h1>
+              <p className="cd-head-sub">Handa na ang susunod mong fresh cut.</p>
             </div>
           </header>
 
           <div className="cd-stats" aria-label="Quick stats">
             <Link to="/appointments" className="cd-stat cd-stat-blue">
-              <span className="cd-stat-icon"><DoodleIcon name="calendar" size={24} /></span>
-              <div>
-                <strong>{stats.upcoming}</strong>
-                <span className="cd-stat-label">Upcoming cuts</span>
-              </div>
+              <span className="cd-stat-badge"><DoodleIcon name="calendar" size={20} /></span>
+              <strong>{stats.upcoming}</strong>
+              <span className="cd-stat-label">Upcoming cuts</span>
             </Link>
             <Link to="/chat" className="cd-stat cd-stat-pink">
-              <span className="cd-stat-icon"><DoodleIcon name="chat" size={24} /></span>
-              <div>
-                <strong>{stats.unread}</strong>
-                <span className="cd-stat-label">Unread chats</span>
-              </div>
+              <span className="cd-stat-badge"><DoodleIcon name="chat" size={20} /></span>
+              <strong>{stats.unread}</strong>
+              <span className="cd-stat-label">Unread chats</span>
             </Link>
+            <div className="cd-stat cd-stat-placeholder cd-stat-placeholder-a" aria-hidden="true">
+              <span className="cd-stat-badge is-dashed"><span className="cd-stat-diamond" /></span>
+              <strong>0</strong>
+              <span className="cd-stat-label">Placeholder</span>
+            </div>
+            <div className="cd-stat cd-stat-placeholder cd-stat-placeholder-b" aria-hidden="true">
+              <span className="cd-stat-badge is-dashed"><span className="cd-stat-diamond" /></span>
+              <strong>0</strong>
+              <span className="cd-stat-label">Placeholder</span>
+            </div>
           </div>
+
+          <Link
+            to="/settings/avatar"
+            className="cd-profile-avatar"
+            aria-label="Change your doodle avatar in settings"
+          >
+            <span className="cd-profile-avatar-frame">
+              <DoodleAvatar avatarId={avatarId} role="customer" size={112} trackCursor />
+            </span>
+            <span className="cd-profile-avatar-label">{firstName}</span>
+          </Link>
         </section>
 
         {/* ---- Map + top rated ---- */}
-        <section className="cd-map-grid" aria-label="Barbershop map">
+        <section className="cd-map-grid" id="cd-discover" aria-label="Barbershop map">
           <div className="cd-card cd-map-card">
             <div className="cd-card-head cd-discovery-head">
               <div>
@@ -480,6 +542,7 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
                   userLocation={userLoc}
                   scope={areaMode}
                   resetKey={mapResetKey}
+                  hoverPreview
                 />
               </Suspense>
             </div>
@@ -499,26 +562,19 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
               />
             )}
 
-            {selectedShop && viewMode === 'map' && createPortal(
-              <div
-                className="cd-shop-popup-backdrop"
-                role="presentation"
-                onMouseDown={(event) => {
-                  if (event.target === event.currentTarget) setSelectedId(null)
-                }}
-              >
-              <article
-                className="cd-shop-card cd-shop-popup"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="selected-shop-title"
+            {selectedShop && viewMode === 'map' && (
+              <ModalPortal
+                backdropClassName="cd-shop-popup-backdrop"
+                dialogClassName="cd-shop-card cd-shop-popup"
+                labelledBy="selected-shop-title"
+                onClose={closeShopDetails}
               >
                 <button
                   type="button"
-                  ref={modalCloseRef}
                   className="cd-shop-popup-close"
                   aria-label="Isara ang shop details"
-                  onClick={() => setSelectedId(null)}
+                  data-dialog-initial-focus
+                  onClick={closeShopDetails}
                 >
                   ×
                 </button>
@@ -565,7 +621,16 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
                     <Link className="cd-see-all" to={`/shops/${routeSegment(selectedShop.id)}`}>
                       Full details <DoodleIcon name="arrow" size={15} />
                     </Link>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-blue"
+                      onClick={() => openShopChat(selectedShop.id)}
+                      disabled={selectedShop.barber_ids.length === 0 || openingShopChat}
+                    >
+                      <DoodleIcon name="chat" size={17} /> {openingShopChat ? 'Opening…' : 'Chat shop'}
+                    </button>
                   </div>
+                  {shopActionError && <p className="form-error" role="alert">{shopActionError}</p>}
                 </div>
                 <section className="cd-shop-services" aria-label="Services and prices">
                   <h4>Cut prices</h4>
@@ -586,64 +651,62 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
                     <h4>Available barbers</h4>
                     <span className="pill pill-on">{selectedShopBarbers.length} free now</span>
                   </div>
-                  {selectedShopBarbers.length === 0 && (
-                    <p className="muted">Walang bakanteng barber ngayon. Tingnan ulit mamaya o buksan ang full details.</p>
-                  )}
-                  {selectedShopBarbers.map((barber) => (
+                  {selectedShopStaff.map((barber) => {
+                    const status: BarberStatus = availableIds.has(barber.id)
+                      ? 'free'
+                      : barber.shift_status === 'off'
+                        ? 'off'
+                        : 'busy'
+                    return (
                       <div className="cd-staff-row" key={barber.id}>
                         <Avatar name={barber.profile.full_name} />
                         <div className="cd-staff-info">
                           <strong>{barber.profile.full_name}</strong>
-                          <span className="pill pill-on">Available</span>
+                          <span className={BARBER_STATUS_PILL[status]}>{BARBER_STATUS_LABEL[status]}</span>
                         </div>
                         <div className="cd-staff-actions">
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={() => openChat(barber.id)}
-                            disabled={openingChatWith !== null}
-                          >
-                            {openingChatWith === barber.id ? 'Opening…' : 'Chat'}
-                          </button>
                           <Link className="btn btn-sm btn-green" to={`/barbers/${routeSegment(barber.id)}`}>Book</Link>
                         </div>
                       </div>
-                  ))}
+                    )
+                  })}
+                  {selectedShopBarbers.length === 0 && (
+                    <p className="muted cd-staff-empty-note">Walang bakanteng barber ngayon. Tingnan ulit mamaya o buksan ang full details.</p>
+                  )}
                 </section>
-              </article>
-              </div>,
-              document.body,
+              </ModalPortal>
             )}
           </div>
 
           <div className="cd-map-aside-stack">
-            <aside className="cd-card cd-side" aria-label={userLoc ? 'Nearest shops' : 'Top rated shops'}>
+            <aside className="cd-card cd-side" aria-label={userLoc ? 'Nearest barbers' : 'Top rated barbers'}>
               <div className="cd-card-head">
-                <h2>{userLoc ? 'Nearest to you' : 'Top rated'}</h2>
+                <h2>{userLoc ? 'Nearest barbers' : 'Top barbers'}</h2>
               </div>
               <ol className="cd-side-list">
-                {userLoc && sideShops.length === 0 && (
+                {sideBarbers.length === 0 && (
                   <li className="cd-side-empty muted">
-                    Walang nearby shop na tugma sa filters mo. Subukan ang “All PH” o alisin ang ibang filters.
+                    Walang barber na tugma sa filters mo. Subukan ang “All PH” o alisin ang ibang filters.
                   </li>
                 )}
-                {sideShops.map((s) => (
-                  <li key={s.id}>
+                {sideBarbers.map(({ barber, shop, status }) => (
+                  <li key={barber.id}>
                     <button
                       type="button"
-                      className={`cd-side-shop${selectedId === s.id ? ' is-active' : ''}`}
+                      className={`cd-side-shop${selectedId === shop.id ? ' is-active' : ''}`}
+                      title={`${barber.profile.full_name} — ${shop.name}`}
                       onClick={() => {
                         setViewMode('map')
-                        setSelectedId(s.id)
+                        setSelectedId(shop.id)
                       }}
                     >
                       <span className="cd-side-name">
-                        <i className={`cd-dot is-${s.status}`} aria-hidden="true" />
-                        {s.name}
-                        <em>{s.city}</em>
+                        <i className={`cd-dot is-${status === 'free' ? 'open' : status === 'busy' ? 'busy' : 'closed'}`} aria-hidden="true" />
+                        {barber.profile.full_name}
+                        <em>{shop.city}</em>
                       </span>
                       <span className="cd-side-rating">
-                        <DoodleIcon name="star" size={13} className="is-lit" /> {s.rating.toFixed(1)}
+                        <DoodleIcon name="star" size={13} className="is-lit" /> {barber.rating.toFixed(1)}
                       </span>
                     </button>
                   </li>
@@ -651,62 +714,11 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
               </ol>
             </aside>
 
-            {/* Paboritong shop sa sidebar para magamit ang espasyo sa ilalim ng nearest list. */}
-            <section className="cd-card cd-favorites-side" aria-labelledby="cd-fav-title">
-              <div className="cd-card-head">
-                <h2 id="cd-fav-title"><DoodleIcon name="heart" size={20} className="is-fav" /> Favorite barbershops</h2>
-              </div>
-              {favoriteShops.length === 0 ? (
-                <p className="muted cd-empty">
-                  Wala ka pang favorites — i-tap ang <DoodleIcon name="heart" size={15} /> sa shop card para idagdag dito.
-                </p>
-              ) : (
-                <div className="cd-fav-grid">
-                  {favoriteShops.map((s) => (
-                    <div className="cd-fav-card" key={s.id}>
-                      <button
-                        type="button"
-                        className="cd-heart is-fav"
-                        aria-label={`Alisin sa favorites: ${s.name}`}
-                        onClick={() => toggleFavorite(s.id)}
-                      >
-                        <DoodleIcon name="heart" size={18} />
-                      </button>
-                      <button
-                        type="button"
-                        className="cd-fav-body"
-                        onClick={() => {
-                          // A favorite may sit outside the private 10km area.
-                          // Reset discovery filters so its pin is guaranteed
-                          // to exist when the map and popup open.
-                          setAreaMode('all')
-                          setFilter('all')
-                          setPriceFilter('all')
-                          setServiceFilter('all')
-                          setSelectedId(s.id)
-                          setViewMode('map')
-                        }}
-                      >
-                        <strong>{s.name}</strong>
-                        <span className="cd-fav-meta">
-                          {s.city}
-                        </span>
-                        <span className="cd-fav-bottom">
-                          <span className={STATUS_PILL[s.status]}>{s.status}</span>
-                          <span className="cd-side-rating">
-                            <DoodleIcon name="star" size={13} className="is-lit" /> {s.rating.toFixed(1)}
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            <AppointmentCalendar appointments={bookings} shops={shops} />
           </div>
         </section>
 
-        <aside className="cd-card cd-engagement cd-engagement-wide" aria-labelledby="cd-rewards-title">
+        <aside className="cd-card cd-engagement cd-engagement-wide" id="cd-rewards" aria-labelledby="cd-rewards-title">
           <div className="cd-card-head">
             <div>
               <span className="cd-kicker">REWARDS</span>
@@ -731,12 +743,12 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
               {referralCopied ? 'Copied!' : 'Copy code'}
             </button>
           </div>
-          <Link className="cd-notification-link" to="/settings">
+          <Link className="cd-notification-link" to="/settings/notifications">
             <DoodleIcon name="chat" size={18} /> Booking and chat notifications <DoodleIcon name="arrow" size={16} />
           </Link>
         </aside>
       </div>
-    </div>
+    </DoodleBoard>
   )
 }
 

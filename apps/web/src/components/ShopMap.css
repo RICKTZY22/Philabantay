@@ -166,3 +166,36 @@
 }
 
 .shop-tooltip::before { display: none; }
+
+/* ---- Hover preview card: notebook page sa maliit na sukat ---- */
+.shop-tooltip.is-preview {
+  padding: 9px 12px 8px 26px;
+  border: 2px solid var(--ink);
+  border-radius: 10px 14px 9px 13px / 13px 9px 14px 10px;
+  background:
+    radial-gradient(circle at 9px 12px, var(--paper-soft) 0 2.5px, var(--ink) 3px 4px, transparent 4.5px) 0 0 / 18px 20px repeat-y,
+    linear-gradient(90deg, transparent 18px, rgba(216, 102, 102, .35) 19px 20px, transparent 21px),
+    repeating-linear-gradient(0deg, transparent 0 17px, rgba(91, 151, 175, .16) 18px 19px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  box-shadow: 4px 5px 0 rgba(30, 28, 25, .4);
+  transform: rotate(-.5deg);
+}
+
+.shop-preview { display: grid; gap: 1px; min-width: 150px; }
+.shop-preview-name { font: 700 15px/1.2 'Kalam', cursive; }
+.shop-preview-rating { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.shop-preview-stars { color: #d99a1b; letter-spacing: 1px; font-size: 13px; }
+.shop-preview-meta { color: var(--muted); font-size: 12px; }
+.shop-preview-meta.is-open { color: #367044; }
+.shop-preview-meta.is-closed { color: var(--danger); }
+.shop-preview-hint {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px dashed var(--line);
+  color: var(--faint);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-tooltip.is-preview { transform: none; }
+}

@@ -45,6 +45,10 @@ export function DoodleDefs() {
           <path d="M4 5 h16 v11 H9 l-4 4 v-4 H4 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
           <path d="M8 9 h8 M8 12 h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </symbol>
+        <symbol id="i-search" viewBox="0 0 24 24">
+          <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M15.5 15.5 L21 21" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </symbol>
         <symbol id="i-user" viewBox="0 0 24 24">
           <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
           <path d="M4 21 c0 -5 4 -7 8 -7 s8 2 8 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -88,7 +92,7 @@ export function DoodleDefs() {
 
 const KNOWN = [
   'scissors', 'comb', 'razor', 'chair', 'clock', 'calendar',
-  'chat', 'user', 'star', 'check', 'plus', 'arrow', 'x', 'send', 'pole',
+  'chat', 'search', 'user', 'star', 'check', 'plus', 'arrow', 'x', 'send', 'pole',
   'home', 'gear', 'heart',
 ] as const
 

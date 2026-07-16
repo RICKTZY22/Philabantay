@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { LandingPage } from './pages/LandingPage'
+import { useAuth } from './features/auth/AuthContext'
 
 // Lazy routes: landing page lang ang kasama agad sa unang download para mabilis
 // ang first paint. Yung ibang feature page, kukunin lang kapag binuksan na.
@@ -12,13 +13,18 @@ import { LandingPage } from './pages/LandingPage'
 // export ang hinihingi ng React.lazy. Ito ang tulay nila; pag tinanggal, sabog
 // ang route chunk sa runtime kahit mukhang okay ang import path.
 const BarbersPage = lazy(() => import('./pages/BarbersPage').then((m) => ({ default: m.BarbersPage })))
+const FavoriteBarbersPage = lazy(() => import('./pages/BarbersPage').then((m) => ({ default: m.FavoriteBarbersPage })))
 const BarberDetailPage = lazy(() => import('./pages/BarberDetailPage').then((m) => ({ default: m.BarberDetailPage })))
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) => ({ default: m.AppDashboardPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const SettingsAccountPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAccountPage })))
+const SettingsAvatarPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAvatarPage })))
+const SettingsNotificationsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsNotificationsPage })))
+const SettingsSecurityPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsSecurityPage })))
+const SettingsBugReportPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsBugReportPage })))
 const ShopProfilePage = lazy(() => import('./pages/ShopProfilePage').then((m) => ({ default: m.ShopProfilePage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
@@ -31,6 +37,14 @@ function AuthRedirect() {
   const mode: 'signin' | 'signup' = location.pathname === '/signup' ? 'signup' : 'signin'
   const prev = (location.state as Record<string, unknown> | null) ?? {}
   return <Navigate to="/" replace state={{ ...prev, authMode: mode }} />
+}
+
+function RoleAwareAppointments() {
+  const { profile } = useAuth()
+  if (profile?.role === 'barber' || profile?.requested_role === 'barber') {
+    return <Navigate to={profile.role === 'barber' ? '/schedule' : '/dashboard'} replace />
+  }
+  return <AppointmentsPage />
 }
 
 export function App() {
@@ -55,6 +69,7 @@ export function App() {
 
         {/* Public discovery: puwedeng tumingin ng shops kahit guest pa. */}
         <Route path="barbers" element={<BarbersPage />} />
+        <Route path="barbers/favorites" element={<FavoriteBarbersPage />} />
         <Route path="barbers/:barberId" element={<BarberDetailPage />} />
         <Route path="shops/:shopId" element={<ShopProfilePage />} />
 
@@ -63,7 +78,7 @@ export function App() {
           path="appointments"
           element={
             <RequireAuth>
-              <AppointmentsPage />
+              <RoleAwareAppointments />
             </RequireAuth>
           }
         />
@@ -93,23 +108,30 @@ export function App() {
           }
         />
         {/* Account preferences ng kahit anong signed-in user. */}
+        <Route path="settings" element={<Navigate to="/settings/account" replace />} />
         <Route
-          path="settings"
+          path="settings/account"
           element={
             <RequireAuth>
-              <SettingsPage />
+              <SettingsAccountPage />
             </RequireAuth>
           }
         />
-        {/* Verified barber tools lang ang nasa nested route na ito. */}
+        <Route path="settings/avatar" element={<RequireAuth><SettingsAvatarPage /></RequireAuth>} />
+        <Route path="settings/notifications" element={<RequireAuth><SettingsNotificationsPage /></RequireAuth>} />
+        <Route path="settings/security" element={<RequireAuth><SettingsSecurityPage /></RequireAuth>} />
+        <Route path="settings/report-bug" element={<RequireAuth><SettingsBugReportPage /></RequireAuth>} />
+        {/* One barber schedule screen. The legacy URL redirects here so there
+            is no duplicate chair-tools/booking flow. */}
         <Route
-          path="dashboard/barber"
+          path="schedule"
           element={
             <RequireAuth role="barber">
               <DashboardPage />
             </RequireAuth>
           }
         />
+        <Route path="dashboard/barber" element={<Navigate to="/schedule" replace />} />
         {/* Catch-all para friendly pa rin kapag mali o luma ang URL. */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

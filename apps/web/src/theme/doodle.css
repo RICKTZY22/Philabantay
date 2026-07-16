@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url('@fontsource/kalam/files/kalam-latin-700-normal.woff2') format('woff2');
+  src: url('/fonts/kalam-700.woff2') format('woff2');
 }
 
 @font-face {
@@ -33,7 +33,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url('@fontsource/patrick-hand/files/patrick-hand-latin-400-normal.woff2') format('woff2');
+  src: url('/fonts/patrick-hand-400.woff2') format('woff2');
 }
 
 :root {
@@ -51,6 +51,11 @@
   --orange: #fad4b8;
   --danger: #e28b7b;
   --shadow: rgba(43, 42, 40, 0.14);
+  --layer-page: 1;
+  --layer-header: 60;
+  --layer-drawer: 70;
+  --layer-curtain: 200;
+  --layer-modal: 1000;
 
   font-family: 'Patrick Hand', cursive;
   color: var(--ink);
@@ -103,12 +108,12 @@ body {
   stacking context kaysa main, kung hindi tatakpan ng page cards ang drawer.
 */
 .app-shell > header {
-  z-index: 50;
+  z-index: var(--layer-header);
 }
 
 .app-shell > main,
 .app-shell > footer {
-  z-index: 1;
+  z-index: var(--layer-page);
 }
 
 h1, h2, h3, h4 {
@@ -156,7 +161,6 @@ button:disabled {
 .doodle-icon {
   display: block;
   color: currentColor;
-  filter: url('#rough');
   flex: none;
 }
 
@@ -276,18 +280,15 @@ main.page {
   font-weight: 700;
   border-radius: 220px 18px 220px 18px / 18px 220px 18px 220px;
   box-shadow: 4px 5px 0 var(--shadow);
-  filter: url('#rough');
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease;
 }
 
 .btn:hover:not(:disabled) {
   transform: translate(-1px, -2px);
-  box-shadow: 5px 7px 0 var(--shadow);
 }
 
 .btn:active:not(:disabled) {
   transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--shadow);
 }
 
 .btn-primary { background: var(--yellow); }
@@ -336,7 +337,6 @@ main.page {
   border: 2px solid var(--ink);
   border-radius: 220px 14px 220px 14px / 14px 220px 14px 220px;
   background: var(--paper);
-  filter: url('#rough');
 }
 
 .pill-on { background: var(--green); }
@@ -419,7 +419,6 @@ main.page {
   font-family: 'Kalam', cursive;
   font-size: 24px;
   font-weight: 700;
-  filter: url('#rough');
   flex: none;
 }
 
@@ -445,7 +444,7 @@ main.page {
 .curtain {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--layer-curtain);
   pointer-events: none;
 }
 
@@ -528,11 +527,37 @@ main.page {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* ---- Footer ---- */
 
-.site-footer {
-  border-top: 3px dashed var(--line);
-  padding-block: 22px;
-  color: var(--faint);
-  text-align: center;
+/* ---- Barber "stacked notebook" primitives ----
+   Front card on top of offset paper sheets. Barber-side pages lang ang
+   gumagamit nito (BarberDashboard + Schedule page). */
+.barber-paper-stack {
+  position: relative;
+  isolation: isolate;
+}
+.barber-paper-stack::before,
+.barber-paper-stack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 2px solid var(--ink);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--yellow) 10%, var(--paper));
+  pointer-events: none;
+}
+.barber-paper-stack::before { transform: rotate(-1deg) translate(-4px, 6px); }
+.barber-paper-stack::after { transform: rotate(.8deg) translate(5px, 8px); background: var(--paper); }
+
+.barber-paper-stack-sm { position: relative; isolation: isolate; }
+.barber-paper-stack-sm::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.5px solid var(--ink);
+  border-radius: inherit;
+  background: var(--paper);
+  transform: rotate(.6deg) translate(3px, 4px);
+  pointer-events: none;
 }

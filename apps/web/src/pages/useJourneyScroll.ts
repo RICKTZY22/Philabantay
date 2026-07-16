@@ -16,6 +16,7 @@ export function useJourneyScroll(
   useEffect(() => {
     const root = rootRef.current
     const hero = root?.querySelector<HTMLElement>('.phil-hero-main')
+    const storefront = root?.querySelector<HTMLElement>('.phil-neighborhood-stage')
     if (!root || !hero) return undefined
 
     // Walang visual na binabago: pini-freeze lang ang looping CSS doodles kapag
@@ -26,15 +27,23 @@ export function useJourneyScroll(
     const observer = new IntersectionObserver(([entry]) => {
       hero.dataset.animationPaused = entry?.isIntersecting ? 'false' : 'true'
     }, { rootMargin: '160px 0px' })
+    const storefrontObserver = storefront
+      ? new IntersectionObserver(([entry]) => {
+          storefront.dataset.animationPaused = entry?.isIntersecting ? 'false' : 'true'
+        }, { rootMargin: '160px 0px' })
+      : null
 
     syncPageVisibility()
     observer.observe(hero)
+    if (storefront && storefrontObserver) storefrontObserver.observe(storefront)
     document.addEventListener('visibilitychange', syncPageVisibility)
     return () => {
       observer.disconnect()
+      storefrontObserver?.disconnect()
       document.removeEventListener('visibilitychange', syncPageVisibility)
       delete root.dataset.animationPaused
       delete hero.dataset.animationPaused
+      if (storefront) delete storefront.dataset.animationPaused
     }
   }, [rootRef])
 

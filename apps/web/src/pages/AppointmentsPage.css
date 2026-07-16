@@ -1,46 +1,149 @@
 .appointments-page { width: 100%; }
 .appointments-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
-.appointments-head h1 { margin: 3px 0 0; }
-.appointments-tabs { display: flex; padding: 3px; border: 2px solid var(--ink); border-radius: 13px; background: var(--paper-soft); }
-.appointments-tabs button { padding: 7px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); }
-.appointments-tabs button.is-active { background: var(--yellow); color: var(--ink); font-weight: 700; }
-.appointments-tabs button span { display: inline-grid; place-items: center; min-width: 21px; height: 21px; margin-left: 5px; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper-soft); }
+.appointments-head h1 { margin: 3px 0 0; font-size: clamp(2.35rem, 4vw, 3.3rem); line-height: .95; }
+.appointments-head p { margin: 2px 0 0; color: var(--muted); }
+.appointments-head .btn { flex: 0 0 auto; }
 
-.appt-list {
-  display: grid;
-  gap: 14px;
-  margin-top: 20px;
+.appointments-workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 14px; align-items: start; margin-top: 10px; }
+.appointments-sidebar { display: grid; gap: 10px; }
+/* Notebook paper cards — kapareho ng chat inbox at shop popup styling. */
+.appointments-sidebar > section {
+  padding: 13px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 151, 175, .14) 32px 33px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  border: 2px solid var(--ink);
+  border-radius: 13px 17px 12px 15px;
+  box-shadow: 3px 4px 0 var(--shadow);
+}
+.appointments-sidebar > section:nth-child(odd) { transform: rotate(-.3deg); }
+.appointments-sidebar > section:nth-child(even) { transform: rotate(.3deg); }
+@media (prefers-reduced-motion: reduce) {
+  .appointments-sidebar > section { transform: none; }
+}
+.appointments-sidebar h2 { margin: 2px 0 8px; font-size: 1.1rem; }
+.appointments-plan { background: color-mix(in srgb, var(--yellow) 32%, var(--paper-soft)) !important; }
+.appointments-plan label { display: grid; gap: 4px; }
+.appointments-plan label span { color: var(--muted); font-size: .82rem; }
+.appointments-plan input { width: 100%; padding: 7px 8px; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 11px 7px 10px; font: inherit; }
+.appointments-plan .btn { width: 100%; margin-top: 9px; }
+.appointments-mini-list > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.appointments-mini-list > header span { display: grid; place-items: center; width: 25px; height: 25px; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.appointments-mini-list > p { margin: 4px 0; color: var(--faint); }
+.appointments-mini-list button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; margin-top: 6px; padding: 7px 8px; color: var(--ink); text-align: left; background: rgba(255, 253, 247, .9); border: 1.5px solid var(--ink); border-radius: 8px 11px 7px 10px; box-shadow: 2px 3px 0 var(--shadow); }
+.appointments-mini-list button:hover { background: var(--paper-soft); transform: translateX(2px); }
+.appointments-mini-list.is-upcoming button { border-left: 7px solid var(--blue); }
+.appointments-mini-list.is-history button { border-left: 7px solid var(--green); }
+.appointments-mini-list button > span { display: grid; min-width: 0; }
+.appointments-mini-list button strong,
+.appointments-mini-list button small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appointments-mini-list button small { color: var(--faint); font-size: .75rem; }
+.appointments-mini-list time { display: grid; justify-items: end; font-size: .8rem; white-space: nowrap; }
+.appointments-mini-more { display: block; margin-top: 7px; color: var(--faint); text-align: center; }
+
+.appointments-calendar-shell {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0 0 8px;
 }
 
-.appt-row {
+.booking-notebook-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-modal);
   display: grid;
-  grid-template-columns: 1.15fr 1.35fr auto auto;
-  gap: 16px;
-  align-items: center;
-  background: var(--paper-soft);
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(29, 28, 26, .62);
+  backdrop-filter: blur(5px);
+  isolation: isolate;
+  overscroll-behavior: contain;
 }
+.booking-notebook {
+  position: relative;
+  width: min(900px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 30px 34px 28px 58px;
+  /* Same spiral-bound recipe as .cd-shop-popup at chat notebook: holes,
+     red margin, ruled lines, cream paper. */
+  background:
+    radial-gradient(circle at 18px 20px, var(--paper-soft) 0 5px, var(--ink) 5.5px 7px, transparent 7.5px) 0 0 / 38px 42px repeat-y,
+    linear-gradient(90deg, transparent 42px, rgba(216, 102, 102, .35) 43px 44px, transparent 45px),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 151, 175, .14) 32px 33px),
+    color-mix(in srgb, var(--yellow) 8%, var(--paper));
+  border: 3px solid var(--ink);
+  border-radius: 13px 20px 15px 18px;
+  box-shadow: 9px 11px 0 rgba(30, 28, 25, .55);
+}
+.booking-notebook::after {
+  content: 'BOOKING NOTES';
+  position: absolute;
+  top: 10px;
+  left: 62px;
+  color: rgba(22, 135, 141, .72);
+  font: 10px/1 'Gochi Hand', cursive;
+  letter-spacing: 1.4px;
+  pointer-events: none;
+  transform: rotate(-1deg);
+}
+.booking-notebook > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-right: 42px; }
+.booking-notebook h2 { margin: 2px 0 0; font-size: clamp(1.7rem, 3vw, 2.35rem); }
+.booking-notebook-close {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font: 700 1.3rem 'Kalam', cursive;
+}
+.booking-notebook-main { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+.booking-notebook-date { display: grid; place-items: center; align-content: center; min-height: 185px; padding: 20px; text-align: center; background: var(--blue); border: 2px solid var(--ink); border-radius: 18px 13px 20px 15px; box-shadow: 4px 5px 0 var(--ink); transform: rotate(-.4deg); }
+@media (prefers-reduced-motion: reduce) {
+  .booking-notebook-date { transform: none; }
+}
+.booking-notebook-date strong { margin-top: 8px; font: 700 1.35rem 'Kalam', cursive; }
+.booking-notebook-date span { font-size: 1.15rem; }
+.booking-notebook dl { display: grid; gap: 0; margin: 0; }
+.booking-notebook dl > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; padding: 9px 4px; border-bottom: 1.5px dashed var(--line); }
+.booking-notebook dt { color: var(--faint); }
+.booking-notebook dd { margin: 0; font-weight: 700; }
+.booking-notebook-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 22px; padding-top: 17px; border-top: 2px dashed var(--line); }
 
-.appt-when { display: flex; align-items: center; gap: 10px; }
-.appt-what { display: grid; }
-.appt-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
-.appt-review { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 2px dashed var(--line); color: var(--muted); }
-.appt-review > div { display: flex; }
-.appt-review button { padding: 2px; border: 0; background: transparent; color: var(--line); }
-.appt-review button.is-rated { color: #d99a1b; }
+.booking-notebook-review { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto auto; align-items: center; gap: 14px 20px; margin-top: 22px; padding: 18px; background: color-mix(in srgb, var(--yellow) 35%, var(--paper-soft)); border: 2px solid var(--ink); border-radius: 14px 18px 13px 16px; }
+.booking-notebook-review h3 { margin: 2px 0; }
+.booking-notebook-review p { margin: 0; color: var(--muted); }
+.appt-rating-row { display: grid; gap: 3px; }
+.appt-rating-row > span { font-size: .88rem; }
+.appt-rating-row > div { display: flex; }
+.appt-rating-row button { padding: 2px; color: var(--line); background: transparent; border: 0; }
+.appt-rating-row button.is-rated { color: #d99a1b; }
+.booking-review-message { grid-column: 1 / -1; color: #367044; }
 
-@media (max-width: 680px) {
-  .appointments-page { width: 100%; }
+@media (max-width: 760px) {
   .appointments-head { align-items: stretch; flex-direction: column; }
-  .appointments-tabs { width: 100%; }
-  .appointments-tabs button { flex: 1; }
-  .appt-row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      'when status'
-      'what actions';
-  }
-  .appt-when { grid-area: when; }
-  .appt-what { grid-area: what; }
-  .appt-actions { grid-area: actions; }
-  .appt-review { justify-content: space-between; }
+  .appointments-head .btn { width: 100%; }
+  .appointments-workspace { grid-template-columns: 1fr; }
+  .appointments-sidebar { grid-template-columns: 1fr 1fr; }
+  .appointments-plan { grid-column: 1 / -1; }
+  .booking-notebook-backdrop { padding: 12px; place-items: start center; }
+  .booking-notebook { max-height: calc(100vh - 24px); padding: 24px 18px 22px 48px; }
+  .booking-notebook::after { left: 50px; }
+  .booking-notebook-main { grid-template-columns: 1fr; }
+  .booking-notebook-date { min-height: 130px; }
+  .booking-notebook dl > div { grid-template-columns: 88px minmax(0, 1fr); }
+  .booking-notebook-review { grid-template-columns: 1fr; }
+  .booking-notebook-review .btn { width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .appointments-sidebar { grid-template-columns: 1fr; }
+  .appointments-plan { grid-column: auto; }
 }

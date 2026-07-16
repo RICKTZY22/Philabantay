@@ -7,22 +7,37 @@ import type {
   AvailabilityRuleInput,
   CreateAppointmentInput,
   CompleteRoleOnboardingInput,
+  ChangePasswordInput,
+  CreateBugReportInput,
   SendMessageInput,
+  JoinShopInput,
+  RateAppointmentInput,
+  ShiftChangeRequestInput,
   SignInInput,
   SignUpInput,
+  UpdateProfileInput,
 } from './dto'
 import type {
   Appointment,
   AppointmentDetailed,
   AvailabilityOverride,
+  PublicAvailabilityOverride,
   AvailabilityRule,
   Barber,
+  BarberAbsence,
+  BarberEmployment,
   BarberWithProfile,
+  BugReport,
   ConversationDetailed,
   Message,
   Profile,
+  Review,
   Service,
+  ShiftChangeRequest,
   ShopWithStatus,
+  HiringShop,
+  BarberApplication,
+  ShopJoinCodeDetails,
   Slot,
 } from './types'
 
@@ -37,11 +52,20 @@ export interface AuthService {
    * hanggang ma-approve ng trusted server/admin process.
    */
   completeRoleOnboarding(input: CompleteRoleOnboardingInput): Promise<Profile>
+  /** Update allowlisted, non-privileged profile preferences. */
+  updateProfile(input: UpdateProfileInput): Promise<Profile>
+  /** Re-authenticate with the current password before replacing it. */
+  changePassword(input: ChangePasswordInput): Promise<void>
   signOut(): Promise<void>
   /** Current signed-in profile, or null. Resolves the persisted session. */
   getCurrentProfile(): Promise<Profile | null>
   /** Fires whenever the signed-in profile changes (login/logout). */
   onAuthChange(cb: (profile: Profile | null) => void): Unsubscribe
+}
+
+export interface SupportService {
+  /** Submit a private support report for the signed-in account. */
+  reportBug(input: CreateBugReportInput): Promise<BugReport>
 }
 
 export interface BarberService {
@@ -56,7 +80,10 @@ export interface BarberService {
 
 export interface AvailabilityService {
   getRules(barberId: string): Promise<AvailabilityRule[]>
-  getOverrides(barberId: string): Promise<AvailabilityOverride[]>
+  /** Public schedule exceptions with private notes removed. */
+  getOverrides(barberId: string): Promise<PublicAvailabilityOverride[]>
+  /** Barber-only view of their own exceptions, including private notes. */
+  getMyOverrides(): Promise<AvailabilityOverride[]>
   /** Barber-only: replace the signed-in barber's weekly rules. */
   setRules(rules: AvailabilityRuleInput[]): Promise<AvailabilityRule[]>
   addOverride(input: AvailabilityOverrideInput): Promise<AvailabilityOverride>
@@ -83,8 +110,8 @@ export interface BookingService {
 export interface ChatService {
   /** Conversations the signed-in user participates in, newest activity first. */
   listConversations(): Promise<ConversationDetailed[]>
-  /** Find or create the 1:1 conversation between the signed-in customer and a barber. */
-  openConversation(barberId: string): Promise<ConversationDetailed>
+  /** Find or create the customer-to-shop conversation. */
+  openConversation(shopId: string): Promise<ConversationDetailed>
   getMessages(conversationId: string, limit?: number): Promise<Message[]>
   sendMessage(input: SendMessageInput): Promise<Message>
   markRead(conversationId: string): Promise<void>
@@ -103,6 +130,39 @@ export interface FavoriteService {
   list(): Promise<string[]>
   /** Toggle a shop in/out of favorites; returns the updated id list. */
   toggle(shopId: string): Promise<string[]>
+  /** Barber ids saved by the signed-in customer. */
+  listBarbers(): Promise<string[]>
+  /** Toggle a barber favorite and return the updated barber-id list. */
+  toggleBarber(barberId: string): Promise<string[]>
+}
+
+export interface ReviewService {
+  /** Ratings created by the signed-in customer. */
+  listMine(): Promise<Review[]>
+  /** Create or update both barber and shop ratings for a completed cut. */
+  rateAppointment(input: RateAppointmentInput): Promise<Review>
+}
+
+export interface BarberEmploymentService {
+  /** Hiring shops shown before the barber has a shop membership. */
+  listHiringShops(): Promise<HiringShop[]>
+  /** Current shop derived from its registered barber membership. */
+  getMyShop(): Promise<ShopWithStatus | null>
+  listMyApplications(): Promise<BarberApplication[]>
+  apply(shopId: string): Promise<BarberApplication>
+  /** Validated shop-issued code; never expose the stored code through reads. */
+  joinWithCode(input: JoinShopInput): Promise<ShopWithStatus>
+  /** Shop-owner-only roster code controls. */
+  getMyShopJoinCode(): Promise<ShopJoinCodeDetails | null>
+  rotateMyShopJoinCode(): Promise<ShopJoinCodeDetails>
+  /** Active employment record ng signed-in barber (hire date, shop stint). */
+  getMyEmployment(): Promise<BarberEmployment | null>
+  /** Absences scoped sa ACTIVE employment lang — fresh start per shop. */
+  listMyAbsences(): Promise<BarberAbsence[]>
+  /** Shift change requests scoped sa active employment, newest first. */
+  listMyShiftChangeRequests(): Promise<ShiftChangeRequest[]>
+  /** File a request to change one day's shift; the owner approves/denies. */
+  requestShiftChange(input: ShiftChangeRequestInput): Promise<ShiftChangeRequest>
 }
 
 /** The full data layer handed to the UI through a React provider. */
@@ -115,4 +175,7 @@ export interface DataBackend {
   chat: ChatService
   shops: ShopService
   favorites: FavoriteService
+  reviews: ReviewService
+  employment: BarberEmploymentService
+  support: SupportService
 }

@@ -1,0 +1,68 @@
+.doodle-avatar {
+  --avatar-size: 120px;
+  --avatar-accent: var(--blue);
+  --avatar-look-x: 0px;
+  --avatar-look-y: 0px;
+  --avatar-head-x: 0px;
+  --avatar-head-y: 0px;
+  --avatar-head-r: 0deg;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  display: inline-grid;
+  place-items: end center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 48% 52% 45% 55% / 55% 45% 55% 45%;
+  background: color-mix(in srgb, var(--avatar-accent) 72%, var(--paper-soft));
+}
+.doodle-avatar svg { width: 94%; height: 108%; overflow: visible; color: var(--ink); }
+.doodle-avatar path,
+.doodle-avatar circle,
+.doodle-avatar rect { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.da-shadow { fill: rgba(255, 255, 255, .38); stroke: none; }
+.da-body { fill: var(--paper-soft); stroke: var(--ink); stroke-width: 3.5; }
+.da-shirt-line,
+.da-brow,
+.da-nose,
+.da-mouth { fill: none; stroke: var(--ink); stroke-width: 3.2; }
+.da-face,
+.da-ear { fill: var(--avatar-skin, var(--paper-soft)); stroke: var(--ink); stroke-width: 3.5; }
+.da-hair,
+.da-moustache { fill: #252523; stroke: #252523; stroke-width: 3; }
+.da-cap { fill: #252523; stroke: var(--ink); stroke-width: 3.5; }
+.da-cap-line { fill: none; stroke: var(--ink); stroke-width: 3.5; }
+.da-eye { fill: var(--ink); stroke: none; }
+.da-eye-white { fill: var(--paper-soft); stroke: var(--ink); stroke-width: 2.6; }
+.da-happy-eyes path { fill: none; stroke: var(--ink); stroke-width: 3.2; }
+.da-freckles { fill: var(--ink); stroke: none; }
+.da-blush { fill: var(--pink); stroke: none; opacity: .85; }
+.da-glasses { fill: none; stroke: var(--ink); stroke-width: 3.5; }
+
+/* ---- Role gear (rewards unlockables) ---- */
+.da-gear-earring { fill: none; stroke: #d99a1b; stroke-width: 3; }
+.da-gear-shears path { fill: none; stroke: var(--ink); stroke-width: 3; }
+.da-gear-shears circle { fill: var(--paper-soft); stroke: var(--ink); stroke-width: 2.6; }
+.da-gear-towel-cloth { fill: var(--blue); stroke: var(--ink); stroke-width: 3; }
+.da-gear-towel-line { fill: none; stroke: var(--ink); stroke-width: 2; opacity: .55; }
+.da-gear-badge circle { fill: var(--yellow); stroke: var(--ink); stroke-width: 3; }
+.da-gear-badge path { fill: var(--ink); stroke: none; }
+.da-gear-headphones rect { fill: #252523; stroke: var(--ink); stroke-width: 3; }
+.da-gear-band { fill: none; stroke: #252523; stroke-width: 4.5; }
+.da-gear-sparkle path { fill: none; stroke: #d99a1b; stroke-width: 3; }
+.da-gear-crown { fill: var(--yellow); stroke: var(--ink); stroke-width: 3.2; }
+.da-head-track {
+  transform: translate(var(--avatar-head-x), var(--avatar-head-y)) rotate(var(--avatar-head-r));
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 90ms ease-out;
+}
+.da-eye-track {
+  transform: translate(var(--avatar-look-x), var(--avatar-look-y));
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 55ms linear;
+}
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .da-head-track,
+  .da-eye-track { transition: none; transform: none; }
+}
