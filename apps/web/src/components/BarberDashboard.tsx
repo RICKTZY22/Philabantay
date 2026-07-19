@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   DataError,
   type AppointmentDetailed,
+  type AvailabilityOverride,
   type AvailabilityRule,
   type BarberAbsence,
   type BarberApplication,
@@ -37,6 +38,7 @@ interface BarberHomeData {
   appointments: AppointmentDetailed[]
   conversations: ConversationDetailed[]
   rules: AvailabilityRule[]
+  overrides: AvailabilityOverride[]
   employment: BarberEmployment | null
   absences: BarberAbsence[]
   shiftRequests: ShiftChangeRequest[]
@@ -49,6 +51,7 @@ const emptyData: BarberHomeData = {
   appointments: [],
   conversations: [],
   rules: [],
+  overrides: [],
   employment: null,
   absences: [],
   shiftRequests: [],
@@ -71,15 +74,16 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
         setData({ ...emptyData, hiringShops, applications })
         return
       }
-      const [appointments, conversations, rules, employment, absences, shiftRequests] = await Promise.all([
+      const [appointments, conversations, rules, overrides, employment, absences, shiftRequests] = await Promise.all([
         backend.bookings.listMine(),
         backend.chat.listConversations(),
         backend.availability.getRules(barberId),
+        backend.availability.getMyOverrides(),
         backend.employment.getMyEmployment(),
         backend.employment.listMyAbsences(),
         backend.employment.listMyShiftChangeRequests(),
       ])
-      setData({ ...emptyData, shop, appointments, conversations, rules, employment, absences, shiftRequests })
+      setData({ ...emptyData, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests })
     } catch (error) {
       setLoadError(error instanceof DataError ? error.message : 'Hindi ma-load ang barber workspace.')
       setData(emptyData)
@@ -112,6 +116,7 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
       appointments={data.appointments}
       conversations={data.conversations}
       rules={data.rules}
+      overrides={data.overrides}
       employment={data.employment}
       absences={data.absences}
       shiftRequests={data.shiftRequests}
@@ -323,12 +328,13 @@ function BarberJobBoard({
   )
 }
 
-function EmployedBarberHome({ barberName, shop, appointments, conversations, rules, employment, absences, shiftRequests, loadError }: {
+function EmployedBarberHome({ barberName, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests, loadError }: {
   barberName: string
   shop: ShopWithStatus
   appointments: AppointmentDetailed[]
   conversations: ConversationDetailed[]
   rules: AvailabilityRule[]
+  overrides: AvailabilityOverride[]
   employment: BarberEmployment | null
   absences: BarberAbsence[]
   shiftRequests: ShiftChangeRequest[]
@@ -381,6 +387,7 @@ function EmployedBarberHome({ barberName, shop, appointments, conversations, rul
             : (
               <BarberShiftCalendar
                 rules={rules}
+                overrides={overrides}
                 employment={employment}
                 absences={absences}
                 requests={shiftRequests}

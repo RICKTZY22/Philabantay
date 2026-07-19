@@ -1,6 +1,7 @@
+import { canonicalAppointmentStatus, customerCanCancelAppointment } from './appointment-lifecycle'
 import type { Appointment } from './types'
 
-const ACTIVE_APPOINTMENT_STATUSES = new Set<Appointment['status']>(['pending', 'confirmed'])
+const ACTIVE_APPOINTMENT_STATUSES = new Set(['requested', 'confirmed'])
 
 /**
  * An appointment is upcoming only while it is active and its start time has
@@ -12,7 +13,7 @@ export function isUpcomingAppointment(
   nowEpochMs = Date.now(),
 ): boolean {
   const startsAt = Date.parse(appointment.starts_at)
-  return ACTIVE_APPOINTMENT_STATUSES.has(appointment.status)
+  return ACTIVE_APPOINTMENT_STATUSES.has(canonicalAppointmentStatus(appointment.status))
     && Number.isFinite(startsAt)
     && startsAt > nowEpochMs
 }
@@ -22,5 +23,5 @@ export function canModifyAppointment(
   appointment: Pick<Appointment, 'starts_at' | 'status'>,
   nowEpochMs = Date.now(),
 ): boolean {
-  return isUpcomingAppointment(appointment, nowEpochMs)
+  return customerCanCancelAppointment(appointment, nowEpochMs)
 }

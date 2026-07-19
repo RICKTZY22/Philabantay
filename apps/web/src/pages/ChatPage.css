@@ -197,6 +197,15 @@
   --nb-label: rgba(160, 92, 22, .78);
 }
 
+.chat-layout[data-notebook='owner'] {
+  --nb-paper: color-mix(in srgb, var(--purple) 20%, var(--paper));
+  --nb-head: color-mix(in srgb, var(--purple) 38%, var(--paper-soft));
+  --nb-compose: color-mix(in srgb, var(--purple) 26%, var(--paper));
+  --nb-mine: color-mix(in srgb, var(--purple) 62%, var(--paper-soft));
+  --nb-active: var(--purple);
+  --nb-label: rgba(106, 76, 156, .82);
+}
+
 .chat-layout[data-notebook] .chat-inbox {
   position: relative;
   padding-left: 54px;
@@ -239,6 +248,36 @@
   transform: rotate(-1deg);
 }
 .chat-layout[data-notebook='barber'] .thread::after { content: 'SHOP DESK NOTES'; }
+.chat-layout[data-notebook='owner'] .thread::after { content: 'OWNER DESK NOTES'; }
+
+/* ---- Owner: staff quick-start strip + staff thread tag ---- */
+.chat-staff-strip { display: grid; gap: 6px; margin: 0 0 13px; }
+.chat-staff-strip > div { display: flex; gap: 7px; flex-wrap: wrap; }
+.chat-staff-strip button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  color: var(--ink);
+  background: rgba(255, 253, 247, .92);
+  border: 1.5px dashed var(--ink);
+  border-radius: 10px 13px 9px 12px;
+  cursor: pointer;
+  font-family: 'Patrick Hand', cursive;
+}
+.chat-staff-strip button:hover { background: var(--purple); border-style: solid; }
+.chat-staff-strip button:disabled { opacity: .55; cursor: wait; }
+
+.chat-staff-tag {
+  margin-left: 7px;
+  padding: 1px 7px;
+  background: var(--purple);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  vertical-align: middle;
+}
 
 .chat-layout[data-notebook] .thread-head {
   background:

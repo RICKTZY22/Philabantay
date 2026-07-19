@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import type { Role } from '@barbershop/shared'
+import { isOwnerVerificationLocked, type Role } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { Loading } from './Loading'
 
@@ -9,10 +9,12 @@ export function RequireAuth({
   children,
   role,
   allowIncomplete = false,
+  allowVerificationLocked = false,
 }: {
   children: ReactNode
   role?: Role
   allowIncomplete?: boolean
+  allowVerificationLocked?: boolean
 }) {
   const { profile, loading } = useAuth()
   const location = useLocation()
@@ -30,6 +32,12 @@ export function RequireAuth({
   // Role page lang ang sadyang may `allowIncomplete` para walang redirect loop.
   if (!allowIncomplete && !profile.onboarding_completed) {
     return <Navigate to={`/onboarding/role?from=${encodeURIComponent(from)}`} replace />
+  }
+
+  // Owner verification is a full account lock, not a dashboard preview. Keep
+  // direct URLs such as /settings from rendering even for a single frame.
+  if (!allowVerificationLocked && isOwnerVerificationLocked(profile)) {
+    return <Navigate to="/verification" replace />
   }
 
   // May login pero maling role: huwag i-render kahit saglit ang protected page.

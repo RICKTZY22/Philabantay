@@ -83,6 +83,21 @@ function validTimeRange(start: string, end: string): boolean {
   return TIME_PATTERN.test(start) && TIME_PATTERN.test(end) && start < end
 }
 
+/** Shared gate ng weekly shifts — barber self-service at owner staff tools. */
+function assertValidWeeklyRules(rules: AvailabilityRuleInput[]): void {
+  if (rules.length > 14) throw new DataError('validation', 'Too many availability blocks.')
+  if (rules.some((rule) => !Number.isInteger(rule.weekday) || rule.weekday < 0 || rule.weekday > 6 || !validTimeRange(rule.start_time, rule.end_time))) {
+    throw new DataError('validation', 'Invalid availability schedule.')
+  }
+  const overlaps = rules.some((rule, index) => rules.some((candidate, candidateIndex) => (
+    candidateIndex < index
+    && candidate.weekday === rule.weekday
+    && rule.start_time < candidate.end_time
+    && rule.end_time > candidate.start_time
+  )))
+  if (overlaps) throw new DataError('validation', 'Availability blocks on the same day cannot overlap.')
+}
+
 function updateAggregate(
   entity: { rating: number; rating_count: number },
   previousScore: number | null,
@@ -129,19 +144,10 @@ function migrateDB(stored: MockDB): MockDB {
   }
   if (stored.version < 4) {
     // v4 nagdagdag ng per-user favorite shops.
-    stored.favorites = { 'u-customer': ['sh-tondo'] }
+    stored.favorites = {}
     stored.version = 4
   }
   if (stored.version < 5) {
-    // v5 adds the verified shop-owner demo account while preserving existing
-    // browser-created users, bookings, messages, and favorites.
-    const seed = buildSeed()
-    const owner = seed.profiles.find((profile) => profile.id === 'u-owner')
-    if (owner && !stored.profiles.some((profile) => profile.id === owner.id)) {
-      stored.profiles.push(owner)
-    }
-    stored.passwords['owner@demo.test'] = seed.passwords['owner@demo.test']
-    stored.emailToId['owner@demo.test'] = 'u-owner'
     stored.version = 5
   }
   if (stored.version < 6) {
@@ -162,16 +168,6 @@ function migrateDB(stored: MockDB): MockDB {
     stored.version = 6
   }
   if (stored.version < 7) {
-    // v7 removes the unused admin demo login and replaces all bundled demo
-    // passwords with PBKDF2 verifiers. Browser-created legacy accounts are
-    // upgraded asynchronously as soon as the backend starts.
-    const seed = buildSeed()
-    Object.keys(seed.passwords).forEach((email) => {
-      stored.passwords[email] = seed.passwords[email]
-    })
-    delete stored.passwords['admin@demo.test']
-    delete stored.emailToId['admin@demo.test']
-    stored.profiles = stored.profiles.filter((profile) => profile.id !== 'u-admin')
     stored.version = 7
   }
   if (stored.version < 8) {
@@ -209,7 +205,7 @@ function migrateDB(stored: MockDB): MockDB {
         rating_count: Number.isInteger(barber.rating_count) ? barber.rating_count : (fresh?.rating_count ?? 0),
       }
     })
-    stored.favoriteBarbers = stored.favoriteBarbers ?? { 'u-customer': ['u-miguel'] }
+    stored.favoriteBarbers = stored.favoriteBarbers ?? {}
     stored.reviews = stored.reviews ?? []
     const demoCut = seed.appointments.find((appointment) => appointment.id === 'a-demo-completed')
     if (demoCut && !stored.appointments.some((appointment) => appointment.id === demoCut.id)) {
@@ -230,24 +226,6 @@ function migrateDB(stored: MockDB): MockDB {
     stored.version = 11
   }
   if (stored.version < 12) {
-    // v12 keeps credentials only for the three demo accounts shown on-screen.
-    // Listing-only barber profiles remain usable for discovery and booking.
-    const retiredDemoEmails = [
-      'ramon@demo.test',
-      'jules@demo.test',
-      'paolo@demo.test',
-      'kiko@demo.test',
-      'jayjay@demo.test',
-      'nino@demo.test',
-      'bogs@demo.test',
-      'dante@demo.test',
-      'lito@demo.test',
-      'marco@demo.test',
-    ]
-    retiredDemoEmails.forEach((email) => {
-      delete stored.passwords[email]
-      delete stored.emailToId[email]
-    })
     stored.version = 12
   }
   if (stored.version < 13) {
@@ -308,6 +286,123 @@ function migrateDB(stored: MockDB): MockDB {
     ))
     stored.version = 15
   }
+  if (stored.version < 16) {
+    // v16 snapshots the shop on each appointment. Older rows only knew their
+    // barber, so use that barber's current roster while upgrading. New rows
+    // keep this id even after the barber transfers to another shop.
+    stored.appointments = stored.appointments.flatMap((appointment) => {
+      const legacy = appointment as Appointment & { shop_id?: string }
+      const shopId = legacy.shop_id && stored.shops.some((shop) => shop.id === legacy.shop_id)
+        ? legacy.shop_id
+        : stored.shops.find((shop) => shop.barber_ids.includes(appointment.barber_id))?.id
+      return shopId ? [{ ...appointment, shop_id: shopId }] : []
+    })
+    stored.version = 16
+  }
+  if (stored.version < 17) {
+    // v17 adds owner tools: staff notes + seeded Tondo booking history and
+    // listing-only customers para may totoong data ang owner analytics.
+    // User-created rows are untouched; seed rows merge only when missing.
+    const seed = buildSeed()
+    const mergeById = <T extends { id: string }>(current: T[], incoming: T[]) => {
+      const known = new Set(current.map((x) => x.id))
+      return [...current, ...incoming.filter((x) => !known.has(x.id))]
+    }
+    stored.profiles = mergeById(stored.profiles, seed.profiles)
+    stored.appointments = mergeById(stored.appointments, seed.appointments)
+    stored.staffNotes = seed.staffNotes
+    stored.version = 17
+  }
+  if (stored.version < 18) {
+    // v18 removes seeded/demo activity before the Supabase cutover while
+    // retaining every credential-backed profile and its current shop link.
+    const seed = buildSeed()
+    const accountIds = new Set(Object.values(stored.emailToId))
+    stored.profiles = stored.profiles.filter((profile) => accountIds.has(profile.id))
+
+    const seedBarbers = new Map(seed.barbers.map((barber) => [barber.id, barber]))
+    stored.barbers = stored.barbers
+      .filter((barber) => accountIds.has(barber.id))
+      .map((barber) => ({
+        ...barber,
+        rating: 0,
+        rating_count: 0,
+        shift_status: 'off',
+        accepting_bookings: false,
+      }))
+    seedBarbers.forEach((barber, barberId) => {
+      if (accountIds.has(barberId) && !stored.barbers.some((candidate) => candidate.id === barberId)) {
+        stored.barbers.push(barber)
+      }
+    })
+
+    stored.shops = stored.shops
+      .filter((shop) => (
+        (shop.owner_id !== null && accountIds.has(shop.owner_id))
+        || shop.barber_ids.some((barberId) => accountIds.has(barberId))
+      ))
+      .map((shop) => ({
+        ...shop,
+        owner_id: shop.owner_id !== null && accountIds.has(shop.owner_id) ? shop.owner_id : null,
+        barber_ids: shop.barber_ids.filter((barberId) => accountIds.has(barberId)),
+        rating: 0,
+        rating_count: 0,
+      }))
+
+    const retainedShopIds = new Set(stored.shops.map((shop) => shop.id))
+    stored.employments = stored.employments.filter((employmentRecord) => (
+      employmentRecord.ended_at === null
+      && accountIds.has(employmentRecord.barber_id)
+      && retainedShopIds.has(employmentRecord.shop_id)
+      && stored.shops.some((shop) => (
+        shop.id === employmentRecord.shop_id
+        && shop.barber_ids.includes(employmentRecord.barber_id)
+      ))
+    ))
+    stored.rules = []
+    stored.overrides = []
+    stored.appointments = []
+    stored.conversations = []
+    stored.messages = []
+    stored.favorites = {}
+    stored.favoriteBarbers = {}
+    stored.reviews = []
+    stored.bugReports = []
+    stored.hiringListings = []
+    stored.barberApplications = []
+    stored.shopJoinCodes = {}
+    stored.absences = []
+    stored.shiftChangeRequests = []
+    stored.staffNotes = []
+    stored.version = 18
+  }
+  if (stored.version < 19) {
+    // Remove every historical bundled login while preserving accounts created
+    // by a person through signup. Dependent catalogue rows are also removed so
+    // no orphaned owner/barber relationship survives the cleanup.
+    const bundledEmails = Object.keys(stored.emailToId).filter((email) => /@demo\.test$/i.test(email))
+    const bundledIds = new Set(bundledEmails.map((email) => stored.emailToId[email]).filter(Boolean))
+    bundledEmails.forEach((email) => {
+      delete stored.passwords[email]
+      delete stored.emailToId[email]
+    })
+    stored.profiles = stored.profiles.filter((profile) => !bundledIds.has(profile.id))
+    stored.barbers = stored.barbers.filter((barber) => !bundledIds.has(barber.id))
+    stored.shops = stored.shops
+      .filter((shop) => shop.owner_id === null || !bundledIds.has(shop.owner_id))
+      .map((shop) => ({
+        ...shop,
+        barber_ids: shop.barber_ids.filter((barberId) => !bundledIds.has(barberId)),
+      }))
+    const retainedShopIds = new Set(stored.shops.map((shop) => shop.id))
+    // The mock never supported user-created services, so every pre-v19 service
+    // came from the removed bundled shop catalogue.
+    stored.services = []
+    stored.employments = stored.employments.filter((employment) => (
+      !bundledIds.has(employment.barber_id) && retainedShopIds.has(employment.shop_id)
+    ))
+    stored.version = 19
+  }
   return stored
 }
 
@@ -347,6 +442,10 @@ function isStoredMockDB(value: unknown): value is MockDB {
     || !Array.isArray(value.absences)
     || !Array.isArray(value.shiftChangeRequests)
   )) return false
+  if (Number(value.version) >= 16 && (!Array.isArray(value.appointments) || value.appointments.some((appointment) => (
+    !isRecord(appointment) || typeof appointment.shop_id !== 'string'
+  )))) return false
+  if (Number(value.version) >= 17 && !Array.isArray(value.staffNotes)) return false
   return true
 }
 
@@ -368,20 +467,28 @@ function hasValidReferences(value: MockDB): boolean {
     !profileIds.has(appointment.customer_id)
     || !barberIds.has(appointment.barber_id)
     || !serviceIds.has(appointment.service_id)
-    || !value.shops.some((shop) => shop.barber_ids.includes(appointment.barber_id))
+    || !shopIds.has(appointment.shop_id)
   ))) return false
-  if (value.conversations.some((conversation) => (
-    !profileIds.has(conversation.customer_id)
-    || !barberIds.has(conversation.barber_id)
-    || !shopIds.has(conversation.shop_id)
-    || !value.shops.some((shop) => shop.id === conversation.shop_id && shop.barber_ids.includes(conversation.barber_id))
-  ))) return false
+  if (value.conversations.some((conversation) => {
+    const shop = value.shops.find((candidate) => candidate.id === conversation.shop_id)
+    if (
+      !profileIds.has(conversation.customer_id)
+      || !barberIds.has(conversation.barber_id)
+      || !shop
+    ) return true
+    // Internal owner-to-staff threads retain their original participants after
+    // a barber leaves. Public customer threads still require a current shop
+    // representative so customers never write to an unstaffed inbox.
+    const isStaffThread = shop.owner_id !== null && conversation.customer_id === shop.owner_id
+    return !isStaffThread && !shop.barber_ids.includes(conversation.barber_id)
+  })) return false
   if (value.messages.some((message) => !conversationIds.has(message.conversation_id) || !profileIds.has(message.sender_id))) return false
   if (value.reviews.some((review) => (
     !appointmentIds.has(review.appointment_id)
     || !profileIds.has(review.customer_id)
     || !barberIds.has(review.barber_id)
     || !shopIds.has(review.shop_id)
+    || value.appointments.find((appointment) => appointment.id === review.appointment_id)?.shop_id !== review.shop_id
   ))) return false
   if (value.hiringListings.some((listing) => !shopIds.has(listing.shop_id))) return false
   if (value.barberApplications.some((application) => (
@@ -395,6 +502,9 @@ function hasValidReferences(value: MockDB): boolean {
   ))) return false
   if (value.shiftChangeRequests.some((request) => (
     !barberIds.has(request.barber_id) || !shopIds.has(request.shop_id)
+  ))) return false
+  if (value.staffNotes.some((note) => (
+    !barberIds.has(note.barber_id) || !shopIds.has(note.shop_id) || !profileIds.has(note.author_id)
   ))) return false
   return true
 }
@@ -425,14 +535,22 @@ export function createMockBackend(): DataBackend {
       if (raw) {
         const parsed: unknown = JSON.parse(raw)
         if (!isStoredMockDB(parsed)) throw new Error('Invalid mock database shape.')
+        const previousVersion = parsed.version
         const stored = migrateDB(parsed)
         if (!hasValidReferences(stored)) throw new Error('Invalid mock database references.')
+        if (stored.version !== previousVersion) {
+          localStorage.setItem(DB_KEY, JSON.stringify(stored))
+          if (previousVersion < 18) localStorage.removeItem('bsh_prefs')
+        }
         return stored
       }
     } catch {
       /* ignore */
     }
     const seed = buildSeed()
+    // Device-only notification settings were part of the mock phase, not an
+    // account record. Start clean; the real preference table comes next.
+    localStorage.removeItem('bsh_prefs')
     localStorage.setItem(DB_KEY, JSON.stringify(seed))
     return seed
   }
@@ -542,7 +660,7 @@ export function createMockBackend(): DataBackend {
     const service = db.services.find((s) => s.id === a.service_id)
     const barber = db.barbers.find((b) => b.id === a.barber_id)
     const customer = profileById(a.customer_id)
-    const shop = db.shops.find((candidate) => candidate.barber_ids.includes(a.barber_id))
+    const shop = db.shops.find((candidate) => candidate.id === a.shop_id)
     if (!service || !barber || !customer || !shop || !profileById(barber.id)) return null
     return {
       ...clone(a),
@@ -916,6 +1034,17 @@ export function createMockBackend(): DataBackend {
     return user
   }
 
+  /** Owner tools guard: verified owner + their registered shop. */
+  function requireOwnedShop(): Shop {
+    const user = requireUser()
+    if (user.role !== 'shop_owner') {
+      throw new DataError('forbidden', 'Shop owners lang ang puwedeng gumamit nito.')
+    }
+    const shop = db.shops.find((candidate) => candidate.owner_id === user.id)
+    if (!shop) throw new DataError('not_found', 'Wala pang registered shop sa owner account na ito.')
+    return shop
+  }
+
   function currentShopFor(barberId: string): Shop | null {
     return db.shops.find((shop) => shop.barber_ids.includes(barberId)) ?? null
   }
@@ -994,11 +1123,30 @@ export function createMockBackend(): DataBackend {
         if (!shop) throw new DataError('validation', 'Mali o expired ang shop code.')
         const currentShop = currentShopFor(user.id)
         if (currentShop && currentShop.id !== shop.id) {
-          throw new DataError('validation', `Member ka na ng ${currentShop.name}.`)
+          const replacementBarberId = currentShop.barber_ids.find((barberId) => barberId !== user.id)
+          const conversationsToReassign = db.conversations.filter((conversation) => (
+            conversation.shop_id === currentShop.id
+            && conversation.barber_id === user.id
+            // Keep a private owner-to-staff thread attached to the staff member
+            // who actually participated in it, even after they leave the shop.
+            && conversation.customer_id !== currentShop.owner_id
+          ))
+          if (conversationsToReassign.length > 0 && !replacementBarberId) {
+            throw new DataError('validation', 'Hindi ka pa puwedeng lumipat dahil ikaw ang huling shop representative sa active chat. Magpa-assign muna ng replacement sa owner.')
+          }
+          conversationsToReassign.forEach((conversation) => {
+            conversation.barber_id = replacementBarberId!
+          })
+          // A valid code is the mock's transfer flow: leave the old roster and
+          // close that stint below before adding the barber to the new shop.
+          // Existing appointments retain their own shop_id; shop chats move to
+          // another current staff member before this barber loses access.
+          currentShop.barber_ids = currentShop.barber_ids.filter((barberId) => barberId !== user.id)
         }
 
         const wasAlreadyMember = shop.barber_ids.includes(user.id)
-        if (!db.barbers.some((barber) => barber.id === user.id)) {
+        const existingBarber = db.barbers.find((barber) => barber.id === user.id)
+        if (!existingBarber) {
           db.barbers.push({
             id: user.id,
             bio: null,
@@ -1008,6 +1156,9 @@ export function createMockBackend(): DataBackend {
             accepting_bookings: false,
             created_at: nowISO(),
           })
+        } else if (currentShop && currentShop.id !== shop.id) {
+          // Starting at another shop requires a fresh explicit "Start shift".
+          existingBarber.shift_status = 'off'
         }
         if (!shop.barber_ids.includes(user.id)) shop.barber_ids.push(user.id)
 
@@ -1163,8 +1314,26 @@ export function createMockBackend(): DataBackend {
           employmentRecord.barber_id === user.id && employmentRecord.ended_at === null
         ))
         if (!active) throw new DataError('forbidden', 'Kailangan mo munang sumali sa isang shop.')
+        if (input.date < active.hired_at) {
+          throw new DataError('validation', 'Hindi pa active ang employment mo sa napiling araw.')
+        }
         if (input.date < localDateKey(new Date())) {
           throw new DataError('validation', 'Mga darating na shift lang ang puwedeng i-request.')
+        }
+        const blocks = effectiveBlocks(
+          input.date,
+          db.rules.filter((rule) => rule.barber_id === user.id),
+          db.overrides.filter((override) => override.barber_id === user.id),
+        )
+        if (blocks.length === 0) {
+          throw new DataError('validation', 'May shift lang ang puwedeng i-request na baguhin.')
+        }
+        if (db.absences.some((absence) => (
+          absence.barber_id === user.id
+          && absence.shop_id === active.shop_id
+          && absence.date === input.date
+        ))) {
+          throw new DataError('validation', 'Naka-record ka nang absent sa araw na ito.')
         }
         const existing = db.shiftChangeRequests.find((request) => (
           request.barber_id === user.id
@@ -1188,6 +1357,106 @@ export function createMockBackend(): DataBackend {
         }
         db.shiftChangeRequests.push(request)
         return clone(request)
+      })
+    },
+
+    async listMyShopStaff() {
+      await delay(50)
+      reloadFromStorage()
+      const shop = requireOwnedShop()
+      return shop.barber_ids.flatMap((barberId) => {
+        const barberRecord = db.barbers.find((candidate) => candidate.id === barberId)
+        const employmentRecord = db.employments.find((candidate) => (
+          candidate.barber_id === barberId && candidate.shop_id === shop.id && candidate.ended_at === null
+        ))
+        if (!barberRecord || !employmentRecord || !profileById(barberId)) return []
+        return [{
+          barber: barberWithProfile(barberRecord),
+          employment: clone(employmentRecord),
+          rules: db.rules.filter((rule) => rule.barber_id === barberId).map(clone),
+          absences: db.absences
+            .filter((absence) => (
+              absence.barber_id === barberId
+              && absence.shop_id === shop.id
+              && absence.date >= employmentRecord.hired_at
+            ))
+            .map(clone),
+          shiftChangeRequests: db.shiftChangeRequests
+            .filter((request) => request.barber_id === barberId && request.shop_id === shop.id)
+            .sort((left, right) => right.created_at.localeCompare(left.created_at))
+            .map(clone),
+          notes: db.staffNotes
+            .filter((note) => note.barber_id === barberId && note.shop_id === shop.id)
+            .sort((left, right) => right.created_at.localeCompare(left.created_at))
+            .map(clone),
+        }]
+      })
+    },
+
+    async setBarberRules(barberId, rules) {
+      await delay()
+      assertValidWeeklyRules(rules)
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        if (!shop.barber_ids.includes(barberId)) {
+          throw new DataError('forbidden', 'Hindi mo staff ang barber na iyan.')
+        }
+        db.rules = db.rules.filter((rule) => rule.barber_id !== barberId)
+        const created: AvailabilityRule[] = rules.map((rule) => ({
+          id: uid('r'),
+          barber_id: barberId,
+          weekday: rule.weekday,
+          start_time: rule.start_time,
+          end_time: rule.end_time,
+          created_at: nowISO(),
+        }))
+        db.rules.push(...created)
+        return created.map(clone)
+      })
+    },
+
+    async resolveShiftChangeRequest(requestId, status) {
+      await delay()
+      if (status !== 'approved' && status !== 'declined') {
+        throw new DataError('validation', 'Invalid na desisyon sa request.')
+      }
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const request = db.shiftChangeRequests.find((candidate) => candidate.id === requestId)
+        if (!request || request.shop_id !== shop.id) {
+          throw new DataError('not_found', 'Walang ganyang request sa shop mo.')
+        }
+        if (request.status !== 'pending') {
+          throw new DataError('validation', 'Na-resolve na ang request na ito.')
+        }
+        request.status = status
+        request.updated_at = nowISO()
+        return clone(request)
+      })
+    },
+
+    async addStaffNote(input) {
+      await delay()
+      const body = input.body.trim()
+      if (body.length < 3 || body.length > 500) {
+        throw new DataError('validation', 'Ang note ay dapat 3 hanggang 500 characters.')
+      }
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const user = requireUser()
+        if (!shop.barber_ids.includes(input.barber_id)) {
+          throw new DataError('forbidden', 'Hindi mo staff ang barber na iyan.')
+        }
+        const note = {
+          id: uid('note'),
+          shop_id: shop.id,
+          barber_id: input.barber_id,
+          author_id: user.id,
+          body,
+          created_at: nowISO(),
+        }
+        db.staffNotes.push(note)
+        return clone(note)
       })
     },
   }
@@ -1262,7 +1531,7 @@ export function createMockBackend(): DataBackend {
         if (appointment.customer_id !== user.id) throw new DataError('forbidden', 'Sarili mong appointment lang ang puwedeng i-rate.')
         if (appointment.status !== 'completed') throw new DataError('validation', 'Completed cuts lang ang puwedeng i-rate.')
         const barber = db.barbers.find((candidate) => candidate.id === appointment.barber_id)
-        const shop = db.shops.find((candidate) => candidate.barber_ids.includes(appointment.barber_id))
+        const shop = db.shops.find((candidate) => candidate.id === appointment.shop_id)
         if (!barber || !shop) throw new DataError('not_found', 'Barber or barbershop not found.')
 
         const existing = db.reviews.find((review) => review.appointment_id === appointment.id)
@@ -1355,17 +1624,7 @@ export function createMockBackend(): DataBackend {
 
     async setRules(rules: AvailabilityRuleInput[]) {
       await delay()
-      if (rules.length > 14) throw new DataError('validation', 'Too many availability blocks.')
-      if (rules.some((rule) => !Number.isInteger(rule.weekday) || rule.weekday < 0 || rule.weekday > 6 || !validTimeRange(rule.start_time, rule.end_time))) {
-        throw new DataError('validation', 'Invalid availability schedule.')
-      }
-      const overlaps = rules.some((rule, index) => rules.some((candidate, candidateIndex) => (
-        candidateIndex < index
-        && candidate.weekday === rule.weekday
-        && rule.start_time < candidate.end_time
-        && rule.end_time > candidate.start_time
-      )))
-      if (overlaps) throw new DataError('validation', 'Availability blocks on the same day cannot overlap.')
+      assertValidWeeklyRules(rules)
 
       return withDatabaseWrite(() => {
         const user = requireUser()
@@ -1484,6 +1743,9 @@ export function createMockBackend(): DataBackend {
     }
     if (barber.id === user.id) throw new DataError('validation', 'You cannot book your own chair.')
 
+    const shop = db.shops.find((candidate) => candidate.barber_ids.includes(barber.id))
+    if (!shop) throw new DataError('not_found', 'Barber is not assigned to a barbershop.')
+
     const service = db.services.find((candidate) => candidate.id === input.service_id && candidate.active)
     if (!service) throw new DataError('not_found', 'Service not found.')
     const start = new Date(input.starts_at)
@@ -1503,6 +1765,7 @@ export function createMockBackend(): DataBackend {
     if (notes && notes.length > 500) throw new DataError('validation', 'Booking notes are too long.')
     return {
       service,
+      shop,
       start,
       end: new Date(start.getTime() + service.duration_min * 60_000),
       notes,
@@ -1514,11 +1777,12 @@ export function createMockBackend(): DataBackend {
       await delay()
       return withDatabaseWrite(() => {
         const user = requireUser()
-        const { start, end, notes } = validateBookingInput(input, user)
+        const { shop, start, end, notes } = validateBookingInput(input, user)
         const appt: Appointment = {
           id: uid('a'),
           customer_id: user.id,
           barber_id: input.barber_id,
+          shop_id: shop.id,
           service_id: input.service_id,
           starts_at: start.toISOString(),
           ends_at: end.toISOString(),
@@ -1547,8 +1811,9 @@ export function createMockBackend(): DataBackend {
         if (!canModifyAppointment(appointment)) {
           throw new DataError('validation', 'A haircut that has already started cannot be rescheduled.')
         }
-        const { start, end, notes } = validateBookingInput(input, user, appointment.id)
+        const { shop, start, end, notes } = validateBookingInput(input, user, appointment.id)
         appointment.barber_id = input.barber_id
+        appointment.shop_id = shop.id
         appointment.service_id = input.service_id
         appointment.starts_at = start.toISOString()
         appointment.ends_at = end.toISOString()
@@ -1591,21 +1856,46 @@ export function createMockBackend(): DataBackend {
         .filter((appointment): appointment is AppointmentDetailed => appointment !== null)
     },
 
+    async listForMyShop() {
+      await delay()
+      reloadFromStorage()
+      const shop = requireOwnedShop()
+      return db.appointments
+        .filter((appointment) => appointment.shop_id === shop.id)
+        .sort((a, b) => b.starts_at.localeCompare(a.starts_at))
+        .map(appointmentDetailed)
+        .filter((appointment): appointment is AppointmentDetailed => appointment !== null)
+    },
+
     async setStatus(appointmentId, status) {
       await delay()
       return withDatabaseWrite(() => {
         const user = requireUser()
         const appt = db.appointments.find((a) => a.id === appointmentId)
         if (!appt) throw new DataError('not_found', 'Appointment not found.')
-        if (appt.barber_id !== user.id) {
-          throw new DataError('forbidden', 'Only the barber can change status.')
+        const ownedShop = user.role === 'shop_owner'
+          ? db.shops.find((shop) => shop.id === appt.shop_id && shop.owner_id === user.id)
+          : null
+        if (appt.barber_id !== user.id && !ownedShop) {
+          throw new DataError('forbidden', 'Only the assigned barber or shop owner can change status.')
+        }
+        if (ownedShop && status !== 'confirmed' && status !== 'cancelled') {
+          throw new DataError('forbidden', 'Owners may only accept or decline reservations.')
         }
         if (status === appt.status) return clone(appt)
         const allowed: Record<Appointment['status'], Appointment['status'][]> = {
           pending: ['confirmed', 'cancelled'],
-          confirmed: ['completed', 'cancelled', 'no_show'],
+          requested: ['confirmed', 'declined', 'expired', 'cancelled'],
+          confirmed: ['checked_in', 'cancelled', 'no_show', 'customer_no_show'],
+          checked_in: ['in_progress'],
+          in_progress: ['awaiting_confirmation'],
+          awaiting_confirmation: ['completed', 'disputed'],
+          disputed: ['completed', 'cancelled'],
+          declined: [],
+          expired: [],
           completed: [],
           cancelled: [],
+          customer_no_show: [],
           no_show: [],
         }
         if (!allowed[appt.status].includes(status)) {
@@ -1622,13 +1912,228 @@ export function createMockBackend(): DataBackend {
         return clone(appt)
       })
     },
+
+    async accept(appointmentId, input) {
+      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+      const updated = await bookings.setStatus(appointmentId, 'confirmed')
+      appointment.version = (appointment.version ?? 0) + 1
+      return { ...updated, version: appointment.version }
+    },
+
+    async decline(appointmentId, input) {
+      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+      const updated = await bookings.setStatus(appointmentId, 'cancelled')
+      appointment.version = (appointment.version ?? 0) + 1
+      appointment.cancellation_reason = input.reason
+      return { ...updated, version: appointment.version, cancellation_reason: input.reason }
+    },
+
+    async issueCheckInCode(appointmentId, input) {
+      await delay()
+      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+      const user = requireUser()
+      const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+      if (appointment.barber_id !== user.id && !ownedShop) throw new DataError('forbidden', 'Only assigned shop staff may issue a check-in code.')
+      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+      appointment.version = (appointment.version ?? 0) + 1
+      const expiresAt = new Date(Math.min(Date.parse(appointment.ends_at), Date.now() + 30 * 60_000)).toISOString()
+      appointment.check_in_code_expires_at = expiresAt
+      return { appointment_id: appointment.id, code: '123456', expires_at: expiresAt, appointment_version: appointment.version }
+    },
+
+    async checkIn(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (appointment.customer_id !== user.id && !ownedShop) throw new DataError('forbidden', 'Only the customer or shop owner may check in.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'checked_in'
+        appointment.checked_in_at = nowISO()
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async start(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        if (appointment.barber_id !== user.id) throw new DataError('forbidden', 'Only the assigned barber may start this appointment.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'in_progress'
+        appointment.actual_started_at = nowISO()
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async finish(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        if (appointment.barber_id !== user.id) throw new DataError('forbidden', 'Only the assigned barber may finish this appointment.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'awaiting_confirmation'
+        appointment.actual_finished_at = nowISO()
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async confirmCompletion(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        if (appointment.customer_id !== user.id) throw new DataError('forbidden', 'Only the customer may confirm completion.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'completed'
+        appointment.completed_at = nowISO()
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async dispute(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        if (appointment.customer_id !== user.id) throw new DataError('forbidden', 'Only the customer may dispute this appointment.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'disputed'
+        appointment.dispute_reason = input.reason
+        appointment.dispute_opened_at = nowISO()
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async cancelWithReason(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (appointment.customer_id !== user.id && appointment.barber_id !== user.id && !ownedShop) throw new DataError('forbidden', 'Not your appointment.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'cancelled'
+        appointment.cancellation_reason = input.reason
+        appointment.cancelled_at = nowISO()
+        appointment.cancelled_by = user.id
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async markCustomerNoShow(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        if (appointment.barber_id !== user.id) throw new DataError('forbidden', 'Only the assigned barber may mark a no-show.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = 'customer_no_show'
+        appointment.no_show_reason = input.reason
+        appointment.no_show_marked_at = nowISO()
+        appointment.no_show_marked_by = user.id
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async resolveDispute(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (!ownedShop) throw new DataError('forbidden', 'Only the shop owner may resolve this dispute.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        appointment.status = input.resolution
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async reassign(appointmentId, input) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (!ownedShop) throw new DataError('forbidden', 'Only the shop owner may reassign this appointment.')
+        if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        if (!db.shops.some((shop) => shop.id === appointment.shop_id && shop.barber_ids.includes(input.barber_id))) {
+          throw new DataError('validation', 'The new barber must belong to this shop.')
+        }
+        appointment.barber_id = input.barber_id
+        appointment.version = (appointment.version ?? 0) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
+    },
+
+    async rescheduleWithVersion(appointmentId, input) {
+      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+      const updated = await bookings.reschedule(appointmentId, input)
+      appointment.version = (appointment.version ?? 0) + 1
+      return { ...updated, version: appointment.version }
+    },
+
+    async timeline() {
+      await delay()
+      return []
+    },
   }
 
   // ================= ChatService =================
   function canAccessShopConversation(conversation: Conversation, user: Profile): boolean {
     if (conversation.customer_id === user.id || conversation.barber_id === user.id) return true
-    if (user.role !== 'barber') return false
-    return db.shops.some((shop) => shop.id === conversation.shop_id && shop.barber_ids.includes(user.id))
+    const conversationShop = db.shops.find((shop) => shop.id === conversation.shop_id)
+    if (!conversationShop) return false
+    const isStaffThread = conversationShop.owner_id !== null
+      && conversation.customer_id === conversationShop.owner_id
+    // Staff threads are private to their two explicit participants. Customer
+    // threads may still be handled by any current representative of the shop.
+    if (isStaffThread) return false
+    if (user.role === 'barber') {
+      return conversationShop.barber_ids.includes(user.id)
+    }
+    // Ang may-ari ng shop ay may access sa lahat ng threads ng shop niya
+    // (customer inquiries at internal staff threads).
+    if (user.role === 'shop_owner') {
+      return conversationShop.owner_id === user.id
+    }
+    return false
   }
 
   const chat: DataBackend['chat'] = {
@@ -1669,6 +2174,41 @@ export function createMockBackend(): DataBackend {
             customer_id: user.id,
             shop_id: targetShop.id,
             barber_id: targetBarber.id,
+            created_at: nowISO(),
+            last_message_at: nowISO(),
+          }
+          db.conversations.push(convo)
+        }
+        const detailed = conversationDetailed(convo, user.id)
+        if (!detailed) throw new DataError('not_found', 'Conversation data is incomplete.')
+        return detailed
+      })
+    },
+
+    async openStaffConversation(barberId) {
+      await delay()
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const user = requireUser()
+        if (!shop.barber_ids.includes(barberId)) {
+          throw new DataError('forbidden', 'Hindi mo staff ang barber na iyan.')
+        }
+        if (!db.barbers.some((barber) => barber.id === barberId) || !profileById(barberId)) {
+          throw new DataError('not_found', 'Barber not found.')
+        }
+        // Internal staff thread: ang owner ang "customer" participant. UI
+        // detects this via conversation.customer_id === shop.owner_id.
+        let convo = db.conversations.find((candidate) => (
+          candidate.shop_id === shop.id
+          && candidate.customer_id === user.id
+          && candidate.barber_id === barberId
+        ))
+        if (!convo) {
+          convo = {
+            id: uid('c'),
+            customer_id: user.id,
+            shop_id: shop.id,
+            barber_id: barberId,
             created_at: nowISO(),
             last_message_at: nowISO(),
           }

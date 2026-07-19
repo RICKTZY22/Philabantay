@@ -1,3 +1,111 @@
+.owner-loading-note { margin: 8px 2px; }
+.owner-section-card { padding: 18px; }
+
+/* ---- Range toggle + chart layout ---- */
+.owner-range-row { display: flex; align-items: center; gap: 12px; margin: 18px 0 0; }
+.owner-range-toggle { display: inline-flex; padding: 3px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper-soft); box-shadow: 2px 3px 0 var(--shadow); }
+.owner-range-toggle button { min-width: 84px; padding: 5px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; font-family: 'Patrick Hand', cursive; }
+.owner-range-toggle button.is-active { background: var(--yellow); color: var(--ink); font-weight: 700; }
+
+.owner-chart-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+
+/* ---- SVG bar charts (data-driven, walang chart library) ---- */
+.owner-bars { width: 100%; height: auto; overflow: visible; }
+.owner-bars-base { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
+.owner-bar { fill: #28bfc2; stroke: var(--ink); stroke-width: 2; }
+.owner-bars.is-green .owner-bar { fill: var(--green); }
+.owner-bar-value { fill: var(--ink); font: 700 12px 'Kalam', cursive; }
+.owner-bar-label { fill: var(--faint); font: 12px 'Patrick Hand', cursive; }
+
+/* ---- Ranked lists (top visitors / top styles) ---- */
+.owner-rank-list { display: grid; gap: 9px; margin: 8px 0 0; padding: 0; list-style: none; }
+.owner-rank-list li { display: grid; grid-template-columns: 26px minmax(90px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.owner-rank-number { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 13px; }
+.owner-rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.owner-rank-bar { height: 15px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--paper); overflow: hidden; }
+.owner-rank-bar i { display: block; height: 100%; background: #28bfc2; border-right: 1.5px solid var(--ink); }
+.owner-rank-list.is-green .owner-rank-bar i { background: var(--green); }
+.owner-rank-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+/* ---- Barber performance cards ---- */
+/* auto-fit (not auto-fill) so a short roster stretches to fill the row instead
+   of leaving empty phantom columns. */
+.owner-performance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 18px; }
+.owner-performance-card { padding: 18px; display: grid; gap: 13px; align-content: start; }
+
+.owner-performance-head { display: flex; align-items: center; gap: 12px; }
+.owner-performance-id { display: grid; min-width: 0; }
+.owner-performance-id strong { font: 700 1.2rem 'Kalam', cursive; }
+.owner-performance-id .muted { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owner-shift-badge { margin-left: auto; flex: none; padding: 3px 10px; border: 1.5px solid var(--ink); border-radius: 999px; font-size: .78rem; white-space: nowrap; }
+.owner-shift-badge.is-on { background: var(--green); }
+.owner-shift-badge.is-off { background: var(--paper); color: var(--faint); }
+
+.owner-performance-rating { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.owner-performance-rating > strong { font: 700 1.3rem 'Kalam', cursive; }
+.owner-performance-stars { display: inline-flex; gap: 1px; }
+.owner-performance-stars .is-lit { color: #d99a1b; }
+.owner-performance-stars .is-dim { color: var(--line); }
+.owner-perf-accepting { margin-left: auto; }
+
+/* Weekly availability chips — fill the card width and show the work pattern. */
+.owner-perf-days { display: flex; flex-wrap: wrap; gap: 5px; }
+.owner-perf-day {
+  flex: 1 1 auto;
+  min-width: 40px;
+  padding: 4px 6px;
+  text-align: center;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px 10px 7px 9px;
+  color: var(--faint);
+  font: .78rem 'Patrick Hand', cursive;
+}
+.owner-perf-day.is-on {
+  border-style: solid;
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--green) 22%, var(--paper-soft));
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 2x2 stat tiles — read as one filled block at any card width. */
+.owner-performance-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+.owner-performance-stats > div {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 9px 11px;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px 13px 9px 12px;
+  background: rgba(255, 253, 247, .9);
+}
+.owner-performance-stats dt { color: var(--muted); font-size: .82rem; }
+.owner-performance-stats dd { margin: 0; font: 700 1.25rem 'Kalam', cursive; }
+.owner-performance-stats dd small { color: var(--faint); font-weight: 400; font-size: .8rem; }
+
+/* ---- Empty chart state ---- */
+.owner-chart-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 176px;
+  padding: 16px;
+  text-align: center;
+  color: var(--faint);
+}
+.owner-chart-empty-badge {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  color: var(--muted);
+  border: 2px dashed var(--line);
+  border-radius: 48% 52% 45% 55% / 55% 45% 55% 45%;
+  background: var(--paper-soft);
+}
+.owner-chart-empty p { margin: 0; max-width: 260px; }
+
 .owner-preview-banner {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -97,6 +205,15 @@
 .owner-status.is-confirmed { background: var(--green); }
 .owner-status.is-pending { background: var(--yellow); }
 .owner-status.is-cancelled { background: var(--pink); }
+.owner-status.is-completed { background: var(--blue); }
+.owner-status.is-no_show { background: var(--pink); opacity: .85; }
+.owner-reservation-status-cell { display: grid; justify-items: start; gap: 8px; }
+.owner-reservation-actions { display: flex; align-items: center; gap: 7px; }
+.owner-reservation-actions .btn { padding: 4px 9px; border-width: 2px; font-size: 14px; box-shadow: 2px 3px 0 var(--shadow); }
+.owner-reservation-error { margin: 4px 0 10px; }
+.owner-cell-stack { display: grid; }
+.owner-cell-stack small { color: var(--faint); }
+.owner-reservations td small { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .owner-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
 .owner-chart-card { padding: 16px; }
@@ -179,4 +296,279 @@
   .owner-join-code-card .btn { grid-column: 1 / -1; }
   .owner-bottom-grid { grid-template-columns: 1fr; }
   .owner-revenue-card { grid-template-columns: 1fr auto; }
+}
+
+
+@media (max-width: 840px) {
+  .owner-chart-grid-2 { grid-template-columns: 1fr; }
+  .owner-range-row { flex-wrap: wrap; }
+  .owner-rank-list li { grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .owner-rank-list .owner-rank-bar { display: none; }
+}
+
+/* ========================================================================
+   Owner command-center redesign: compact indigo shell + asymmetric card grid
+   inspired by the approved prototype/reference. Notebook edges and type stay.
+   ======================================================================== */
+.owner-overview-shell {
+  --owner-indigo: #5556c8;
+  --owner-indigo-deep: #393a86;
+  --owner-lilac: #e7e6ff;
+  --owner-coral: #f19567;
+  display: grid;
+  gap: 16px;
+}
+
+.owner-overview-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.owner-overview-heading h1 {
+  margin: 0;
+  color: #32325f;
+  font-size: clamp(1.9rem, 3vw, 2.65rem);
+}
+
+.owner-overview-heading p {
+  max-width: 680px;
+  margin: 3px 0 0;
+  color: #666582;
+}
+
+.owner-overview-shell .owner-card-kicker { color: var(--owner-indigo); }
+.owner-overview-shell .owner-range-toggle {
+  flex: none;
+  border-color: #47488e;
+  background: rgba(255,255,255,.76);
+  box-shadow: 2px 3px 0 rgba(55,55,99,.18);
+}
+.owner-overview-shell .owner-range-toggle button { min-width: 66px; }
+.owner-overview-shell .owner-range-toggle button.is-active { background: var(--owner-indigo); color: #fff; }
+
+.owner-command-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px;
+  color: #4a3150;
+  border: 2px solid #6a5681;
+  border-radius: 14px 20px 15px 18px;
+  background: linear-gradient(100deg, #ffe0c5, #f2dbf5);
+  box-shadow: 3px 4px 0 rgba(80,61,96,.15);
+}
+.owner-command-alert-icon {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255,255,255,.72);
+}
+.owner-command-alert div { display: grid; }
+.owner-command-alert small { color: #705f72; }
+.owner-command-alert-count {
+  min-width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #4d4eb3;
+  color: #fff;
+  font: 700 1.15rem 'Kalam', cursive;
+}
+
+.owner-kpi-matrix {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.owner-overview-shell .owner-paper-card {
+  border: 2px solid #4a4a77;
+  border-radius: 16px 22px 17px 20px / 20px 16px 22px 17px;
+  background: rgba(255, 254, 250, .96);
+  box-shadow: 4px 6px 0 rgba(69,69,116,.13);
+  filter: none;
+}
+
+.owner-overview-shell .owner-metric {
+  min-height: 100px;
+  align-items: flex-start;
+  padding: 13px 14px;
+}
+.owner-overview-shell .owner-metric-icon {
+  width: 39px;
+  height: 39px;
+  border-color: #44446f;
+}
+.owner-overview-shell .owner-metric > span:nth-child(2) { gap: 1px; }
+.owner-overview-shell .owner-metric strong { color: #5f5e76; font: 400 .9rem 'Patrick Hand', cursive; }
+.owner-overview-shell .owner-metric small { color: #32325f; font: 700 1.8rem/1 'Gochi Hand', cursive; }
+.owner-metric-meta { color: #8a89a3; font-size: .76rem; }
+.owner-overview-shell .owner-metric-scribble { border-color: rgba(83,83,159,.08); }
+.owner-metric.is-blue .owner-metric-icon { background: #d8e8ff; }
+.owner-metric.is-purple .owner-metric-icon { background: #e1d8fb; }
+.owner-metric.is-orange .owner-metric-icon { background: #ffe0ca; }
+
+.owner-dashboard-mosaic {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.owner-mosaic-card { min-width: 0; padding: 16px; }
+.owner-mosaic-card h2 { color: #393960; font-size: 1.25rem; }
+.owner-value-panel { grid-column: span 7; }
+.owner-next-panel { grid-column: span 5; }
+.owner-deals-panel { grid-column: span 5; }
+.owner-health-panel { grid-column: span 3; }
+.owner-ranking-panel { grid-column: span 4; }
+.owner-access-panel { grid-column: span 6; display: grid; align-content: start; gap: 10px; }
+
+.owner-value-summary { display: grid; justify-items: end; text-align: right; }
+.owner-value-summary strong { color: var(--owner-indigo-deep); font: 700 1.8rem 'Gochi Hand', cursive; }
+.owner-value-summary small { color: #8a89a3; }
+
+.owner-overview-shell .owner-bars { max-height: 210px; margin-top: 6px; }
+.owner-overview-shell .owner-bars-base { stroke: rgba(70,70,118,.25); stroke-width: 1.5; }
+.owner-overview-shell .owner-bar { fill: #696bdd; stroke: #41427f; stroke-width: 1.5; }
+.owner-overview-shell .owner-bars.is-green .owner-bar { fill: #f29a6b; }
+.owner-overview-shell .owner-bar-label { fill: #77768f; }
+.owner-overview-shell .owner-bar-value { fill: #41415f; }
+
+.owner-next-list { display: grid; gap: 7px; margin: 8px 0 0; padding: 0; list-style: none; }
+.owner-next-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-top: 1px solid rgba(63,63,102,.13);
+}
+.owner-next-list time {
+  width: 42px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 11px;
+  background: #eeeeff;
+  color: #48499d;
+  line-height: 1;
+}
+.owner-next-list time strong { font: 700 1.15rem 'Gochi Hand', cursive; }
+.owner-next-list time span { margin-top: 2px; font-size: .67rem; text-transform: uppercase; }
+.owner-next-list li > span { display: grid; min-width: 0; }
+.owner-next-list li > span strong,
+.owner-next-list li > span small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owner-next-list li > span small { color: #85849b; }
+.owner-next-dot { width: 10px; height: 10px; border: 2px solid #4b4b73; border-radius: 50%; background: #94bcec; }
+.owner-next-dot.is-requested,
+.owner-next-dot.is-pending { background: #f3bb68; }
+.owner-next-dot.is-checked_in { background: #ad8ee3; }
+
+.owner-ring-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.owner-ring-stat { display: grid; justify-items: center; gap: 6px; color: #62617a; }
+.owner-ring {
+  --owner-ring-color: #f19567;
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--owner-ring-color) var(--owner-ring-value), #e8e7f2 0);
+}
+.owner-ring::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #fffefa;
+}
+.owner-ring strong { z-index: 1; grid-area: 1 / 1; color: #3d3d65; font: 700 1.25rem 'Gochi Hand', cursive; }
+.owner-ring-stat.is-purple .owner-ring { --owner-ring-color: #696bdd; }
+.owner-panel-note { margin: 12px 0 0; color: #8b899d; font-size: .78rem; text-align: center; }
+
+.owner-overview-shell .owner-rank-list { gap: 8px; }
+.owner-overview-shell .owner-rank-number { background: #5657c6; }
+.owner-overview-shell .owner-rank-bar { border-color: #5b5b87; background: #ecebfa; }
+.owner-overview-shell .owner-rank-bar i { background: #7374df; border-color: #4c4d99; }
+.owner-overview-shell .owner-rank-list.is-green .owner-rank-bar i { background: #f2a06f; }
+
+.owner-access-panel p { margin: 0; color: #77768d; }
+.owner-access-panel code {
+  width: fit-content;
+  padding: 7px 13px;
+  color: #40417d;
+  border: 2px dashed #5556a7;
+  border-radius: 10px;
+  background: #eeedff;
+  font: 700 1.3rem 'Kalam', cursive;
+  letter-spacing: 2px;
+}
+.owner-access-panel .btn { width: fit-content; background: #e1e0ff; }
+
+/* Reservations and secondary owner sections inherit the same clean workspace. */
+.doodle-board-wrap.is-owner .owner-reservations,
+.doodle-board-wrap.is-owner .owner-staff-card,
+.doodle-board-wrap.is-owner .owner-performance-card,
+.doodle-board-wrap.is-owner .owner-section-card {
+  border-color: #4b4b79;
+  background: rgba(255,254,250,.97);
+  filter: none;
+  box-shadow: 4px 6px 0 rgba(69,69,116,.13);
+}
+.doodle-board-wrap.is-owner .owner-service-tabs button.is-active { color: #4445a4; border-color: #5657c6; }
+.doodle-board-wrap.is-owner .owner-status.is-requested,
+.doodle-board-wrap.is-owner .owner-status.is-pending { background: #f5c66d; }
+.doodle-board-wrap.is-owner .owner-status.is-confirmed { background: #b8d8ff; }
+.doodle-board-wrap.is-owner .owner-status.is-checked_in,
+.doodle-board-wrap.is-owner .owner-status.is-in_progress { background: #cbb8ef; }
+.doodle-board-wrap.is-owner .owner-status.is-awaiting_confirmation { background: #ffd8a5; }
+.doodle-board-wrap.is-owner .owner-status.is-completed { background: #bce6c8; }
+.doodle-board-wrap.is-owner .owner-status.is-cancelled,
+.doodle-board-wrap.is-owner .owner-status.is-no_show,
+.doodle-board-wrap.is-owner .owner-status.is-customer_no_show,
+.doodle-board-wrap.is-owner .owner-status.is-declined,
+.doodle-board-wrap.is-owner .owner-status.is-expired { background: #f3c1cb; }
+.doodle-board-wrap.is-owner .owner-status.is-disputed { background: #efa1a1; }
+
+@media (max-width: 1260px) {
+  .owner-kpi-matrix { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .owner-value-panel,
+  .owner-next-panel,
+  .owner-deals-panel,
+  .owner-health-panel,
+  .owner-ranking-panel,
+  .owner-access-panel { grid-column: span 6; }
+}
+
+@media (max-width: 760px) {
+  .owner-overview-heading { align-items: stretch; flex-direction: column; }
+  .owner-overview-heading .owner-range-toggle { width: 100%; overflow-x: auto; }
+  .owner-overview-heading .owner-range-toggle button { flex: 1; }
+  .owner-command-alert { grid-template-columns: auto minmax(0,1fr); }
+  .owner-command-alert-count { display: none; }
+  .owner-kpi-matrix { grid-template-columns: 1fr 1fr; }
+  .owner-dashboard-mosaic { grid-template-columns: 1fr; }
+  .owner-value-panel,
+  .owner-next-panel,
+  .owner-deals-panel,
+  .owner-health-panel,
+  .owner-ranking-panel,
+  .owner-access-panel { grid-column: 1; }
+  .owner-value-summary { justify-items: start; text-align: left; }
+  .owner-card-heading.compact { flex-wrap: wrap; }
+}
+
+@media (max-width: 460px) {
+  .owner-kpi-matrix { grid-template-columns: 1fr; }
+  .owner-ring { width: 82px; height: 82px; }
+  .owner-ring::before { width: 60px; height: 60px; }
 }

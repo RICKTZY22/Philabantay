@@ -21,6 +21,8 @@ interface DoodleBoardProps {
   search?: DoodleBoardSearch
   /** Itago ang name chip (customer board: nasa avatar section na ang identity). */
   showUserChip?: boolean
+  /** Role-specific visual skin; navigation remains in the global hamburger. */
+  variant?: 'default' | 'owner'
   children: ReactNode
 }
 
@@ -30,15 +32,24 @@ interface DoodleBoardProps {
  * customer, barber, and owner homes share one visual language. The rail is
  * purely decorative now — real navigation lives in the global hamburger menu.
  */
-export function DoodleBoard({ userName, centerLabel, liveTone = 'green', search, showUserChip = true, children }: DoodleBoardProps) {
+export function DoodleBoard({ userName, centerLabel, liveTone = 'green', search, showUserChip = true, variant = 'default', children }: DoodleBoardProps) {
   return (
-    <div className="doodle-board-wrap">
+    <div className={`doodle-board-wrap is-${variant}`}>
       <div className="doodle-board">
         <aside className="doodle-rail" aria-hidden="true">
           <div className="doodle-rail-mark">
             <span className="brand-pole" />
             <strong>PB</strong>
           </div>
+          {variant === 'owner' && (
+            <div className="doodle-owner-rail-stack">
+              <span><DoodleIcon name="home" size={21} /></span>
+              <span><DoodleIcon name="calendar" size={21} /></span>
+              <span><DoodleIcon name="user" size={21} /></span>
+              <span><DoodleIcon name="star" size={21} /></span>
+              <span><DoodleIcon name="gear" size={21} /></span>
+            </div>
+          )}
           <DoodleIcon name="scissors" size={28} className="doodle-rail-scissors" />
         </aside>
 

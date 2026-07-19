@@ -10,12 +10,45 @@ export type OnboardingRole = 'customer' | 'barber' | 'shop_owner'
 /** Review state ng professional account request. */
 export type VerificationStatus = 'unverified' | 'not_required' | 'pending' | 'verified' | 'rejected' | 'suspended'
 
-export type AppointmentStatus =
-  | 'pending'
+export type CanonicalAppointmentStatus =
+  | 'requested'
   | 'confirmed'
+  | 'checked_in'
+  | 'in_progress'
+  | 'awaiting_confirmation'
+  | 'declined'
+  | 'expired'
   | 'cancelled'
   | 'completed'
+  | 'customer_no_show'
+  | 'disputed'
+
+/**
+ * `pending` and `no_show` remain temporarily readable for the mock/frontend
+ * migration. New API writes use only CanonicalAppointmentStatus.
+ */
+export type AppointmentStatus =
+  | CanonicalAppointmentStatus
+  | 'pending'
   | 'no_show'
+
+export type AppointmentEventType =
+  | 'created'
+  | 'accepted'
+  | 'declined'
+  | 'checked_in'
+  | 'started'
+  | 'finished'
+  | 'completion_confirmed'
+  | 'auto_completed'
+  | 'cancelled'
+  | 'customer_no_show'
+  | 'disputed'
+  | 'dispute_resolved'
+  | 'expired'
+  | 'rescheduled'
+  | 'reassigned'
+  | 'check_in_code_issued'
 
 export type ShiftStatus = 'off' | 'on'
 
@@ -116,6 +149,8 @@ export interface Appointment {
   id: string
   customer_id: string
   barber_id: string
+  /** Shop where this appointment was made; stays correct if the barber later moves. */
+  shop_id: string
   service_id: string
   /** ISO timestamp */
   starts_at: string
@@ -125,6 +160,50 @@ export interface Appointment {
   notes: string | null
   created_at: string
   updated_at: string
+  /** Optimistic concurrency token; required by lifecycle command endpoints. */
+  version?: number
+  /** Requested reservations stop blocking inventory after this deadline. */
+  expires_at?: string | null
+  /** Stored only as a hash in Postgres; clients receive just its expiry. */
+  check_in_code_expires_at?: string | null
+  checked_in_at?: string | null
+  actual_started_at?: string | null
+  actual_finished_at?: string | null
+  completion_due_at?: string | null
+  completed_at?: string | null
+  cancelled_at?: string | null
+  cancelled_by?: string | null
+  cancellation_reason?: string | null
+  no_show_marked_at?: string | null
+  no_show_marked_by?: string | null
+  no_show_reason?: string | null
+  dispute_opened_at?: string | null
+  dispute_reason?: string | null
+  /** Immutable transaction snapshot; catalog edits must not rewrite history. */
+  booked_service_name?: string
+  booked_duration_min?: number
+  booked_price_cents?: number
+}
+
+export interface AppointmentEvent {
+  id: string
+  appointment_id: string
+  shop_id: string
+  actor_id: string | null
+  actor_role: Role | 'system'
+  event_type: AppointmentEventType
+  from_status: CanonicalAppointmentStatus | null
+  to_status: CanonicalAppointmentStatus
+  reason: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface AppointmentCheckInCode {
+  appointment_id: string
+  code: string
+  expires_at: string
+  appointment_version: number
 }
 
 export interface AppointmentDetailed extends Appointment {
@@ -217,6 +296,17 @@ export interface BarberAbsence {
   reason: string | null
 }
 
+/** Private per-staff note inside one shop (owner tools). */
+export interface StaffNote {
+  id: string
+  shop_id: string
+  barber_id: string
+  /** Sino ang sumulat — owner o ang barber mismo. */
+  author_id: string
+  body: string
+  created_at: string
+}
+
 export type ShiftChangeRequestStatus = 'pending' | 'approved' | 'declined'
 
 /**
@@ -233,6 +323,20 @@ export interface ShiftChangeRequest {
   status: ShiftChangeRequestStatus
   created_at: string
   updated_at: string
+}
+
+/**
+ * Owner-facing composite: lahat ng kailangan ng Staff tools tungkol sa isang
+ * roster member sa isang tawag. Scoped sa active employment ng barber.
+ */
+export interface ShopStaffMember {
+  barber: BarberWithProfile
+  employment: BarberEmployment
+  rules: AvailabilityRule[]
+  absences: BarberAbsence[]
+  /** Pending muna ang unang laman; kasama rin ang na-resolve for history. */
+  shiftChangeRequests: ShiftChangeRequest[]
+  notes: StaffNote[]
 }
 
 export interface ShopJoinCodeDetails {

@@ -11,7 +11,7 @@ Dependencies point inward toward stable contracts and pure rules:
 ```text
 pages -> components -> hooks/lib/config
   |          |
-  +------> DataBackend interface <----- mock or future Supabase adapter
+  +------> DataBackend interface <----- MockBackend or ApiBackend
                          |
                   packages/shared
 ```
@@ -27,8 +27,9 @@ Rules:
   safety, display formatting, and map URL construction.
 - `hooks` contains reusable React lifecycle behavior such as clocks or browser
   subscriptions. Hooks do not render UI.
-- `config` contains static application metadata such as navigation and local
-  demo accounts. It must not contain mutable runtime state.
+- `config` contains non-sensitive static application metadata such as
+  navigation and discovery limits. It must not contain accounts, credentials,
+  secrets, or mutable runtime state.
 
 ## Feature implementation pattern
 

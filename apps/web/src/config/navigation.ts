@@ -17,6 +17,13 @@ export type MenuContext = {
   icon: DoodleIconName
 }
 
+export const OWNER_DASHBOARD_SECTIONS = ['overview', 'reservations', 'staff', 'barbers'] as const
+export type OwnerDashboardSection = typeof OWNER_DASHBOARD_SECTIONS[number]
+
+export function isOwnerDashboardSection(value: string | undefined): value is OwnerDashboardSection {
+  return OWNER_DASHBOARD_SECTIONS.some((section) => section === value)
+}
+
 const CUSTOMER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard', icon: 'home', label: 'Home', end: true },
   { to: '/chat', icon: 'chat', label: 'Chats' },
@@ -37,13 +44,38 @@ const BARBER_SEEKER_MENU_ITEMS: MenuItem[] = [
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]
 
+const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
+  { to: '/dashboard/owner/overview', icon: 'home', label: 'Overview', end: true },
+  { to: '/dashboard/owner/reservations', icon: 'calendar', label: 'Reservations', end: true },
+  { to: '/dashboard/owner/staff', icon: 'user', label: 'Staff', end: true },
+  { to: '/chat', icon: 'chat', label: 'Messages' },
+  { to: '/dashboard/owner/barbers', icon: 'scissors', label: 'Barbers', end: true },
+  { to: '/settings', icon: 'gear', label: 'Settings' },
+]
+
 export function getMainMenuItems(profile: Profile): MenuItem[] {
+  if (profile.role === 'shop_owner') return SHOP_OWNER_MENU_ITEMS
   if (profile.role === 'barber') return BARBER_MENU_ITEMS
   if (profile.requested_role === 'barber') return BARBER_SEEKER_MENU_ITEMS
   return CUSTOMER_MENU_ITEMS
 }
 
-export function getMenuContext(pathname: string, isBarber: boolean, isBarberSeeker = false): MenuContext {
+export function getMenuContext(
+  pathname: string,
+  isBarber: boolean,
+  isBarberSeeker = false,
+  isShopOwner = false,
+): MenuContext {
+  if (isShopOwner && pathname.startsWith('/dashboard/owner')) {
+    return {
+      eyebrow: 'SHOP WORKSPACE',
+      title: 'Owner dashboard',
+      description: 'Reservations, staff, performance, at live shop reports.',
+      actionLabel: 'Open messages',
+      actionTo: '/chat',
+      icon: 'home',
+    }
+  }
   if (pathname.startsWith('/schedule') || pathname.startsWith('/dashboard/barber')) {
     return {
       eyebrow: 'YOUR ROSTER',
@@ -74,6 +106,16 @@ export function getMenuContext(pathname: string, isBarber: boolean, isBarberSeek
         }
   }
   if (pathname.startsWith('/chat')) {
+    if (isShopOwner) {
+      return {
+        eyebrow: 'OWNER DESK',
+        title: 'Shop conversations',
+        description: 'Messages mula sa customers at sarili mong staff.',
+        actionLabel: 'View reservations',
+        actionTo: '/dashboard/owner/reservations',
+        icon: 'chat',
+      }
+    }
     return isBarber ? {
       eyebrow: 'SHOP DESK',
       title: 'Customer conversations',

@@ -289,6 +289,7 @@ export function DashboardPage() {
           </p>
           <BarberShiftCalendar
             rules={rules}
+            overrides={overrides}
             employment={employment}
             absences={absences}
             requests={shiftRequests}

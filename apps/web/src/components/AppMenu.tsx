@@ -19,7 +19,7 @@ type AppMenuProps = {
  * drawer para CSS transition (hindi mount/unmount) ang animation.
  */
 export function AppMenu({ onOpenChange }: AppMenuProps) {
-  const { profile, isBarber, signOut } = useAuth()
+  const { profile, isBarber, isShopOwner, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const { go } = useCurtain()
@@ -86,7 +86,13 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
   const pending = profile.verification_status === 'pending'
   const avatarRole = profile.requested_role
     ?? (profile.role === 'barber' || profile.role === 'shop_owner' ? profile.role : 'customer')
-  const menuContext = getMenuContext(location.pathname, isBarber, profile.requested_role === 'barber' && !isBarber)
+  const ownerWorkspace = isShopOwner
+  const menuContext = getMenuContext(
+    location.pathname,
+    isBarber,
+    profile.requested_role === 'barber' && !isBarber,
+    ownerWorkspace,
+  )
   const menuItems = getMainMenuItems(profile)
 
   async function handleSignOut() {

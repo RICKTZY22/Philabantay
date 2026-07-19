@@ -83,10 +83,11 @@ On performance, the single biggest cost is the hand-drawn `#rough` SVG filter ap
 - **What:** `uid()` builds every entity id from `Math.random().toString(36).slice(2, 10)`, roughly 41 bits from a non-cryptographic PRNG, with no collision check. Today nothing treats ids as secrets, but the helper looks reusable. The correctness audit also flagged the collision angle: a colliding message id would make the Thread dedupe guard (ChatPage.tsx:162) permanently suppress a real message.
 - **Fix:** Use `crypto.randomUUID()` in `uid()` (the codebase already relies on `crypto` in passwords.ts); in Phase 2 let Postgres generate ids.
 
-### S-9 [Info] Thirteen seeded accounts all accept the password demo1234, ten of them undocumented
-- **File:** `apps/web/src/services/mock/seed.ts:38`
-- **What:** Every entry in the seed passwords map (:204-218) reuses one `DEMO_PASSWORD_HASH`, so all seeded barbers and the owner sign in with `demo1234`. The login screen only advertises three (`DEMO_ACCOUNTS` :250-254).
-- **Fix:** Keep for Phase 1. Make the Phase 2 seed generate per-account random passwords or create demo users only behind an explicit dev flag.
+### S-9 [Resolved] Bundled accounts reused one shared password
+- **Files:** mock seed, Supabase seed, and the landing-page account picker
+- **Resolution:** All bundled accounts and pre-filled login controls were
+  removed. The mock v19 cleanup removes historical bundled profiles, and live
+  integration tests generate unique accounts and passwords at runtime.
 
 ### S-10 [Info] Entire mock DB, including all users' password verifiers and phone numbers, is readable client-side
 - **File:** `apps/web/src/services/mock/MockBackend.ts:34`
@@ -168,7 +169,8 @@ On performance, the single biggest cost is the hand-drawn `#rough` SVG filter ap
 - **File:** `apps/web/src/components/CustomerDashboard.tsx:265-274`; `apps/web/src/pages/ShopProfilePage.tsx:76-90`
 - **Category:** state
 - **What:** `openShopChat`/`chatWithShop` guard the zero-barbers case, but `openConversation` can still throw: a shop whose barbers are all unverified throws `validation` (MockBackend.ts:972), and a signed-in barber/owner clicking "Chat shop" throws `forbidden` (:960-962). No catch, so the button just resets.
-- **Failure scenario:** The demo barber account (miguel@demo.test) opens a shop profile and clicks "Chat shop": nothing happens except a console error.
+- **Failure scenario:** A signed-in barber opens a shop profile and clicks
+  "Chat shop": nothing happens except a console error.
 - **Fix:** Add a catch that surfaces the DataError message near the button.
 
 ### L-10 [Low] Duplicate phone numbers silently lock later accounts out of phone sign-in

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { DataError, type OnboardingRole } from '@barbershop/shared'
+import { Navigate } from 'react-router-dom'
+import { DataError, isOwnerVerificationLocked, type OnboardingRole } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { useCurtain } from '../components/CurtainTransition'
 import { RoleAvatar } from '../components/RoleAvatar'
@@ -98,10 +99,11 @@ export function RoleSelectionPage() {
   }, [profile?.onboarding_completed])
 
   if (!profile) return null
+  if (isOwnerVerificationLocked(profile)) return <Navigate to="/verification" replace />
 
-  const pendingProfessional =
+  const pendingBarber =
     profile.verification_status === 'pending' &&
-    (profile.requested_role === 'barber' || profile.requested_role === 'shop_owner')
+    profile.requested_role === 'barber'
 
   async function continueOnboarding() {
     if (!selected || busy) return
@@ -109,45 +111,25 @@ export function RoleSelectionPage() {
     setBusy(true)
     try {
       await completeRoleOnboarding({ role: selected })
-      // Lahat ng role sa safe app dashboard muna. Doon hiwalay ang verified tools.
-      go('/dashboard')
+      go(selected === 'shop_owner' ? '/verification' : '/dashboard')
     } catch (err) {
       setError(err instanceof DataError ? err.message : 'Hindi natuloy. Subukan ulit.')
       setBusy(false)
     }
   }
 
-  if (pendingProfessional) {
-    if (profile.requested_role === 'barber') {
-      return (
-        <section className="role-onboarding role-status" aria-labelledby="role-status-title">
-          <div className="status-stamp"><DoodleIcon name="search" size={54} /></div>
-          <span className="eyebrow">Open to work</span>
-          <h1 id="role-status-title">Hiring map na ang susunod.</h1>
-          <p>Wala ka pang shop affiliation. Pumili ng hiring shop at mag-apply, o gamitin ang code na ibinigay ng employer mo.</p>
-          <div className="role-safety-note">
-            <DoodleIcon name="check" size={26} />
-            <span>Magiging registered barber ka lang pagkatapos ma-validate ang shop membership.</span>
-          </div>
-          <button className="btn btn-primary" onClick={() => go('/dashboard')}>Open hiring map</button>
-        </section>
-      )
-    }
-    const label = profile.requested_role === 'shop_owner' ? 'shop owner' : 'barber'
+  if (pendingBarber) {
     return (
       <section className="role-onboarding role-status" aria-labelledby="role-status-title">
-        <div className="status-stamp"><DoodleIcon name="clock" size={54} /></div>
-        <span className="eyebrow">Request received</span>
-        <h1 id="role-status-title">Nasa verification line ka na.</h1>
-        <p>
-          Naka-save ang request mo bilang <strong>{label}</strong>. Hindi muna magiging public ang
-          professional profile o shop location hangga't hindi verified.
-        </p>
+        <div className="status-stamp"><DoodleIcon name="search" size={54} /></div>
+        <span className="eyebrow">Open to work</span>
+        <h1 id="role-status-title">Hiring map na ang susunod.</h1>
+        <p>Wala ka pang shop affiliation. Pumili ng hiring shop at mag-apply, o gamitin ang code na ibinigay ng employer mo.</p>
         <div className="role-safety-note">
           <DoodleIcon name="check" size={26} />
-          <span>Customer access lang muna habang pending, kaya safe pa rin ang bookings at listings.</span>
+          <span>Magiging registered barber ka lang pagkatapos ma-validate ang shop membership.</span>
         </div>
-        <button className="btn btn-primary" onClick={() => go('/barbers')}>Browse barbers muna</button>
+        <button className="btn btn-primary" onClick={() => go('/dashboard')}>Open hiring map</button>
       </section>
     )
   }

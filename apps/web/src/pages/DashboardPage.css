@@ -1,9 +1,9 @@
-.barber-schedule-page { display: grid; gap: 22px; padding: 8px 0 36px; }
-.schedule-page-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 26px; border: 2.5px solid var(--ink); border-radius: 18px 25px 16px 22px; background: var(--paper-soft); box-shadow: 5px 6px 0 var(--shadow); }
+.barber-schedule-page { display: grid; gap: 14px; padding: 6px 0 28px; }
+.schedule-page-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 20px; border: 2.5px solid var(--ink); border-radius: 18px 25px 16px 22px; background: var(--paper-soft); box-shadow: 5px 6px 0 var(--shadow); }
 .schedule-page-hero h1 { margin: 3px 0; font-size: clamp(2.2rem, 5vw, 3.6rem); }
 .schedule-page-hero p { margin: 0; color: var(--muted); }
 .schedule-message { padding: 11px 15px; border: 2px solid var(--ink); border-radius: 12px; background: var(--yellow); }
-.schedule-live-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 18px 20px; border: 2.5px solid var(--ink); border-radius: 16px 22px 15px 20px; background: color-mix(in srgb, var(--blue) 38%, var(--paper-soft)); box-shadow: 4px 5px 0 var(--shadow); }
+.schedule-live-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 12px 16px; border: 2.5px solid var(--ink); border-radius: 16px 22px 15px 20px; background: color-mix(in srgb, var(--blue) 38%, var(--paper-soft)); box-shadow: 4px 5px 0 var(--shadow); }
 .schedule-live-card h2 { margin: 2px 0; }
 .schedule-live-card p { margin: 0; color: var(--muted); }
 .schedule-live-icon { display: grid; place-items: center; width: 62px; height: 62px; border: 2.5px solid var(--ink); border-radius: 50%; background: var(--paper-soft); }
@@ -13,10 +13,10 @@
 .schedule-accepting-toggle input { width: auto; }
 .schedule-accepting-toggle span { display: grid; }
 .schedule-accepting-toggle small { color: var(--muted); }
-.schedule-editor-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); gap: 22px; align-items: start; }
+.schedule-editor-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); gap: 14px; align-items: start; }
 /* Notebook paper cards — ruled lines + cream tint, kapareho ng barber home. */
 .schedule-paper-card {
-  padding: 20px;
+  padding: 14px 16px;
   border: 2.5px solid var(--ink);
   border-radius: 18px 24px 16px 21px;
   background:
@@ -24,17 +24,17 @@
     color-mix(in srgb, var(--yellow) 6%, var(--paper-soft));
   box-shadow: 4px 6px 0 var(--shadow);
 }
-.schedule-mid-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 22px; align-items: start; }
-.schedule-calendar-hint { margin: 4px 0 14px; }
+.schedule-mid-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 14px; align-items: start; }
+.schedule-calendar-hint { margin: 2px 0 8px; }
 
 /* ---- Attendance card ---- */
-.schedule-attendance-card { display: grid; gap: 12px; align-content: start; }
+.schedule-attendance-card { display: grid; gap: 8px; align-content: start; }
 .schedule-attendance-card > p { margin: 0; }
 .schedule-attendance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .schedule-attendance-grid article {
   display: grid;
   gap: 2px;
-  padding: 12px;
+  padding: 8px 10px;
   background: rgba(255, 253, 247, .9);
   border: 2px solid var(--ink);
   border-radius: 12px 15px 11px 14px;
@@ -57,21 +57,21 @@
 }
 .schedule-attendance-rate .doodle-icon { color: #d99a1b; }
 .schedule-card-heading { display: flex; justify-content: space-between; gap: 14px; }
-.schedule-card-heading h2 { margin: 3px 0 12px; }
-.hours-editor { display: grid; gap: 7px; }
-.hours-row { display: grid; grid-template-columns: minmax(120px, 1.2fr) auto auto auto; gap: 8px; align-items: center; padding: 9px 10px; border: 1.5px dashed var(--line); border-radius: 10px; opacity: .66; }
+.schedule-card-heading h2 { margin: 2px 0 8px; }
+.hours-editor { display: grid; gap: 4px; }
+.hours-row { display: grid; grid-template-columns: minmax(120px, 1.2fr) auto auto auto; gap: 8px; align-items: center; padding: 5px 9px; border: 1.5px dashed var(--line); border-radius: 10px; opacity: .66; }
 .hours-row.is-enabled { opacity: 1; background: color-mix(in srgb, var(--green, #bfe5bd) 18%, var(--paper-soft)); }
 .hours-day { display: flex; align-items: center; gap: 8px; font-family: 'Kalam', cursive; }
 .hours-day input { width: auto; }
 .hours-row input[type='time'],
 .ov-form input { padding: 7px 9px; border: 1.8px solid var(--ink); border-radius: 9px 12px 8px 11px; background: var(--paper-soft); }
-.schedule-save { margin-top: 14px; }
+.schedule-save { margin-top: 10px; }
 .ov-form { display: grid; grid-template-columns: minmax(145px, .7fr) minmax(0, 1.3fr) auto; gap: 8px; }
-.schedule-override-list { display: grid; gap: 8px; margin-top: 14px; }
-.ov-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1.5px dashed var(--line); border-radius: 10px; }
+.schedule-override-list { display: grid; gap: 6px; margin-top: 10px; }
+.ov-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border: 1.5px dashed var(--line); border-radius: 10px; }
 .ov-item > span { display: grid; }
 .ov-item small { color: var(--muted); }
-.schedule-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 90px; color: var(--muted); }
+.schedule-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; color: var(--muted); }
 @media (max-width: 900px) {
   .schedule-live-card { grid-template-columns: auto 1fr; }
   .schedule-live-actions { grid-column: 1 / -1; }

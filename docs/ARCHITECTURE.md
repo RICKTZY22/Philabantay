@@ -19,16 +19,18 @@ existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](SECURITY.md), and
 | Build/dev | Vite (`apps/web/vite.config.ts`) |
 | Routing | `react-router-dom` v7 (`BrowserRouter`, declared in `App.tsx`) |
 | State management | React Context + local component state. No Redux/Zustand/RTK. |
-| Server data | An in-app **mock backend** (in-memory + `localStorage`). No network calls today. |
-| Realtime | `BroadcastChannel` across tabs (mock stand-in for Supabase Realtime) |
+| Server data | `VITE_DATA_BACKEND` selects the in-app mock or the Express-backed `ApiBackend`; UI components use the same interface for both. |
+| Realtime | Mock: `BroadcastChannel`. API: authenticated HTTP polling behind `chat.subscribe`. |
 | Maps | Leaflet + OpenStreetMap tiles |
 | Animation | GSAP + ScrollTrigger (dynamically imported), plus CSS transitions |
 | Styling | Plain CSS, one colocated stylesheet per component/page, shared tokens in `theme/doodle.css` |
 | Monorepo | npm workspaces: `apps/*` and `packages/*` |
 
-**Planned (Phase 2, not in the repo yet):** a thin Express API (`apps/api`) and
-Supabase (Postgres + Auth + Realtime + RLS). The README describes it, but only
-`apps/web` and `packages/shared` currently exist.
+**Phase 2 local setup complete:** Supabase Postgres/Auth/RLS migrations and the
+credential-free local seed live under `supabase/`; the thin Express API lives in
+`apps/api`. The frontend HTTP adapter is wired and the Docker-backed local stack
+has passed direct RLS, Express API, and three-role browser verification. See
+[LOCAL-SUPABASE-VERIFICATION.md](LOCAL-SUPABASE-VERIFICATION.md).
 
 ---
 
@@ -39,6 +41,7 @@ barbersalonhelp/
 ├─ package.json            npm workspaces; root scripts (dev/build/lint/typecheck)
 ├─ tsconfig.base.json      shared strict TS config
 ├─ docs/                   these guides
+├─ supabase/               Postgres migrations, RLS policies, local config + seed
 ├─ packages/
 │  └─ shared/              @barbershop/shared: the contract everyone agrees on
 │     └─ src/
@@ -50,7 +53,8 @@ barbersalonhelp/
 │        ├─ constants.ts     SHOP_NAME, timezone, weekday labels, slot step
 │        └─ index.ts         re-exports everything
 └─ apps/
-   └─ web/                 @barbershop/web: the React app (the only runtime today)
+   ├─ api/                 @barbershop/api: Express 5 REST API + Supabase clients
+   └─ web/                 @barbershop/web: the React app
       └─ src/ ...          see next table
 ```
 
@@ -72,7 +76,7 @@ workspaces.
 | `services/mock/` | `MockBackend.ts` (all service logic), `seed.ts` (initial data + schema), `availability.ts` (slot math), `passwords.ts` (PBKDF2). |
 | `hooks/` | Reusable lifecycle behavior: `useLiveLocation`, `useCurrentTime`. |
 | `lib/` | Pure utilities: `date`, `geo`, `format`, `security`, `profile`. |
-| `config/` | Static metadata: `navigation`, `demoAccounts`, `discovery` (nearby radius). |
+| `config/` | Static metadata: `navigation` and `discovery` (nearby radius). |
 | `theme/` | `doodle.css` (tokens + global styles), `DoodleDefs` (SVG icon sprite + rough filters), GSAP animation runtime + hook. |
 
 ---
@@ -107,9 +111,11 @@ flowchart TD
   Pages[pages + components] -->|useBackend()| Contract[DataBackend interface\npackages/shared]
   Pages -->|useAuth()| AuthCtx[AuthContext]
   AuthCtx -->|delegates auth.* to| Contract
-  Contract -.implemented today by.-> Mock[createMockBackend\nservices/mock]
-  Contract -.implemented later by.-> Supa[SupabaseBackend\n(Phase 2)]
+  Contract -.implemented by.-> Mock[createMockBackend\nservices/mock]
+  Contract -.implemented by.-> Api[ApiBackend\nExpress HTTP]
   Mock --> LS[(localStorage + sessionStorage)]
+  Api --> Express[apps/api]
+  Express --> Supabase[(Supabase Auth + Postgres)]
 ```
 
 The switchboard is `services/backend.tsx`:
@@ -117,11 +123,12 @@ The switchboard is `services/backend.tsx`:
 ```ts
 const kind = import.meta.env.VITE_DATA_BACKEND ?? 'mock'
 // 'mock'     -> createMockBackend()
-// 'supabase' -> throws (fails closed; not implemented yet)
+// 'api'      -> new ApiBackend({ baseUrl: VITE_API_BASE_URL })
+// 'supabase' -> alias of 'api' for existing deployments
 ```
 
-So today only `mock` works, and asking for `supabase` intentionally throws rather
-than silently shipping a fake backend to production.
+The API cases fail closed when `VITE_API_BASE_URL` is missing. No Supabase
+service-role value is accepted through a browser `VITE_` variable.
 
 ---
 
@@ -227,11 +234,11 @@ Two rules that hold everywhere:
 
 ### Realtime (chat)
 
-`chat.subscribe(conversationId, cb)` registers an in-tab listener. `sendMessage`
-delivers to this tab's listeners immediately and posts to a `BroadcastChannel` so
-other tabs re-read and fire their listeners. `ChatPage`'s `Thread` subscribes on
-mount and unsubscribes on unmount. Phase 2 replaces the channel with Supabase
-Realtime behind the same method signature.
+`chat.subscribe(conversationId, cb)` keeps the transport behind one synchronous
+unsubscribe contract. The mock uses `BroadcastChannel`; `ApiBackend` immediately
+delivers messages sent by the current tab and polls the protected messages route
+for remote messages. `ChatPage` remains transport-agnostic and cleans up the
+subscription on unmount.
 
 ---
 
@@ -243,7 +250,9 @@ Realtime behind the same method signature.
 - `components/RequireAuth.tsx` guards private routes in this order: wait for
   session restore (`loading`), then require a profile (redirect to `/login` with
   a `from`), then require completed onboarding (redirect to `/onboarding/role`),
-  then optionally require a specific `role`.
+  then enforce the pending-owner verification lock (redirect to
+  `/verification`), then optionally require a specific `role`. `Layout` repeats
+  the owner lock for normally-public routes, leaving Sign out as the only action.
 - Important: `RequireAuth` is **UX only**. It is explicitly documented as *not* a
   security boundary; production security is Supabase RLS
   ([ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md)).
@@ -266,7 +275,7 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
 | `AppDashboardPage` | nothing itself; picks a dashboard by `requested_role`/`role` | Renders `CustomerDashboard` / `BarberDashboard` / `ShopOwnerDashboard` |
 | `CustomerDashboard` | `shops.list`, `barbers.list`, `barbers.availableNow`, `bookings.listMine`, `chat.listConversations`, `favorites.list`, `services.list`, `favorites.toggle`, `chat.openConversation` | `useLiveLocation`, `useCurrentTime`, `ShopMap` (lazy), `AppointmentCalendar`, `DoodleBoard`, `ModalPortal` |
 | `BarberDashboard` | `employment.getMyShop`, `employment.listHiringShops`, `employment.listMyApplications`, `employment.apply`, `employment.joinWithCode`, `bookings.listMine`, `chat.listConversations`, `availability.getRules` | `useLiveLocation`, `ShopMap` (lazy), `DoodleBoard` |
-| `ShopOwnerDashboard` | `employment.getMyShopJoinCode`, `employment.rotateMyShopJoinCode` (rest is sample data) | `DoodleBoard` |
+| `ShopOwnerDashboard` | `bookings.listForMyShop`, `employment.getMyShopJoinCode`, `employment.rotateMyShopJoinCode`, owner staff/attendance/notes/performance methods | `DoodleBoard`, `OwnerStaffPanel` |
 | `BarberDetailPage` | `barbers.get`, `services.list`, `shops.list`, `favorites.listBarbers`, `availability.getOpenSlots`, `bookings.create`, `bookings.reschedule`, `favorites.toggleBarber` | `useAuth`, `lib/date`, `lib/format`, `lib/security` |
 | `AppointmentsPage` | `bookings.listMine`, `reviews.listMine`, `bookings.cancel`, `reviews.rateAppointment` | `AppointmentCalendar`, `ModalPortal`, `useCurrentTime`, shared appointment rules |
 | `BarbersPage` | `barbers.list`, `shops.list`, `favorites.listBarbers`, `barbers.availableNow`, `favorites.toggleBarber` | `useLiveLocation`, `useCurrentTime`, `useDoodleAnimations` |
@@ -301,10 +310,11 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
 - **Validation on load:** `isStoredMockDB` (shape check) and `hasValidReferences`
   (no dangling foreign keys) run before trusting persisted data; bad data falls
   back to a fresh seed.
-- **Migrations:** `migrateDB` upgrades old browser data across versions 2 to 14
+- **Migrations:** `migrateDB` upgrades old browser data across versions 2 to 19
   (adding shops, favorites, the owner account, hashed passwords, shop-level chat,
-  doodle avatars, reviews, private contact fields, employment, shop ownership).
-  Current seed version is 14.
+  doodle avatars, reviews, private contact fields, employment, shop ownership,
+  appointment shop snapshots, and the pre-Supabase activity cleanup). Current
+  seed version is 19.
 - **Passwords:** `passwords.ts` uses PBKDF2-SHA256 (600k iterations) via WebCrypto
   with constant-time comparison and a dummy hash to equalize unknown-account
   timing. Legacy plaintext is upgraded on the fly. This is described as
@@ -314,10 +324,9 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
   (step through blocks, drop past times and booked overlaps), and `isWithinHours`
   (used for live "open/available" status). Times are treated as device-local for
   this single-shop MVP.
-- **Seed data** (`seed.ts`): one demo customer, ~11 barbers, one shop owner, 10
-  shops nationwide (real street coordinates), 6 services, weekly rules, 3 hiring
-  listings, 3 join codes, and one completed appointment so the ratings flow is
-  testable.
+- **Seed data** (`seed.ts`): credential-free and empty. Accounts are created
+  only through signup; the v19 migration removes historical bundled logins and
+  their dependent shop catalogue while preserving user-created accounts.
 
 ---
 
@@ -337,7 +346,7 @@ Shop              id, owner_id, name, address, city, lat, lng, rating, barber_id
 Service           id, name, duration_min, price_cents, active
 AvailabilityRule  barber_id, weekday(0-6), start_time, end_time     (weekly)
 AvailabilityOverride  barber_id, date, is_available, start/end, reason(private)
-Appointment       customer_id, barber_id, service_id, starts_at, ends_at, status, notes
+Appointment       customer_id, barber_id, shop_id, service_id, starts_at, ends_at, status, notes
   AppointmentDetailed = + service, barber, customer, shop
 Conversation      customer_id, shop_id, barber_id(representative)
   ConversationDetailed = + customer, shop, barber, last_message, unread_count
@@ -383,9 +392,10 @@ Two enums drive most conditionals: `AppointmentStatus`
 
 Things that surprised me while reading, worth keeping in mind (or fixing):
 
-1. **`apps/api` and Supabase do not exist yet.** The README and docs describe
-   Phase 2, but the repo is `apps/web` + `packages/shared` only.
-   `VITE_DATA_BACKEND=supabase` throws by design.
+1. **Service catalogue scope is still implicit.** `ServiceCatalog.list()` has no
+   shop argument even though Postgres services are shop-scoped. The current
+   single seeded shop is unambiguous; multi-shop booking needs a contract/UI
+   extension rather than guessing inside the adapter.
 2. **Password hint mismatch.** `SecuritySettingsPanel.tsx` tells users "at least
    10 characters and one special character," but the enforced rule
    (`validation.ts`, used by `changePassword`) is `MIN_PASSWORD_LENGTH = 6` plus
@@ -397,9 +407,11 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 4. **Two favorite domains.** Shops use `favorites.list` / `favorites.toggle`;
    barbers use `favorites.listBarbers` / `favorites.toggleBarber`. Easy to grab
    the wrong pair.
-5. **Sample-only UI.** The owner dashboard's reservations/metrics/charts, and the
-   shop profile's queue/hours/gallery/latest-review/specialties, are hardcoded,
-   not backend-driven. See [FEATURES.md](FEATURES.md#what-is-real-vs-placeholder-so-you-are-not-surprised).
+5. **Sample-only shop-profile UI.** The shop profile's
+   queue/hours/gallery/latest-review/specialties remain hardcoded. The owner
+   dashboard reservations, metrics, charts, staff, and performance panels now
+   use backend data. See
+   [FEATURES.md](FEATURES.md#what-is-real-vs-placeholder-so-you-are-not-surprised).
 6. **Notification prefs are device-local** (`localStorage: bsh_prefs`) and never
    reach the backend; the "Email updates" toggle has no downstream effect.
 7. **Shared settings helpers live in a panel.** `SettingsHeading` and
@@ -424,18 +436,17 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 
 ---
 
-## Phase 2 swap plan (how the seam pays off)
+## Phase 2 swap status (how the seam pays off)
 
-To go from demo to real, the intended path is:
+The implemented path is:
 
-1. Implement `DataBackend` (`packages/shared/src/services.ts`) against Supabase in
-   a new adapter, and add the Express API that holds the service-role key.
-2. Wire it in `services/backend.tsx` under the `supabase` case (which currently
-   throws).
-3. Flip `VITE_DATA_BACKEND=supabase`.
-4. Enforce every rule the mock enforces (roles, ownership, status transitions,
-   slot validation) again in Postgres/RLS, because the browser is never the
-   authority. Follow [ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md)
-   and [SECURITY.md](SECURITY.md).
+1. `ApiBackend` in `packages/shared/src/services.ts` calls the Express API,
+   persists only the user's access/refresh session, and satisfies `DataBackend`.
+2. `services/backend.tsx` selects `mock`, `api`, or the `supabase` alias.
+3. Flip `VITE_DATA_BACKEND=api` and set `VITE_API_BASE_URL`.
+4. The Express API and Postgres/RLS enforce roles, ownership, status transitions,
+   and slot validation because the browser is never the authority. Follow
+   [ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md) and
+   [SECURITY.md](SECURITY.md).
 
 Because pages only ever touched the interface, no screen should need to change.

@@ -1,11 +1,12 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type {
+  AvailabilityOverride,
   AvailabilityRule,
   BarberAbsence,
   BarberEmployment,
   ShiftChangeRequest,
 } from '@barbershop/shared'
-import { localDateKey, todayLocalDateKey } from '../lib/date'
+import { localDateKey, parseLocalDateKey, todayLocalDateKey } from '../lib/date'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import './BarberShiftCalendar.css'
 
@@ -35,8 +36,12 @@ const REQUEST_PILL: Record<ShiftChangeRequest['status'], string> = {
   declined: 'pill pill-off',
 }
 
+type ShiftBlock = Pick<AvailabilityRule, 'id' | 'start_time' | 'end_time'>
+
 interface BarberShiftCalendarProps {
   rules: AvailabilityRule[]
+  /** One-off availability changes override the weekly roster in the grid. */
+  overrides?: AvailabilityOverride[]
   employment: BarberEmployment | null
   absences: BarberAbsence[]
   requests?: ShiftChangeRequest[]
@@ -46,6 +51,7 @@ interface BarberShiftCalendarProps {
 
 export function BarberShiftCalendar({
   rules,
+  overrides = [],
   employment,
   absences,
   requests = [],
@@ -62,7 +68,7 @@ export function BarberShiftCalendar({
   const [formMessage, setFormMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
 
   const rulesByWeekday = useMemo(() => {
-    const map = new Map<number, AvailabilityRule[]>()
+    const map = new Map<number, ShiftBlock[]>()
     rules.forEach((rule) => {
       const list = map.get(rule.weekday) ?? []
       list.push(rule)
@@ -75,10 +81,19 @@ export function BarberShiftCalendar({
     () => new Map(absences.map((absence) => [absence.date, absence])),
     [absences],
   )
-  const requestByDate = useMemo(
-    () => new Map(requests.map((request) => [request.date, request])),
-    [requests],
+  const overridesByDate = useMemo(
+    () => new Map(overrides.map((override) => [override.date, override])),
+    [overrides],
   )
+  const requestByDate = useMemo(() => {
+    // The service returns newest first. Keep the first request for each date
+    // so a new request after a declined/approved one does not show stale state.
+    const byDate = new Map<string, ShiftChangeRequest>()
+    requests.forEach((request) => {
+      if (!byDate.has(request.date)) byDate.set(request.date, request)
+    })
+    return byDate
+  }, [requests])
 
   const weeks = useMemo(() => {
     const first = new Date(monthCursor)
@@ -102,12 +117,21 @@ export function BarberShiftCalendar({
   }
 
   function weekdayOf(dateKey: string): number {
-    return new Date(`${dateKey}T00:00:00`).getDay()
+    return parseLocalDateKey(dateKey)?.getDay() ?? -1
   }
 
-  function dayShiftBlocks(dateKey: string): AvailabilityRule[] {
+  function dayShiftBlocks(dateKey: string): ShiftBlock[] {
     if (employment && dateKey < employment.hired_at) return []
     if (employment?.ended_at && dateKey > employment.ended_at) return []
+    const override = overridesByDate.get(dateKey)
+    if (override && !override.is_available) return []
+    if (override?.start_time && override.end_time) {
+      return [{
+        id: override.id,
+        start_time: override.start_time,
+        end_time: override.end_time,
+      }]
+    }
     return rulesByWeekday.get(weekdayOf(dateKey)) ?? []
   }
 
@@ -132,6 +156,7 @@ export function BarberShiftCalendar({
         key: selectedDay,
         blocks: dayShiftBlocks(selectedDay),
         absence: absenceByDate.get(selectedDay) ?? null,
+        override: overridesByDate.get(selectedDay) ?? null,
         request: requestByDate.get(selectedDay) ?? null,
         isHiredDay: employment?.hired_at === selectedDay,
         isEndDay: employment?.ended_at === selectedDay,
@@ -153,12 +178,14 @@ export function BarberShiftCalendar({
           if (!cell.inMonth) return <span className="bsc-cell is-blank" key={cell.key} aria-hidden="true" />
           const blocks = dayShiftBlocks(cell.key)
           const absence = absenceByDate.get(cell.key)
+          const override = overridesByDate.get(cell.key)
           const request = requestByDate.get(cell.key)
           const isMilestone = employment?.hired_at === cell.key || employment?.ended_at === cell.key
           const classes = [
             'bsc-cell',
             blocks.length > 0 ? 'is-scheduled' : '',
             absence ? 'is-absent' : '',
+            override && !override.is_available ? 'is-unavailable' : '',
             cell.key === today ? 'is-today' : '',
             cell.key === selectedDay ? 'is-selected' : '',
             employment && cell.key < employment.hired_at ? 'is-prehire' : '',
@@ -172,9 +199,10 @@ export function BarberShiftCalendar({
               key={cell.key}
             >
               <span className="bsc-daynum">{cell.day}</span>
-              {isMilestone && <HappyFace />}
-              {absence && <span className="bsc-absent-label">Absent</span>}
-              {request && <span className={`bsc-request-dot is-${request.status}`} aria-hidden="true" />}
+            {isMilestone && <HappyFace />}
+            {absence && <span className="bsc-absent-label">Absent</span>}
+            {override && !override.is_available && <span className="bsc-unavailable-label">Off</span>}
+            {request && <span className={`bsc-request-dot is-${request.status}`} aria-hidden="true" />}
             </button>
           )
         })}
@@ -183,9 +211,11 @@ export function BarberShiftCalendar({
       {selected && (
         <div className="bsc-day-card barber-paper-stack-sm">
           <header>
-            <strong>{DAY_FORMATTER.format(new Date(`${selected.key}T00:00:00`))}</strong>
+            <strong>{DAY_FORMATTER.format(parseLocalDateKey(selected.key) ?? new Date())}</strong>
             {selected.absence
               ? <span className="pill pill-off">Absent</span>
+              : selected.override && !selected.override.is_available
+                ? <span className="pill pill-off">Unavailable</span>
               : selected.blocks.length > 0
                 ? <span className="pill pill-on">Scheduled</span>
                 : <span className="pill">Day off</span>}
@@ -199,12 +229,16 @@ export function BarberShiftCalendar({
           )}
           {selected.beforeHire && <p className="muted">Hindi ka pa hired sa shop noong araw na ito.</p>}
 
+          {selected.override && !selected.override.is_available && (
+            <p className="muted">Naka-mark itong unavailable{selected.override.reason ? `: ${selected.override.reason}` : '.'}</p>
+          )}
+
           {!selected.beforeHire && selected.blocks.map((block) => (
             <p className="bsc-shift-time" key={block.id}>
               <DoodleIcon name="clock" size={16} /> {formatWallTime(block.start_time)} – {formatWallTime(block.end_time)}
             </p>
           ))}
-          {!selected.beforeHire && selected.blocks.length === 0 && !selected.isHiredDay && (
+          {!selected.beforeHire && selected.blocks.length === 0 && !selected.isHiredDay && !selected.override?.is_available && (
             <p className="muted">Walang naka-schedule na shift.</p>
           )}
           {selected.absence?.reason && <p className="muted">Dahilan: {selected.absence.reason}</p>}
@@ -216,7 +250,7 @@ export function BarberShiftCalendar({
             </div>
           )}
 
-          {onRequestChange && !selected.request && selected.key >= today && !selected.beforeHire && (
+          {onRequestChange && !selected.request && selected.key >= today && !selected.beforeHire && !selected.absence && selected.blocks.length > 0 && (
             <form className="bsc-request-form" onSubmit={submitRequest}>
               <label htmlFor={`bsc-request-${selected.key}`}>Request a change para sa shift na ito</label>
               <div>

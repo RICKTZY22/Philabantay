@@ -1,0 +1,5 @@
+-- Intentionally credential-free.
+--
+-- Local accounts, shops, and services must be created through the same signup
+-- and setup flows used by the application. Never add reusable credentials or
+-- production-derived records to this version-controlled seed.

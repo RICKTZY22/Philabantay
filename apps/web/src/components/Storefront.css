@@ -1,29 +1,20 @@
-/* Keyframes + sizing for the animated Philabantay storefront scene.
-   Self-contained so the component works on any page. Some keyframes are
-   intentionally identical to LandingPage.css definitions. */
+/* A single restrained pulse replaces the former haircut choreography. */
+@keyframes lampGlowPulse {
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50% { filter: brightness(.88); transform: scale(.96); }
+}
 
-@keyframes poleSpin { from { background-position: 0 0; } to { background-position: 0 50.9px; } }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
-@keyframes flagWave { from { transform: skewY(-7deg); } to { transform: skewY(7deg); } }
-@keyframes cloudDrift { from { transform: translateX(0); } to { transform: translateX(46px); } }
-@keyframes birdGlide {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(90px, -14px); }
-  50% { transform: translate(180px, 4px); }
-  75% { transform: translate(270px, -10px); }
-  100% { transform: translate(360px, 0); }
+/* The original shop choreography, kept deterministic and compositor-only. */
+@keyframes shopWalkIn {
+  0% { transform: translate3d(0, 0, 0); opacity: 1; }
+  26%, 31.5% { transform: translate3d(425px, 0, 0); opacity: 1; }
+  32%, 100% { transform: translate3d(425px, 0, 0); opacity: 0; }
 }
-@keyframes walkIn {
-  0% { transform: translateX(0); opacity: 1; }
-  26%, 31.5% { transform: translateX(425px); opacity: 1; }
-  32%, 100% { transform: translateX(425px); opacity: 0; }
-}
-@keyframes walkOut {
-  0%, 58% { transform: translateX(0) scale(1); opacity: 0; }
-  60% { transform: translateX(0) scale(1); opacity: 1; }
-  68% { transform: translateX(0) scale(1); opacity: 1; }
-  92% { transform: translateX(430px) scale(1); opacity: 1; }
-  94%, 100% { transform: translateX(430px) scale(1); opacity: 0; }
+@keyframes shopWalkOut {
+  0%, 58% { transform: translate3d(0, 0, 0); opacity: 0; }
+  60%, 68% { transform: translate3d(0, 0, 0); opacity: 1; }
+  92% { transform: translate3d(430px, 0, 0); opacity: 1; }
+  94%, 100% { transform: translate3d(430px, 0, 0); opacity: 0; }
 }
 @keyframes walkerSideIn {
   0%, 23.5% { opacity: 1; transform: scaleX(1); }
@@ -48,31 +39,22 @@
   30%, 62% { transform: scaleX(.12); }
   68%, 100% { transform: scaleX(1); }
 }
-@keyframes windowShow {
-  0%, 33% { opacity: 0; }
-  37%, 54% { opacity: 1; }
-  58%, 100% { opacity: 0; }
-}
 @keyframes freshTag {
-  0%, 59% { opacity: 0; transform: scale(.4); }
-  63% { opacity: 1; transform: scale(1); }
-  82% { opacity: 1; transform: scale(1); }
-  88%, 100% { opacity: 0; transform: scale(.8); }
+  0%, 59% { opacity: 0; transform: scale(.4) rotate(-4deg); }
+  63%, 82% { opacity: 1; transform: scale(1) rotate(-4deg); }
+  88%, 100% { opacity: 0; transform: scale(.8) rotate(-4deg); }
 }
-@keyframes legSwing { from { transform: rotate(26deg); } to { transform: rotate(-26deg); } }
-@keyframes armSwing { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
-@keyframes armPump { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
-@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
-@keyframes lean { from { transform: rotate(1.4deg); } to { transform: rotate(-1.4deg); } }
-@keyframes snipJiggle { from { transform: rotate(-12deg); } to { transform: rotate(14deg); } }
-@keyframes snipPop { 0%, 100% { transform: scale(.85); } 50% { transform: scale(1.12); } }
-@keyframes hairFall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(32px) rotate(90deg); opacity: 0; }
+@keyframes cityWalkRight {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(100vw + 260px), 0, 0); }
 }
-@keyframes sparkle { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes cityWalkLeft {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(-100vw - 260px), 0, 0); }
+}
 
 .phil-stage.phil-neighborhood-stage {
+  --shop-cycle: 16s;
   position: relative;
   isolation: isolate;
   z-index: 1;
@@ -96,10 +78,6 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-}
-
-.city-doodle > div[style*="position: absolute"] {
-  filter: saturate(.88);
 }
 
 .city-sidewalk {
@@ -200,7 +178,6 @@
   border: 3px solid var(--ink);
   border-radius: 48% 52% 45% 55% / 54% 46% 55% 45%;
   background: #a8d8b9;
-  filter: url('#rough');
 }
 .city-doodle-tree-left { left: 145px; top: 368px; transform: scale(.8) rotate(-3deg); }
 .city-doodle-tree-right { right: 20px; top: 365px; transform: scale(.82) rotate(3deg); }
@@ -225,31 +202,33 @@
   background: #ffd76a;
   box-shadow: 0 0 14px 4px rgba(255, 205, 90, .58);
   transform: translateX(-50%);
-  animation: blink 4s ease-in-out infinite;
 }
 .city-doodle-lamp-left { left: 178px; }
 .city-doodle-lamp-right { right: 90px; }
 
 .phil-walker-out,
-.fresh-cut-tag {
-  isolation: isolate;
-}
+.fresh-cut-tag { isolation: isolate; }
 
 .phil-doodle-walker {
   position: absolute;
   top: 288px;
   width: 108px;
   height: 168px;
+  contain: layout paint;
   transform-origin: 50% 100%;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 .phil-doodle-walker-in {
   left: -150px;
   z-index: 4;
+  animation: shopWalkIn var(--shop-cycle) linear infinite;
 }
 .phil-doodle-walker-out {
   left: 282px;
   z-index: 10;
   opacity: 0;
+  animation: shopWalkOut var(--shop-cycle) linear infinite;
 }
 .phil-walker-view {
   position: absolute;
@@ -258,22 +237,144 @@
   backface-visibility: hidden;
   will-change: transform, opacity;
 }
-.phil-walker-side-in { animation: walkerSideIn var(--walk, 12s) linear infinite; }
-.phil-walker-back-in { opacity: 0; animation: walkerBackIn var(--walk, 12s) linear infinite; }
-.phil-walker-front-out { opacity: 0; animation: walkerFrontOut var(--walk, 12s) linear infinite; }
-.phil-walker-side-out { opacity: 0; animation: walkerSideOut var(--walk, 12s) linear infinite; }
+.phil-walker-side-in { animation: walkerSideIn var(--shop-cycle) linear infinite; }
+.phil-walker-back-in { opacity: 0; animation: walkerBackIn var(--shop-cycle) linear infinite; }
+.phil-walker-front-out { opacity: 0; animation: walkerFrontOut var(--shop-cycle) linear infinite; }
+.phil-walker-side-out { opacity: 0; animation: walkerSideOut var(--shop-cycle) linear infinite; }
+.phil-shop-door-leaf {
+  animation: doorSwing var(--shop-cycle) linear infinite;
+  will-change: transform;
+}
 .fresh-cut-tag {
   position: absolute;
-  left: 2px;
+  left: -2px;
   top: -30px;
   z-index: 11;
-  padding: 2px 12px;
+  padding: 3px 12px;
   border: 2px solid var(--ink);
   border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   background: var(--accent);
+  box-shadow: 3px 4px 0 rgba(43, 43, 43, .2);
   font-family: 'Gochi Hand', cursive;
   font-size: 16px;
   white-space: nowrap;
+  opacity: 0;
+  animation: freshTag var(--shop-cycle) linear infinite;
+}
+
+/* These people are ordinary passersby; their paths never point at the door. */
+.city-pedestrians {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  overflow: hidden;
+  pointer-events: none;
+}
+.city-pedestrian {
+  position: absolute;
+  bottom: 84px;
+  width: 92px;
+  height: 164px;
+  contain: layout paint;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.city-pedestrian-one {
+  left: -130px;
+  animation: cityWalkRight 29s linear infinite -18s;
+}
+.city-pedestrian-two {
+  right: -130px;
+  animation: cityWalkLeft 35s linear infinite -7s;
+}
+.city-pedestrian-three {
+  left: -130px;
+  z-index: 2;
+  opacity: .94;
+  animation: cityWalkRight 41s linear infinite -34s;
+}
+.city-pedestrian-three > svg {
+  transform: scale(.86);
+  transform-origin: 50% 100%;
+}
+.city-pedestrian-four {
+  right: -130px;
+  bottom: 79px;
+  z-index: 3;
+  animation: cityWalkLeft 33s linear infinite -25s;
+}
+.city-pedestrian-four > svg {
+  transform: scale(.82);
+  transform-origin: 50% 100%;
+}
+.city-pedestrian-five {
+  left: -130px;
+  bottom: 91px;
+  z-index: 1;
+  opacity: .9;
+  animation: cityWalkRight 38s linear infinite -11s;
+}
+.city-pedestrian-five > svg {
+  transform: scale(.9);
+  transform-origin: 50% 100%;
+}
+.city-pedestrian-six {
+  right: -130px;
+  bottom: 85px;
+  animation: cityWalkLeft 46s linear infinite -38s;
+}
+.city-pedestrian-seven {
+  left: -130px;
+  bottom: 76px;
+  z-index: 4;
+  animation: cityWalkRight 52s linear infinite -43s;
+}
+.city-pedestrian-seven > svg {
+  transform: scale(.78);
+  transform-origin: 50% 100%;
+}
+
+/* The landing observer toggles this attribute when the city is off-screen.
+   Keeping the wrapper tracks paused prevents invisible compositor work; each
+   WalkFigure also pauses its own limb animation when it leaves the viewport. */
+.phil-neighborhood-stage[data-animation-paused='true'] .city-pedestrian,
+.phil-neighborhood-stage[data-animation-paused='true'] .phil-doodle-walker,
+.phil-neighborhood-stage[data-animation-paused='true'] .phil-walker-view,
+.phil-neighborhood-stage[data-animation-paused='true'] .phil-shop-door-leaf,
+.phil-neighborhood-stage[data-animation-paused='true'] .fresh-cut-tag {
+  animation-play-state: paused !important;
+}
+
+.phil-window-message {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  color: var(--ink);
+  text-align: center;
+}
+.phil-window-message strong {
+  font-family: 'Gochi Hand', cursive;
+  font-size: 20px;
+  letter-spacing: 1.5px;
+}
+.phil-window-message span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+.phil-window-message i {
+  width: 62px;
+  height: 5px;
+  margin-top: 3px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d94f4f 0 33%, #f6efe4 33% 66%, #4f6fd9 66%);
+}
+
+.phil-marquee-light {
+  box-shadow: 0 0 8px 2px rgba(255, 200, 70, .58);
+  transition: box-shadow 20s ease, opacity 20s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -293,6 +394,8 @@
     height: 374px;
     transform: scale(0.72);
   }
+  .city-pedestrian-six,
+  .city-pedestrian-seven { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -307,4 +410,207 @@
     height: 150px;
     transform: scale(0.285);
   }
+}
+
+/* Time-aware city polish. Color variables come from the landing page phase. */
+.phil-stage.phil-neighborhood-stage.is-full-bleed {
+  background: linear-gradient(180deg, var(--city-sky-top, #78c8eb), var(--city-sky-bottom, #f5d5af));
+  transition: background 20s ease, filter 20s ease;
+}
+.phil-stage.phil-neighborhood-stage.is-full-bleed::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--city-night-wash, transparent);
+  transition: background 20s ease;
+}
+.city-depth {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: 67px;
+  z-index: 0;
+  border-top: 3px solid rgba(43,43,43,.42);
+  background-color: rgba(88, 116, 139, .34);
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 20px, rgba(255,244,184,.22) 20px 27px, transparent 27px 48px),
+    repeating-linear-gradient(0deg, transparent 0 20px, rgba(43,43,43,.09) 20px 22px);
+  transition: filter 20s ease, background-color 20s ease;
+}
+.city-depth-far {
+  height: 245px;
+  opacity: .54;
+  clip-path: polygon(0 42%, 6% 42%, 6% 18%, 12% 18%, 12% 35%, 18% 35%, 18% 7%, 24% 7%, 24% 31%, 31% 31%, 31% 14%, 38% 14%, 38% 37%, 45% 37%, 45% 4%, 52% 4%, 52% 28%, 60% 28%, 60% 11%, 67% 11%, 67% 36%, 74% 36%, 74% 17%, 81% 17%, 81% 30%, 88% 30%, 88% 8%, 95% 8%, 95% 40%, 100% 40%, 100% 100%, 0 100%);
+}
+.city-depth-near {
+  height: 185px;
+  opacity: .42;
+  background-color: rgba(111, 135, 144, .38);
+  clip-path: polygon(0 38%, 8% 38%, 8% 7%, 15% 7%, 15% 32%, 24% 32%, 24% 15%, 32% 15%, 32% 39%, 41% 39%, 41% 2%, 49% 2%, 49% 30%, 60% 30%, 60% 12%, 70% 12%, 70% 35%, 80% 35%, 80% 6%, 89% 6%, 89% 40%, 100% 40%, 100% 100%, 0 100%);
+}
+.phil[data-day-phase='night'] .city-depth {
+  filter: brightness(.46) saturate(.72) hue-rotate(12deg);
+  background-color: rgba(18, 29, 58, .76);
+}
+.phil[data-day-phase='night'] .phil-shop-core {
+  filter: brightness(.57) saturate(.72) hue-rotate(10deg);
+  transition: filter 20s ease;
+}
+.city-sidewalk {
+  height: 24px;
+  background:
+    repeating-linear-gradient(90deg, rgba(43,43,43,.08) 0 2px, transparent 2px 64px),
+    #e6dccb;
+  box-shadow: inset 0 -5px 0 rgba(43,43,43,.08);
+}
+.city-road {
+  top: 475px;
+  height: 62px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.025), transparent 20%, rgba(255,255,255,.035) 50%, transparent 80%),
+    #aaa397;
+  border-top: 2px solid #2b2b2b;
+  box-shadow: inset 0 5px 0 rgba(43,43,43,.1), inset 0 -4px 0 rgba(43,43,43,.16);
+}
+.city-road span { top: 29px; height: 5px; }
+.city-road-crosswalk {
+  position: absolute;
+  left: 7%;
+  top: 6px;
+  width: 150px;
+  height: 47px;
+  opacity: .72;
+  background: repeating-linear-gradient(90deg, rgba(255,253,248,.92) 0 12px, transparent 12px 25px);
+  transform: skewX(-8deg);
+}
+.city-road-drain {
+  position: absolute;
+  right: 8%;
+  top: 8px;
+  width: 78px;
+  height: 14px;
+  border: 2px solid #2b2b2b;
+  border-radius: 4px;
+  background: repeating-linear-gradient(90deg, #3d3d3d 0 4px, #8f897f 4px 9px);
+}
+.city-doodle-lamp { z-index: 24; }
+.city-doodle-lamp span {
+  opacity: var(--city-lamp-opacity, .28);
+  box-shadow: 0 0 18px 7px var(--city-lamp-glow, rgba(255,205,90,.2));
+  animation: lampGlowPulse 4s ease-in-out infinite;
+  transition: opacity 20s ease, box-shadow 20s ease, background 20s ease;
+}
+.phil-shop-sun {
+  background: var(--sun-color, #ffd76a) !important;
+  box-shadow: 0 0 24px 8px var(--sun-glow, rgba(255,205,90,.55)) !important;
+  transition: background 20s ease, box-shadow 20s ease;
+}
+.phil-shop-lamp-light {
+  opacity: var(--city-lamp-opacity, .28);
+  box-shadow: 0 0 18px 7px var(--city-lamp-glow, rgba(255,205,90,.2)) !important;
+  animation: lampGlowPulse 4s ease-in-out infinite;
+  transition: opacity 20s ease, box-shadow 20s ease;
+}
+.phil[data-day-phase='night'] .city-doodle-sign { filter: brightness(.78); }
+
+/* Full-page landing finale. Anchor the drawing to the street instead of
+   vertically centering it, so people and buildings cannot float above it. */
+.phil-stage.phil-neighborhood-stage.is-full-bleed {
+  flex: 0 0 100vw;
+  width: 100vw;
+  min-width: 100vw;
+  height: max(680px, 100svh);
+  transform: none;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 16% 22%, rgba(255,215,106,.22), transparent 17%),
+    linear-gradient(180deg, var(--city-sky-top, #78c8eb), var(--city-sky-bottom, #f5d5af));
+  transition: background 20s ease, filter 20s ease;
+}
+.phil-neighborhood-stage.is-full-bleed .city-doodle {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 0;
+  width: max(1320px, 100vw);
+  height: 537px;
+  transform: translateX(-50%);
+}
+.phil-neighborhood-stage.is-full-bleed .phil-shop-core {
+  top: auto;
+  bottom: 85px;
+  transform: translateX(-50%);
+}
+.phil-neighborhood-stage.is-full-bleed .city-sidewalk,
+.phil-neighborhood-stage.is-full-bleed .city-road {
+  left: -2px;
+  right: -2px;
+}
+
+@media (max-width: 720px) {
+  .phil-stage.phil-neighborhood-stage.is-full-bleed {
+    height: max(620px, 100svh);
+    transform: none;
+  }
+  .phil-neighborhood-stage.is-full-bleed .city-doodle {
+    width: 1320px;
+    bottom: 0;
+    transform: translateX(-50%) scale(.68);
+    transform-origin: bottom center;
+  }
+  .phil-neighborhood-stage.is-full-bleed .phil-shop-core {
+    bottom: 58px;
+    transform: translateX(-50%) scale(.68);
+    transform-origin: bottom center;
+  }
+  .city-pedestrian {
+    bottom: 57px;
+    width: 64px;
+    height: 114px;
+  }
+  .city-pedestrian-three,
+  .city-pedestrian-four,
+  .city-pedestrian-five,
+  .city-pedestrian-six,
+  .city-pedestrian-seven { display: none; }
+}
+
+.phil-shop-core {
+  transition: filter 20s ease;
+}
+
+.doodle-building-window {
+  transition: background 20s ease;
+}
+
+.phil[data-day-phase='night'] .doodle-building-window {
+  background: #ffe49a !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phil-stage.phil-neighborhood-stage,
+  .phil-stage.phil-neighborhood-stage * {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .phil-doodle-walker-in,
+  .phil-doodle-walker-out,
+  .phil-walker-view,
+  .phil-shop-door-leaf,
+  .fresh-cut-tag,
+  .city-pedestrian { animation: none !important; }
+  .phil-doodle-walker-in { transform: translate3d(190px, 0, 0); opacity: 1; }
+  .phil-walker-side-in { opacity: 1; transform: none; }
+  .phil-walker-back-in,
+  .phil-doodle-walker-out { display: none; }
+  .city-pedestrian-one { left: 8%; }
+  .city-pedestrian-two { right: 9%; }
+  .city-pedestrian-three { left: 74%; }
+  .city-pedestrian-four { right: 26%; }
+  .city-pedestrian-five { left: 38%; }
+  .city-pedestrian-six { right: 43%; }
+  .city-pedestrian-seven { left: 62%; }
 }

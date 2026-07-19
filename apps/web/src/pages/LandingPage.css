@@ -61,6 +61,26 @@
 }
 @keyframes slashFx { 0% { transform: scaleX(.25); opacity: 1; } 100% { transform: scaleX(1.35); opacity: 0; } }
 @keyframes sparkle { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes howWalkRight {
+  from { transform: translate3d(-180px, 0, 0); }
+  to { transform: translate3d(calc(100vw + 180px), 0, 0); }
+}
+@keyframes howWalkLeft {
+  from { transform: translate3d(180px, 0, 0); }
+  to { transform: translate3d(calc(-100vw - 180px), 0, 0); }
+}
+@keyframes spaceTwinkle {
+  0%, 100% { opacity: .3; transform: scale(.72) rotate(0); }
+  50% { opacity: 1; transform: scale(1.28) rotate(12deg); }
+}
+@keyframes planetFloat {
+  from { transform: translateY(-7px) rotate(-5deg); }
+  to { transform: translateY(9px) rotate(5deg); }
+}
+@keyframes skyCloudSail {
+  from { transform: translateX(-8vw); }
+  to { transform: translateX(8vw); }
+}
 
 /* Full-bleed breakout: the landing ignores the app's 1100px container so the
    design's 1280px canvas renders at true size. Off-screen actors (birds, cars)
@@ -75,6 +95,127 @@
   margin-top: -32px; /* cancel main.page top padding — design starts 10px under the header */
   overflow-x: clip;
 }
+
+/* One continuous vertical doodle world: space above, daylight through the
+   journey, then the street-level city finale. */
+.phil-hero-main {
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, #171936 0%, #2f3769 47%, #697eaa 74%, #b7d9e6 100%);
+}
+.phil-space-world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.phil-space-world > i {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  border: 1.5px solid rgba(255,255,255,.88);
+  border-radius: 50%;
+  background: #fff9c8;
+  box-shadow: 0 0 10px 3px rgba(255,242,174,.42);
+  animation: spaceTwinkle 3.2s ease-in-out infinite;
+}
+.phil-space-world > i.is-cross-star {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phil-space-world > i.is-cross-star::before,
+.phil-space-world > i.is-cross-star::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 3px;
+  background: #fff9c8;
+  box-shadow: 0 0 10px 3px rgba(255,242,174,.38);
+  transform: translate(-50%, -50%);
+}
+.phil-space-world > i.is-cross-star::before { width: 3px; height: 17px; }
+.phil-space-world > i.is-cross-star::after { width: 17px; height: 3px; }
+.phil-space-nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(24px);
+  opacity: .38;
+}
+.phil-space-nebula-one { left: -8%; top: -12%; width: 46vw; height: 44vw; background: #795b9e; }
+.phil-space-nebula-two { right: -12%; top: 12%; width: 48vw; height: 46vw; background: #3d7d9d; }
+.phil-space-moon {
+  position: absolute;
+  right: 8%;
+  top: 10%;
+  width: clamp(76px, 8vw, 128px);
+  aspect-ratio: 1;
+  border: 4px solid #292b4a;
+  border-radius: 50%;
+  background: #fff2b8;
+  box-shadow: 0 0 42px 14px rgba(255,239,172,.26);
+  transform: rotate(-8deg);
+}
+.phil-space-moon::before,
+.phil-space-moon::after,
+.phil-space-moon span {
+  content: '';
+  position: absolute;
+  border: 2px solid rgba(43,43,43,.22);
+  border-radius: 50%;
+  background: rgba(160,145,110,.13);
+}
+.phil-space-moon::before { left: 18%; top: 24%; width: 22%; height: 22%; }
+.phil-space-moon::after { right: 18%; bottom: 20%; width: 29%; height: 29%; }
+.phil-space-moon span { right: 17%; top: 21%; width: 14%; height: 14%; }
+.phil-space-planet {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border: 3px solid #252744;
+  border-radius: 50%;
+  animation: planetFloat 5s ease-in-out infinite alternate;
+}
+.phil-space-planet::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 112px;
+  height: 26px;
+  border: 5px solid #252744;
+  border-top-color: #f5c66d;
+  border-bottom-color: #f5c66d;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-14deg);
+}
+.phil-space-planet-one { left: 7%; top: 18%; background: #f49aae; }
+.phil-space-planet-two { right: 24%; top: 45%; width: 48px; height: 48px; background: #6fc1c9; animation-delay: -2s; }
+.phil-space-planet-two::after { width: 78px; height: 18px; }
+.phil-space-constellation {
+  position: absolute;
+  left: 8%;
+  top: 50%;
+  width: 220px;
+  opacity: .58;
+}
+.phil-space-constellation path { fill: none; stroke: #fff9c8; stroke-width: 2; stroke-dasharray: 5 7; }
+.phil-space-constellation circle { fill: #fff9c8; stroke: #272946; stroke-width: 2; }
+.phil-space-horizon {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: -10%;
+  height: 42%;
+  border-radius: 50% 50% 0 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(172,220,238,.92), rgba(105,126,170,.2) 60%, transparent 72%);
+}
+.phil-hero,
+.phil-street { position: relative; z-index: 2; }
 
 /* ---- Hero ---- */
 .phil-hero {
@@ -103,6 +244,12 @@
   display: flex;
   justify-content: center;
   margin-top: 90px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,215,106,.25), transparent 18%),
+    linear-gradient(180deg, rgba(190,224,241,.34), rgba(255,247,233,.08) 48%, rgba(244,184,196,.15));
 }
 
 .phil-billboard {
@@ -298,6 +445,130 @@
   padding: 90px 32px 130px;
 }
 
+/* The hero street continues as a quiet, full-bleed neighborhood behind the
+   journey. The real WalkFigure assets cross the open sidewalk bands while the
+   reading surface stays above them. */
+.phil-how-neighborhood {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 100vw;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  opacity: 1;
+  background:
+    linear-gradient(180deg, #8fd0ea 0%, #bfe6f3 34%, #e8f4ef 68%, #f8d9bd 100%),
+    linear-gradient(rgba(43,43,43,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43,43,43,.018) 1px, transparent 1px);
+  background-size: auto, 42px 42px, 42px 42px;
+}
+.phil-how-neighborhood::before {
+  content: '';
+  position: absolute;
+  right: 8%;
+  top: 4%;
+  width: clamp(110px, 13vw, 210px);
+  aspect-ratio: 1;
+  border: 4px solid rgba(43,43,43,.72);
+  border-radius: 50%;
+  background: #ffd76a;
+  box-shadow: 0 0 60px 22px rgba(255,215,106,.42);
+  animation: planetFloat 5.5s ease-in-out infinite alternate;
+}
+.phil-how-neighborhood::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  top: 8%;
+  width: 190px;
+  height: 54px;
+  border: 3px solid rgba(43,43,43,.65);
+  border-radius: 55% 48% 46% 52%;
+  background: rgba(255,253,248,.86);
+  box-shadow: 74px 12px 0 -8px rgba(255,253,248,.76), 74px 12px 0 -5px rgba(43,43,43,.42);
+  animation: skyCloudSail 9s ease-in-out infinite alternate;
+}
+/* Loose combs, bows, sparkles, and product doodles belonged to the previous
+   scrapbook background. The new world uses only space, sky, and city scenery. */
+.phil-how > [data-anim="doodle"] { display: none; }
+.phil-how-title,
+.phil-audience-switch,
+.phil-steps,
+.phil-shopfront-outro { position: relative; z-index: 2; }
+
+.phil-how-sidewalk {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 88px;
+  border-block: 2.5px solid rgba(43, 43, 43, .72);
+  background:
+    linear-gradient(rgba(43,43,43,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43,43,43,.045) 1px, transparent 1px),
+    rgba(233, 223, 205, .7);
+  background-size: 28px 28px;
+}
+.phil-how-sidewalk::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  border-top: 2px dashed rgba(43, 43, 43, .2);
+}
+.phil-how-sidewalk span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  border-top: 3px solid rgba(255, 253, 248, .82);
+}
+.phil-how-sidewalk-top { top: 235px; }
+.phil-how-sidewalk-middle { top: 1475px; }
+
+.phil-how-building-group {
+  position: absolute;
+  top: 0;
+  width: 260px;
+  height: 320px;
+  filter: saturate(.82);
+  opacity: .72;
+}
+.phil-how-building-group-left { left: 0; }
+.phil-how-building-group-right { right: 0; }
+
+.phil-how-walker {
+  position: absolute;
+  z-index: 1;
+  width: 72px;
+  height: 128px;
+  filter: drop-shadow(2px 4px 0 rgba(255, 253, 248, .78));
+  will-change: transform;
+}
+.phil-how-walker-one {
+  left: 0;
+  top: 188px;
+  animation: howWalkRight 27s linear infinite -8s;
+}
+.phil-how-walker-two {
+  left: 100%;
+  top: 205px;
+  animation: howWalkLeft 33s linear infinite -21s;
+}
+.phil-how-walker-three {
+  left: 0;
+  top: 1425px;
+  animation: howWalkRight 31s linear infinite -18s;
+}
+.phil-how-walker-four {
+  left: 100%;
+  top: 1438px;
+  animation: howWalkLeft 37s linear infinite -4s;
+}
+
 .phil-how-title { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 28px; }
 .phil-how-title h2 {
   margin: 0;
@@ -414,6 +685,125 @@
   border-radius: 50%;
   transform: translate(-50%, -50%) rotate(-8deg);
 }
+
+/* A long illustrated city lives inside the route board itself. Cards and the
+   yellow route remain above it, so the city reads as scenery rather than UI. */
+.phil-journey-city {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(190,224,241,.2), rgba(255,247,233,.08) 38%, rgba(199,231,196,.2));
+}
+.phil-journey-city-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 350px;
+}
+.phil-journey-city-row-one { top: 24px; }
+.phil-journey-city-row-two { top: 430px; }
+.phil-journey-city-row-three { top: 840px; }
+.phil-journey-skyline { position: absolute; inset: 0; opacity: .52; }
+.phil-journey-road {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  border-block: 2px solid rgba(43,43,43,.5);
+  background: rgba(203,195,181,.58);
+}
+.phil-journey-road::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -16px;
+  height: 14px;
+  border-block: 2px solid rgba(43,43,43,.45);
+  background: rgba(233,223,205,.72);
+}
+.phil-journey-road span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 35px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, rgba(255,253,248,.88) 0 28px, transparent 28px 62px);
+}
+.phil-journey-city-tree {
+  position: absolute;
+  bottom: 74px;
+  width: 48px;
+  height: 72px;
+}
+.phil-journey-city-tree::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  bottom: 0;
+  width: 8px;
+  height: 36px;
+  border: 2px solid rgba(43,43,43,.7);
+  background: #b98256;
+}
+.phil-journey-city-tree::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 28px;
+  border: 2px solid rgba(43,43,43,.7);
+  border-radius: 48% 52% 45% 55%;
+  background: #a8d8b9;
+}
+.phil-journey-city-tree-one { left: 25%; }
+.phil-journey-city-tree-two { right: 25%; }
+.phil-journey-city-tree-three { left: 31%; }
+.phil-journey-city-lamp {
+  position: absolute;
+  bottom: 74px;
+  width: 4px;
+  height: 94px;
+  border-radius: 3px;
+  background: rgba(43,43,43,.72);
+}
+.phil-journey-city-lamp::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(43,43,43,.72);
+  border-radius: 50%;
+  background: #ffd76a;
+  box-shadow: 0 0 14px 4px rgba(255,205,90,.38);
+  transform: translateX(-50%);
+  animation: blink 4s ease-in-out infinite;
+}
+.phil-journey-city-lamp-one { right: 29%; }
+.phil-journey-city-lamp-two { left: 31%; }
+.phil-journey-city-lamp-three { right: 27%; }
+.phil-journey-city-walker {
+  position: absolute;
+  bottom: 18px;
+  z-index: 2;
+  width: 60px;
+  height: 108px;
+  opacity: .82;
+  filter: drop-shadow(2px 3px 0 rgba(255,253,248,.78));
+  will-change: transform;
+}
+.phil-journey-city-walker.is-right {
+  left: 0;
+  animation: howWalkRight 25s linear infinite -11s;
+}
+.phil-journey-city-walker.is-left {
+  left: 100%;
+  animation: howWalkLeft 30s linear infinite -7s;
+}
+.phil-journey-city-walker.is-late { animation-duration: 34s; animation-delay: -24s; }
 
 .phil-stack-kicker {
   position: absolute;
@@ -636,18 +1026,13 @@
 }
 .phil-journey-doodle { position: absolute; }
 .phil-route-cloud svg,
-.phil-route-sun svg,
-.phil-route-person svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.phil-route-sun svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .phil-route-cloud-one { left: 8%; top: 60px; width: 132px; height: 72px; }
 .phil-route-cloud-two { left: calc(50% - 65px); bottom: 38px; width: 130px; height: 70px; }
 .phil-route-sun { right: 8%; top: 58px; width: 86px; height: 86px; }
-.phil-route-customer { left: 8%; top: 505px; width: 82px; height: 140px; }
-.phil-route-barber { left: 14%; top: 655px; width: 88px; height: 145px; }
 .phil-cloud-float { animation: floatY 3.8s ease-in-out infinite alternate; }
 .phil-cloud-float-late { animation-delay: -1.7s; }
 .phil-sun-spin { animation: wobble 4.5s ease-in-out infinite alternate; }
-.phil-person-bob { width: 100%; height: 100%; animation: bob .8s ease-in-out infinite alternate; transform-origin: bottom center; }
-.phil-person-bob-late { animation-delay: -.4s; }
 
 .phil-auth-flash {
   position: relative;
@@ -764,6 +1149,7 @@
   .phil-stage { transform: scale(0.9); transform-origin: top center; }
   .phil-street { display: block; opacity: .75; }
   .phil-city-label { display: none; }
+  .phil-how-building-group { opacity: .42; }
 }
 
 @media (max-width: 900px) {
@@ -773,8 +1159,6 @@
   .phil-pile-slot-2,
   .phil-pile-slot-4 { right: 2.5%; }
   .phil-pile-slot-3 { left: calc(50% - 200px); width: 400px; }
-  .phil-route-customer { left: 2%; }
-  .phil-route-barber { left: 10%; }
 }
 
 @media (max-width: 720px) {
@@ -814,6 +1198,23 @@
   .phil-actions .phil-auth-inline { width: 100%; }
   .phil-stage { transform: scale(0.62); height: 300px; }
   .phil-how { padding-inline: 18px; }
+  .phil-how-neighborhood { opacity: .42; }
+  .phil-space-planet-two,
+  .phil-space-constellation { display: none; }
+  .phil-space-planet-one { left: -20px; top: 15%; transform: scale(.7); }
+  .phil-space-moon { right: 5%; top: 7%; }
+  .phil-how-neighborhood { opacity: 1; }
+  .phil-how-building-group { display: none; }
+  .phil-journey-city { opacity: .28; }
+  .phil-journey-skyline,
+  .phil-journey-city-walker { display: none; }
+  .phil-how-sidewalk-top { top: 210px; }
+  .phil-how-sidewalk-middle,
+  .phil-how-walker-three,
+  .phil-how-walker-four { display: none; }
+  .phil-how-walker { width: 58px; height: 104px; }
+  .phil-how-walker-one { top: 172px; }
+  .phil-how-walker-two { top: 180px; }
   .phil-how-title h2 { font-size: 38px; }
   .phil-audience-switch {
     grid-template-columns: 1fr 42px 1fr;
@@ -884,9 +1285,1043 @@
 
 @media (prefers-reduced-motion: reduce) {
   .phil-journey-flip { animation: none; }
+  .phil-how-walker { animation: none; }
+  .phil-how-walker-one { left: 7%; transform: none; }
+  .phil-how-walker-two { left: auto; right: 9%; transform: none; }
+  .phil-how-walker-three { left: 14%; transform: none; }
+  .phil-how-walker-four { left: auto; right: 12%; transform: none; }
+  .phil-journey-city-walker { animation: none; }
+  .phil-space-world > i,
+  .phil-space-planet,
+  .phil-how-neighborhood::before,
+  .phil-how-neighborhood::after { animation: none; }
 }
 .phil[data-animation-paused='true'] *,
 .phil-hero-main[data-animation-paused='true'] *,
 .phil-neighborhood-stage[data-animation-paused='true'] * {
   animation-play-state: paused !important;
+}
+
+/* ========================================================================
+   Landing world v2 — void -> open sky -> street city
+   ======================================================================== */
+@property --sky-top { syntax: '<color>'; inherits: true; initial-value: #73c7ed; }
+@property --sky-middle { syntax: '<color>'; inherits: true; initial-value: #b8e3f5; }
+@property --sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f8d8b3; }
+@property --sun-color { syntax: '<color>'; inherits: true; initial-value: #ffd76a; }
+@property --sun-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 215, 106, .46); }
+@property --city-sky-top { syntax: '<color>'; inherits: true; initial-value: #78c8eb; }
+@property --city-sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f5d5af; }
+@property --city-night-wash { syntax: '<color>'; inherits: true; initial-value: rgba(15, 25, 64, 0); }
+@property --city-lamp-opacity { syntax: '<number>'; inherits: true; initial-value: .28; }
+@property --city-lamp-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 205, 90, .2); }
+
+.phil {
+  --sky-top: #73c7ed;
+  --sky-middle: #b8e3f5;
+  --sky-bottom: #f8d8b3;
+  --sun-color: #ffd76a;
+  --sun-glow: rgba(255, 215, 106, .46);
+  --city-sky-top: #78c8eb;
+  --city-sky-bottom: #f5d5af;
+  --city-night-wash: rgba(15, 25, 64, 0);
+  --city-lamp-opacity: .28;
+  --city-lamp-glow: rgba(255, 205, 90, .2);
+  transition:
+    --sky-top 20s ease,
+    --sky-middle 20s ease,
+    --sky-bottom 20s ease,
+    --sun-color 20s ease,
+    --sun-glow 20s ease,
+    --city-sky-top 20s ease,
+    --city-sky-bottom 20s ease,
+    --city-night-wash 20s ease,
+    --city-lamp-opacity 20s ease,
+    --city-lamp-glow 20s ease;
+}
+.phil[data-day-phase='morning'] {
+  --sky-top: #86cce8;
+  --sky-middle: #d1edf4;
+  --sky-bottom: #ffd9ae;
+  --sun-color: #ffe29a;
+  --sun-glow: rgba(255, 219, 142, .48);
+  --city-sky-top: #8ccde6;
+  --city-sky-bottom: #f7d7b0;
+}
+.phil[data-day-phase='afternoon'] {
+  --sky-top: #4db6e8;
+  --sky-middle: #96daf3;
+  --sky-bottom: #e9f4f4;
+  --sun-color: #ffd65c;
+  --sun-glow: rgba(255, 214, 92, .55);
+  --city-sky-top: #55b8e7;
+  --city-sky-bottom: #cceaf3;
+}
+.phil[data-day-phase='dusk'] {
+  --sky-top: #536aa7;
+  --sky-middle: #c786a0;
+  --sky-bottom: #f2a56f;
+  --sun-color: #ff9b62;
+  --sun-glow: rgba(255, 142, 85, .46);
+  --city-sky-top: #536795;
+  --city-sky-bottom: #db8d77;
+  --city-night-wash: rgba(37, 37, 83, .18);
+  --city-lamp-opacity: .72;
+  --city-lamp-glow: rgba(255, 205, 90, .72);
+}
+.phil[data-day-phase='night'] {
+  --sky-top: #070b22;
+  --sky-middle: #16254b;
+  --sky-bottom: #314d6f;
+  --sun-color: #e8edff;
+  --sun-glow: rgba(199, 215, 255, .35);
+  --city-sky-top: #050918;
+  --city-sky-bottom: #182b4a;
+  --city-night-wash: rgba(4, 8, 28, .52);
+  --city-lamp-opacity: 1;
+  --city-lamp-glow: rgba(255, 205, 90, .95);
+}
+
+/* Space is intentionally timeless: a true dark void at every local hour. */
+.phil .phil-hero-main {
+  min-height: 100svh;
+  background:
+    radial-gradient(ellipse at 24% 18%, rgba(82, 54, 135, .36), transparent 33%),
+    radial-gradient(ellipse at 78% 42%, rgba(18, 77, 119, .3), transparent 32%),
+    linear-gradient(180deg, #000 0%, #02030a 54%, #080b1d 100%);
+}
+.phil .phil-hero-auth {
+  min-height: 100svh;
+  align-items: center;
+  padding-block: clamp(28px, 6vh, 80px);
+}
+.phil .phil-hero-main > .phil-street { display: none; }
+.phil-space-horizon { display: none; }
+
+@keyframes astronautDriftOne {
+  0%, 100% { transform: translate(0, 0) rotate(-8deg); }
+  45% { transform: translate(28px, -24px) rotate(7deg); }
+  75% { transform: translate(-12px, 10px) rotate(-2deg); }
+}
+@keyframes astronautDriftTwo {
+  0%, 100% { transform: translate(0, 0) rotate(10deg); }
+  50% { transform: translate(-35px, 22px) rotate(-8deg); }
+}
+@keyframes spaceshipCruise {
+  from { transform: translate3d(-28vw, 0, 0) rotate(-4deg); }
+  to { transform: translate3d(128vw, -12vh, 0) rotate(5deg); }
+}
+@keyframes galaxyTurn { to { transform: rotate(360deg); } }
+
+.phil-space-astronaut {
+  position: absolute;
+  z-index: 3;
+  width: clamp(88px, 8vw, 138px);
+  filter: drop-shadow(5px 8px 0 rgba(0,0,0,.34));
+  will-change: transform;
+}
+.phil-space-astronaut svg,
+.phil-space-ship svg { display: block; width: 100%; height: auto; }
+.phil-space-astronaut-one { left: 5%; top: 42%; animation: astronautDriftOne 11s ease-in-out infinite; }
+.phil-space-astronaut-two { right: 5%; top: 62%; animation: astronautDriftTwo 13s ease-in-out infinite -4s; }
+.phil-space-ship {
+  position: absolute;
+  left: 0;
+  top: 18%;
+  z-index: 2;
+  width: clamp(150px, 14vw, 240px);
+  filter: drop-shadow(6px 8px 0 rgba(0,0,0,.3));
+  animation: spaceshipCruise 34s linear infinite -12s;
+  will-change: transform;
+}
+.phil-space-galaxy {
+  position: absolute;
+  right: 18%;
+  top: 20%;
+  width: clamp(130px, 16vw, 280px);
+  aspect-ratio: 1;
+  border: 14px solid rgba(154, 104, 209, .14);
+  border-left-color: rgba(119, 198, 226, .45);
+  border-right-color: rgba(244, 184, 196, .34);
+  border-radius: 50%;
+  filter: blur(1px) drop-shadow(0 0 24px rgba(114, 99, 211, .42));
+  animation: galaxyTurn 45s linear infinite;
+}
+.phil-space-galaxy::before,
+.phil-space-galaxy::after {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border: 9px solid rgba(126, 201, 229, .35);
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+.phil-space-galaxy::after { inset: 38%; border-width: 6px; border-color: #fff5b7 transparent #f4b8c4 #fff5b7; }
+.phil-space-galaxy i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff7cb;
+  box-shadow: 0 0 9px 3px rgba(255,247,203,.5);
+}
+.phil-space-galaxy i:nth-child(1) { left: 8%; top: 34%; }
+.phil-space-galaxy i:nth-child(2) { right: 12%; top: 55%; }
+.phil-space-galaxy i:nth-child(3) { left: 52%; bottom: 4%; }
+
+/* The middle chapter is sky only. Old street/building layers are removed. */
+.phil-how-sidewalk,
+.phil-how-building-group,
+.phil-how-walker,
+.phil-journey-city { display: none !important; }
+.phil-how-neighborhood {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255,255,255,.2), transparent 24%),
+    linear-gradient(180deg, var(--sky-top), var(--sky-middle) 52%, var(--sky-bottom));
+  transition: background 20s ease, filter 20s ease;
+}
+.phil-how-neighborhood::before {
+  background: var(--sun-color);
+  box-shadow: 0 0 70px 28px var(--sun-glow);
+  transition: background 20s ease, box-shadow 20s ease, transform 20s ease;
+}
+.phil-how-neighborhood::after {
+  display: block;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255,255,226,.9) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 72% 24%, rgba(255,255,226,.78) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 38% 68%, rgba(255,255,226,.68) 0 1.3px, transparent 2px);
+  background-size: 150px 160px, 210px 190px, 260px 230px;
+  box-shadow: none;
+  opacity: 0;
+  animation: none;
+  transition: opacity 20s ease;
+}
+.phil[data-day-phase='night'] .phil-how-neighborhood::before {
+  transform: translateY(36px) scale(.82);
+}
+.phil[data-day-phase='night'] .phil-how-neighborhood::after { opacity: .58; }
+.phil-steps,
+.phil-journey-barber {
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255,255,255,.52), transparent 25%),
+    linear-gradient(145deg, rgba(255,253,248,.84), rgba(234,244,247,.76));
+  backdrop-filter: blur(3px);
+}
+
+@keyframes birdsAcross {
+  from { transform: translateX(-220px); }
+  to { transform: translateX(calc(100vw + 220px)); }
+}
+@keyframes cloudAcross {
+  from { transform: translateX(-18vw); }
+  to { transform: translateX(18vw); }
+}
+.phil-sky-cloud {
+  position: absolute;
+  z-index: 1;
+  width: 210px;
+  height: 58px;
+  border: 3px solid rgba(43,43,43,.52);
+  border-radius: 52% 48% 46% 54%;
+  background: rgba(255,253,248,.82);
+  box-shadow: 74px 11px 0 -9px rgba(255,253,248,.74), 74px 11px 0 -6px rgba(43,43,43,.38);
+  animation: cloudAcross 13s ease-in-out infinite alternate;
+}
+.phil-sky-cloud-one { left: 10%; top: 9%; }
+.phil-sky-cloud-two { right: 20%; top: 31%; transform: scale(.72); animation-delay: -7s; }
+.phil-sky-birds {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  width: 170px;
+  will-change: transform;
+  animation: birdsAcross 32s linear infinite -14s;
+}
+.phil-sky-birds svg { display: block; width: 100%; }
+.phil-sky-birds path { fill: none; stroke: #2b2b2b; stroke-width: 4; stroke-linecap: round; }
+.phil-sky-birds-one { top: 13%; }
+.phil-sky-birds-two { top: 48%; animation-duration: 41s; animation-delay: -28s; transform: scale(.7); }
+.phil[data-day-phase='night'] .phil-sky-birds { opacity: .3; }
+
+/* Remove chapter gaps: every pixel belongs to space, sky, or city. */
+.phil-how { padding-bottom: 0; }
+.phil-shopfront-outro {
+  margin-top: 72px;
+  margin-bottom: 0;
+  background: linear-gradient(180deg, var(--city-sky-top), var(--city-sky-bottom));
+  transition: background 20s ease;
+}
+
+@media (max-width: 720px) {
+  .phil .phil-hero-auth { min-height: 100svh; padding-block: 18px 32px; }
+  .phil-space-astronaut { width: 74px; opacity: .72; }
+  .phil-space-astronaut-one { left: -12px; top: 38%; }
+  .phil-space-astronaut-two { right: -14px; top: 70%; }
+  .phil-space-ship { width: 130px; }
+  .phil-space-galaxy { right: -44px; top: 23%; opacity: .66; }
+  .phil-sky-birds-two { display: none; }
+  .phil-sky-cloud { opacity: .58; transform: scale(.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phil-space-astronaut,
+  .phil-space-ship,
+  .phil-space-galaxy,
+  .phil-sky-birds,
+  .phil-sky-cloud { animation: none !important; }
+}
+
+/* Landing owns its entire canvas; the application paper shell must not leak
+   between the space, sky, and city chapters. */
+.app-shell.is-landing {
+  min-height: 100vh;
+  background: #000;
+}
+.app-shell.is-landing > .bg-pattern { display: none; }
+.app-shell.is-landing .app-header {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  z-index: 80;
+  transform: translateX(-50%);
+}
+main.page.is-landing-page { padding-block: 0; }
+main.page.is-landing-page > .container.is-landing-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+main.page.is-landing-page .phil {
+  width: 100%;
+  margin: 0;
+}
+
+/* Performance-first landing layout -------------------------------------- */
+.phil-auth-station-wrap {
+  width: min(1040px, calc(100vw - 48px));
+}
+.phil-posts { display: none; }
+
+/* A pair of painted star fields replaces 21 separately animated elements. */
+.phil-space-world::before,
+.phil-space-world::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.phil-space-world::before {
+  background-image:
+    radial-gradient(circle, rgba(255,250,199,.95) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(202,229,255,.78) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(255,255,255,.7) 0 1.4px, transparent 2px);
+  background-position: 15px 20px, 74px 91px, 132px 47px;
+  background-size: 137px 151px, 211px 193px, 263px 229px;
+  opacity: .82;
+}
+.phil-space-world::after {
+  background:
+    radial-gradient(ellipse at 24% 20%, rgba(118,75,166,.27), transparent 34%),
+    radial-gradient(ellipse at 80% 54%, rgba(36,115,157,.25), transparent 31%);
+}
+.phil-space-galaxy {
+  animation: none;
+  filter: none;
+  opacity: .7;
+}
+.phil-space-planet { animation: none; }
+.phil-space-astronaut {
+  aspect-ratio: 280 / 500;
+  filter: none;
+}
+.phil-space-astronaut > svg { height: 100% !important; }
+.phil-space-ship { filter: none; }
+
+/* The sky stays pinned behind the long journey. Only one cloud, one plane,
+   and one flock animate for the entire section. */
+.phil-how-neighborhood {
+  position: sticky;
+  left: 50%;
+  top: 0;
+  bottom: auto;
+  height: 100svh;
+  margin-bottom: -100svh;
+  transform: translateX(-50%);
+}
+.phil-how-neighborhood[data-animation-paused='true'] *,
+.phil-how-neighborhood[data-animation-paused='true']::before,
+.phil-how-neighborhood[data-animation-paused='true']::after {
+  animation-play-state: paused !important;
+}
+
+/* Five normal-flow checkpoints: long scrolling with no scroll listener,
+   clip-path badge slicing, 3D flip, blur, or continuously recomputed route. */
+.phil-steps.phil-card-stack {
+  display: grid;
+  min-height: 0;
+  padding: clamp(84px, 14vh, 150px) clamp(18px, 4vw, 52px) 40px;
+  gap: clamp(54px, 9vh, 108px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+  backdrop-filter: none;
+}
+.phil-steps.phil-card-stack::before {
+  content: '';
+  position: absolute;
+  inset: 92px auto 70px 50%;
+  z-index: -1;
+  width: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: repeating-linear-gradient(180deg, rgba(43,43,43,.46) 0 9px, transparent 9px 22px);
+  transform: translateX(-50%);
+}
+.phil-steps.phil-card-stack::after { display: none; }
+.phil-stack-orbit,
+.phil-route-map,
+.phil-s2walker,
+.phil-progress-note,
+.phil-journey-doodles,
+.phil-journey-city { display: none !important; }
+
+.phil-steps .phil-stack-kicker {
+  position: sticky;
+  left: auto;
+  right: auto;
+  top: 18px;
+  z-index: 12;
+  min-height: 46px;
+  margin: 0 auto 4px;
+  padding: 9px 16px;
+  border: 2px solid rgba(43,43,43,.72);
+  border-radius: 12px;
+  background: #f3f6f7;
+  box-shadow: 3px 4px 0 rgba(43,43,43,.18);
+  color: rgba(31,42,61,.78);
+}
+
+.phil-steps .phil-pile-slot,
+.phil-steps .phil-pile-slot-1,
+.phil-steps .phil-pile-slot-2,
+.phil-steps .phil-pile-slot-3,
+.phil-steps .phil-pile-slot-4,
+.phil-steps .phil-pile-slot-5 {
+  position: relative;
+  inset: auto;
+  left: auto;
+  right: auto;
+  top: auto;
+  width: 100%;
+  min-height: clamp(500px, 72svh, 760px);
+  display: flex;
+  align-items: center;
+  padding: 24px 0;
+  transform: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 650px;
+}
+.phil-steps .phil-pile-slot:nth-of-type(odd) { justify-content: flex-start; }
+.phil-steps .phil-pile-slot:nth-of-type(even) { justify-content: flex-end; }
+.phil-steps .phil-pile-slot-3 { justify-content: center; }
+
+.phil-steps .phil-pile-card {
+  width: min(590px, 82%);
+  overflow: hidden;
+  contain: layout paint;
+  border: 2.5px solid #27354d;
+  border-radius: 22px;
+  background: #f7f8f6;
+  box-shadow: 8px 10px 0 color-mix(in srgb, var(--step-color) 68%, rgba(36,50,75,.3));
+  transition: none;
+}
+.phil-steps .phil-pile-card:hover {
+  transform: none;
+  box-shadow: 8px 10px 0 color-mix(in srgb, var(--step-color) 68%, rgba(36,50,75,.3));
+}
+.phil-steps .phil-pile-sheet {
+  min-height: 0;
+  padding: clamp(24px, 4vw, 42px);
+  gap: 12px;
+  background: #f7f8f6;
+}
+.phil-steps .phil-pile-head {
+  grid-template-columns: 70px 1fr 58px;
+  min-height: 70px;
+}
+.phil-steps .phil-pile-route {
+  color: #52647a;
+  letter-spacing: .04em;
+}
+.phil-steps .phil-badge-no {
+  width: 56px;
+  height: 56px;
+}
+.phil-steps .badge-half { display: none; }
+.phil-steps .badge-number {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 3px solid #27354d;
+  border-radius: 50%;
+  background: var(--step-color);
+  box-shadow: 3px 4px 0 rgba(35,49,72,.35);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 28px;
+}
+.phil-steps .phil-pile-footer {
+  background: var(--step-color);
+  border-top-color: #27354d;
+}
+
+@media (max-width: 720px) {
+  .phil-auth-station-wrap { width: calc(100vw - 28px); }
+  .phil-space-astronaut-two { display: none; }
+  .phil-steps.phil-card-stack {
+    padding-inline: 0;
+    gap: 30px;
+  }
+  .phil-steps.phil-card-stack::before { left: 23px; }
+  .phil-steps .phil-stack-kicker {
+    width: calc(100% - 20px);
+    font-size: 11px;
+    letter-spacing: .7px;
+  }
+  .phil-steps .phil-pile-slot,
+  .phil-steps .phil-pile-slot-1,
+  .phil-steps .phil-pile-slot-2,
+  .phil-steps .phil-pile-slot-3,
+  .phil-steps .phil-pile-slot-4,
+  .phil-steps .phil-pile-slot-5 {
+    min-height: clamp(440px, 66svh, 620px);
+    justify-content: flex-end;
+    padding-left: 36px;
+  }
+  .phil-steps .phil-pile-card { width: calc(100% - 4px); }
+  .phil-steps .phil-pile-head { grid-template-columns: 58px 1fr 50px; }
+  .phil-steps .phil-pile-icon { width: 56px; height: 56px; }
+  .phil-steps .phil-pile-icon svg { width: 46px; height: 46px; }
+  .phil-steps .phil-badge-no { width: 48px; height: 48px; }
+}
+
+/* Workflow guide v3 ------------------------------------------------------
+   The sky chapter owns the viewport width. Content is constrained inside it,
+   so the sticky scenery can no longer be clipped by the old 1080px wrapper. */
+.phil-how {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: clip;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255,255,255,.2), transparent 24%),
+    linear-gradient(180deg, var(--sky-top), var(--sky-middle) 52%, var(--sky-bottom));
+  transition: background 20s ease;
+}
+
+.phil-how-neighborhood {
+  position: sticky;
+  inset: 0 auto auto;
+  width: 100%;
+  height: 100svh;
+  margin: 0 0 -100svh;
+  transform: none;
+}
+
+.phil-how-title,
+.phil-system-lifecycle,
+.phil-role-journeys,
+.phil-capabilities {
+  position: relative;
+  z-index: 2;
+  width: min(1120px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.phil-how-title {
+  gap: 14px;
+  margin-bottom: 38px;
+  padding-top: clamp(82px, 12vh, 132px);
+  color: #263246;
+}
+
+.phil-how-label {
+  padding: 6px 18px;
+  border: 2px solid #263246;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 3px 4px 0 rgba(38, 50, 70, .28);
+  font-family: 'Gochi Hand', cursive;
+  font-size: 19px;
+}
+
+.phil-how-title h2 {
+  max-width: 900px;
+  font-size: clamp(42px, 5.2vw, 72px);
+  line-height: 1.03;
+}
+
+.phil-how-title > p {
+  max-width: 720px;
+  margin: 2px auto 0;
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.55;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.phil-system-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.phil-system-lifecycle li {
+  min-height: 174px;
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 13px;
+  align-items: start;
+  padding: 22px;
+  border: 2px solid #263246;
+  border-radius: 20px;
+  background: rgba(255, 253, 248, .92);
+  box-shadow: 5px 6px 0 rgba(38, 50, 70, .18);
+  contain: layout paint;
+}
+
+.phil-system-lifecycle li > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #263246;
+  border-radius: 50%;
+  background: #fbe7a2;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 19px;
+}
+
+.phil-system-lifecycle h3,
+.phil-system-lifecycle p { margin: 0; }
+.phil-system-lifecycle h3 {
+  margin-bottom: 7px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 27px;
+  line-height: 1;
+}
+.phil-system-lifecycle p { color: #445064; font-size: 16px; line-height: 1.45; }
+
+.phil-role-journeys {
+  display: grid;
+  gap: clamp(58px, 9vh, 100px);
+  margin-top: clamp(72px, 11vh, 120px);
+}
+
+.phil-journey-guide {
+  padding: clamp(24px, 4vw, 44px);
+  border: 2.5px solid #263246;
+  border-radius: 30px;
+  background: rgba(248, 250, 249, .92);
+  box-shadow: 9px 11px 0 rgba(38, 50, 70, .2);
+}
+.phil-journey-guide.is-customer { box-shadow: 9px 11px 0 rgba(251, 231, 162, .72); }
+.phil-journey-guide.is-shop { box-shadow: 9px 11px 0 rgba(190, 224, 241, .72); }
+
+.phil-journey-guide > header {
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+.phil-journey-guide > header > span,
+.phil-capabilities > header > span,
+.phil-capability-grid article > span {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+}
+.phil-journey-guide > header h2,
+.phil-journey-guide > header p { margin: 0; }
+.phil-journey-guide > header h2 {
+  margin-top: 7px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: clamp(36px, 4vw, 52px);
+  line-height: 1;
+}
+.phil-journey-guide > header p { margin-top: 9px; color: #526074; font-size: 18px; }
+
+.phil-journey-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.phil-journey-list > li {
+  min-height: 238px;
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 23px;
+  border: 2px solid #263246;
+  border-radius: 20px;
+  background: #fffdf8;
+  box-shadow: inset 0 8px 0 var(--step-color);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+.phil-journey-list > li:last-child {
+  grid-column: 1 / -1;
+  width: calc(50% - 9px);
+  justify-self: center;
+}
+.phil-journey-step-icon {
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #263246;
+  border-radius: 17px;
+  background: var(--step-color);
+  transform: rotate(-2deg);
+}
+.phil-journey-step-icon svg { width: 53px; height: 53px; }
+.phil-journey-step-copy > span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #69778a;
+}
+.phil-journey-step-copy h3,
+.phil-journey-step-copy p { margin: 0; }
+.phil-journey-step-copy h3 {
+  margin-top: 5px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 28px;
+  line-height: 1.05;
+}
+.phil-journey-step-copy p { margin-top: 8px; color: #465368; font-size: 16px; line-height: 1.45; }
+.phil-journey-step-copy > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.phil-journey-step-copy small {
+  padding: 3px 8px;
+  border: 1.5px solid #263246;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--step-color) 56%, white);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .5px;
+}
+
+.phil-capabilities { padding: clamp(80px, 12vh, 130px) 0 90px; }
+.phil-capabilities > header { max-width: 820px; margin: 0 auto 34px; text-align: center; color: #263246; }
+.phil-capabilities > header h2 {
+  margin: 8px 0;
+  font-family: 'Gochi Hand', cursive;
+  font-size: clamp(38px, 4.6vw, 60px);
+  line-height: 1.05;
+}
+.phil-capabilities > header p { margin: 0; font-size: 18px; }
+.phil-capability-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.phil-capability-grid article {
+  padding: 25px;
+  border: 2px solid #263246;
+  border-radius: 22px;
+  background: rgba(255, 253, 248, .94);
+  box-shadow: inset 0 9px 0 var(--capability-color), 5px 7px 0 rgba(38, 50, 70, .17);
+}
+.phil-capability-grid h3 {
+  margin: 8px 0 14px;
+  font-family: 'Gochi Hand', cursive;
+  font-size: 34px;
+}
+.phil-capability-grid ul { display: grid; gap: 11px; margin: 0; padding-left: 20px; }
+.phil-capability-grid li { color: #465368; font-size: 16px; line-height: 1.4; }
+
+.phil[data-day-phase='night'] .phil-how-title,
+.phil[data-day-phase='night'] .phil-capabilities > header {
+  color: #fffdf8;
+  text-shadow: 0 2px 0 rgba(0,0,0,.34);
+}
+
+.phil-shopfront-outro { margin-top: 0; }
+
+@media (max-width: 900px) {
+  .phil-system-lifecycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phil-capability-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .phil-how-title,
+  .phil-system-lifecycle,
+  .phil-role-journeys,
+  .phil-capabilities { width: min(100% - 28px, 1120px); }
+  .phil-how-title { padding-top: 72px; }
+  .phil-how-title h2 { font-size: 42px; }
+  .phil-system-lifecycle { grid-template-columns: 1fr; }
+  .phil-system-lifecycle li { min-height: 0; }
+  .phil-journey-guide { padding: 20px 16px 24px; border-radius: 23px; }
+  .phil-journey-list { grid-template-columns: 1fr; }
+  .phil-journey-list > li,
+  .phil-journey-list > li:last-child {
+    grid-column: auto;
+    width: 100%;
+    min-height: 0;
+    grid-template-columns: 58px 1fr;
+    gap: 13px;
+    padding: 18px 15px;
+  }
+  .phil-journey-step-icon { width: 54px; height: 54px; }
+  .phil-journey-step-icon svg { width: 44px; height: 44px; }
+  .phil-journey-step-copy h3 { font-size: 25px; }
+  .phil-capabilities { padding-bottom: 56px; }
+}
+
+/* Landing polish v4 ------------------------------------------------------
+   Guides are always visible. Browsers with view timelines add a small reveal;
+   unsupported or interrupted animation can never hide the information. */
+@keyframes guideReveal {
+  from { opacity: .82; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+[data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+@supports (animation-timeline: view()) {
+  [data-reveal] {
+    animation: guideReveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 18%;
+  }
+}
+
+.phil-how-title,
+.phil-system-lifecycle,
+.phil-role-journeys,
+.phil-capabilities {
+  width: min(1040px, calc(100% - 40px));
+}
+.phil-how-title {
+  margin-bottom: 26px;
+  padding-top: clamp(68px, 9vh, 98px);
+}
+.phil-how-title h2 {
+  font-size: clamp(38px, 4.5vw, 58px);
+  line-height: 1.04;
+}
+.phil-system-lifecycle { gap: 12px; }
+.phil-system-lifecycle li {
+  min-height: 132px;
+  grid-template-columns: 38px 1fr;
+  gap: 11px;
+  padding: 16px;
+  border-radius: 17px;
+  box-shadow: 4px 5px 0 rgba(38, 50, 70, .15);
+}
+.phil-system-lifecycle li > span {
+  width: 36px;
+  height: 36px;
+  font-size: 17px;
+}
+.phil-system-lifecycle h3 { margin-bottom: 5px; font-size: 24px; }
+.phil-system-lifecycle p { font-size: 14px; line-height: 1.4; }
+
+.phil-role-journeys {
+  gap: clamp(38px, 6vh, 58px);
+  margin-top: clamp(52px, 7vh, 76px);
+}
+.phil-journey-guide {
+  padding: clamp(20px, 3vw, 30px);
+  border-radius: 24px;
+  box-shadow: 6px 8px 0 rgba(38, 50, 70, .16);
+}
+.phil-journey-guide.is-customer { box-shadow: 6px 8px 0 rgba(251, 231, 162, .68); }
+.phil-journey-guide.is-shop { box-shadow: 6px 8px 0 rgba(190, 224, 241, .68); }
+.phil-journey-guide > header { margin-bottom: 19px; }
+.phil-journey-guide > header h2 { font-size: clamp(32px, 3.5vw, 44px); }
+.phil-journey-guide > header p { margin-top: 6px; font-size: 16px; }
+.phil-journey-list { gap: 12px; }
+.phil-journey-list > li {
+  min-height: 178px;
+  grid-template-columns: 56px 1fr;
+  gap: 13px;
+  padding: 17px;
+  border-radius: 16px;
+  box-shadow: inset 0 6px 0 var(--step-color);
+  contain-intrinsic-size: auto 180px;
+}
+.phil-journey-list > li:last-child { width: calc(50% - 6px); }
+.phil-journey-step-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+}
+.phil-journey-step-icon svg { width: 42px; height: 42px; }
+.phil-journey-step-copy > span { font-size: 10px; }
+.phil-journey-step-copy h3 { margin-top: 3px; font-size: 24px; }
+.phil-journey-step-copy p { margin-top: 6px; font-size: 14px; line-height: 1.4; }
+
+.phil-capabilities { padding: clamp(52px, 8vh, 76px) 0 60px; }
+.phil-capabilities > header { max-width: 700px; margin-bottom: 24px; }
+.phil-capabilities > header h2 { font-size: clamp(34px, 4vw, 48px); }
+.phil-capabilities > header p { font-size: 16px; }
+.phil-capability-grid { gap: 12px; }
+.phil-capability-grid article {
+  padding: 18px;
+  border-radius: 17px;
+  box-shadow: inset 0 7px 0 var(--capability-color), 4px 5px 0 rgba(38, 50, 70, .14);
+}
+.phil-capability-grid h3 { margin: 6px 0 10px; font-size: 29px; }
+.phil-capability-grid ul { gap: 7px; padding-left: 17px; }
+.phil-capability-grid li { font-size: 14px; line-height: 1.35; }
+
+/* A small balloon replaces the large plane that crossed the guide copy. */
+@keyframes balloonAcross {
+  0% { transform: translate3d(-120px, 7vh, 0) rotate(-3deg); }
+  28% { transform: translate3d(30vw, -3vh, 0) rotate(2deg); }
+  62% { transform: translate3d(66vw, 8vh, 0) rotate(-2deg); }
+  100% { transform: translate3d(calc(100vw + 140px), -5vh, 0) rotate(3deg); }
+}
+.phil-sky-balloon {
+  position: absolute;
+  left: 0;
+  top: 12%;
+  z-index: 1;
+  width: clamp(54px, 5vw, 82px);
+  opacity: .82;
+  filter: drop-shadow(3px 4px 0 rgba(43, 43, 43, .14));
+  animation: balloonAcross 54s linear infinite -18s;
+  will-change: transform;
+}
+.phil-sky-balloon svg { display: block; width: 100%; height: auto; }
+.phil[data-day-phase='night'] .phil-sky-balloon { opacity: .35; }
+
+/* The astronauts now traverse the whole void instead of hovering in a corner. */
+@keyframes astronautTourOne {
+  0% { transform: translate3d(0, 20vh, 0) rotate(-14deg); }
+  24% { transform: translate3d(32vw, -9vh, 0) rotate(5deg); }
+  52% { transform: translate3d(68vw, 20vh, 0) rotate(18deg); }
+  76% { transform: translate3d(92vw, -4vh, 0) rotate(-6deg); }
+  100% { transform: translate3d(calc(100vw + 190px), 12vh, 0) rotate(12deg); }
+}
+@keyframes astronautTourTwo {
+  0% { transform: translate3d(0, 0, 0) rotate(13deg); }
+  25% { transform: translate3d(-30vw, -22vh, 0) rotate(-12deg); }
+  50% { transform: translate3d(-62vw, 9vh, 0) rotate(8deg); }
+  75% { transform: translate3d(-91vw, -13vh, 0) rotate(-18deg); }
+  100% { transform: translate3d(calc(-100vw - 190px), 14vh, 0) rotate(9deg); }
+}
+.phil-space-astronaut-one {
+  left: -150px;
+  top: 20%;
+  animation: astronautTourOne 43s linear infinite -11s;
+}
+.phil-space-astronaut-two {
+  left: calc(100% + 40px);
+  right: auto;
+  top: 64%;
+  animation: astronautTourTwo 49s linear infinite -31s;
+}
+
+/* Two quiet spiral galaxies add depth without bitmap assets or large blur. */
+@keyframes galaxySlowTurn { to { transform: rotate(360deg); } }
+.phil-space-galaxy {
+  z-index: 1;
+  border-width: 10px;
+  background:
+    radial-gradient(circle, rgba(255, 247, 203, .78) 0 3px, transparent 4px),
+    conic-gradient(from 30deg, rgba(126, 201, 229, .12), rgba(154, 104, 209, .28), rgba(244, 184, 196, .18), rgba(126, 201, 229, .12));
+  filter: none;
+  opacity: .74;
+  animation: galaxySlowTurn 82s linear infinite;
+}
+.phil-space-galaxy-one {
+  right: 9%;
+  top: 16%;
+  width: clamp(140px, 17vw, 280px);
+}
+.phil-space-galaxy-two {
+  left: 7%;
+  right: auto;
+  top: auto;
+  bottom: 5%;
+  width: clamp(100px, 12vw, 190px);
+  opacity: .46;
+  animation-direction: reverse;
+  animation-duration: 106s;
+}
+
+/* A handful of transform-only streaks creates a sparse meteor shower. */
+@keyframes meteorShower {
+  0%, 58% { opacity: 0; transform: translate3d(0, 0, 0) rotate(-32deg); }
+  60% { opacity: .95; }
+  68% { opacity: 0; transform: translate3d(-42vw, 52vh, 0) rotate(-32deg); }
+  100% { opacity: 0; transform: translate3d(-42vw, 52vh, 0) rotate(-32deg); }
+}
+.phil-space-meteors {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.phil-space-meteors i {
+  position: absolute;
+  top: -12%;
+  width: clamp(75px, 8vw, 130px);
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(198, 229, 255, .7), #fff8c8);
+  box-shadow: 20px 0 8px rgba(190, 221, 255, .32);
+  opacity: 0;
+  animation: meteorShower 10s linear infinite;
+  will-change: transform, opacity;
+}
+.phil-space-meteors i:nth-child(1) { left: 28%; animation-delay: -2s; }
+.phil-space-meteors i:nth-child(2) { left: 62%; top: -4%; animation-delay: -6.5s; animation-duration: 13s; }
+.phil-space-meteors i:nth-child(3) { left: 88%; top: 18%; animation-delay: -9s; animation-duration: 15s; }
+.phil-space-meteors i:nth-child(4) { left: 46%; top: 30%; animation-delay: -12s; animation-duration: 18s; }
+
+@media (max-width: 720px) {
+  .phil-how-title,
+  .phil-system-lifecycle,
+  .phil-role-journeys,
+  .phil-capabilities { width: min(100% - 24px, 1040px); }
+  .phil-how-title { padding-top: 58px; }
+  .phil-how-title h2 { font-size: 38px; }
+  .phil-system-lifecycle li { min-height: 0; }
+  .phil-journey-list > li,
+  .phil-journey-list > li:last-child {
+    width: 100%;
+    grid-template-columns: 48px 1fr;
+    padding: 14px;
+  }
+  .phil-journey-step-icon { width: 44px; height: 44px; }
+  .phil-journey-step-icon svg { width: 35px; height: 35px; }
+  .phil-space-galaxy-two { display: none; }
+  .phil-space-meteors i:nth-child(n + 3) { display: none; }
+  .phil-sky-balloon { width: 50px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .phil-sky-balloon,
+  .phil-space-astronaut,
+  .phil-space-galaxy,
+  .phil-space-meteors i { animation: none !important; }
+  .phil-space-meteors { display: none; }
 }

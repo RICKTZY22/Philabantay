@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { DataError, type ConversationDetailed, type Message } from '@barbershop/shared'
+import { DataError, type ConversationDetailed, type Message, type ShopStaffMember } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useAuth } from '../features/auth/AuthContext'
 import { useCurrentTime } from '../hooks/useCurrentTime'
@@ -28,14 +28,19 @@ export function ChatPage() {
   const navigate = useNavigate()
   const nowEpochMs = useCurrentTime()
   // Notebook styling per role: customer = warm cream/yellow, barber = cool
-  // green "shop desk" scheme para agad makita kung aling side ka. Owners keep
-  // the plain look.
+  // green "shop desk", owner = purple "owner desk" — iisang notebook look,
+  // magkakaibang kulay para agad makilala ang side mo.
   const isPlainCustomer = profile?.role === 'customer'
     && profile.requested_role !== 'barber'
     && profile.requested_role !== 'shop_owner'
-  const notebookRole = isPlainCustomer ? 'customer' : profile?.role === 'barber' ? 'barber' : undefined
+  const isOwner = profile?.role === 'shop_owner'
+  const notebookRole = isPlainCustomer
+    ? 'customer'
+    : profile?.role === 'barber' ? 'barber' : isOwner ? 'owner' : undefined
 
   const [conversations, setConversations] = useState<ConversationDetailed[] | null>(null)
+  const [staff, setStaff] = useState<ShopStaffMember[]>([])
+  const [openingStaffChat, setOpeningStaffChat] = useState('')
   const [query, setQuery] = useState('')
   const [loadError, setLoadError] = useState('')
 
@@ -51,6 +56,33 @@ export function ChatPage() {
     loadConversations()
   }, [loadConversations])
 
+  // Owner lang ang may staff roster sa inbox — dito sila nag-i-start ng
+  // internal threads sa mga barbers nila.
+  useEffect(() => {
+    if (!isOwner) return
+    let active = true
+    backend.employment.listMyShopStaff()
+      .then((members) => { if (active) setStaff(members) })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [backend, isOwner])
+
+  async function startStaffChat(barberId: string) {
+    if (openingStaffChat) return
+    setOpeningStaffChat(barberId)
+    try {
+      const convo = await backend.chat.openStaffConversation(barberId)
+      loadConversations()
+      navigate(`/chat/${routeSegment(convo.id)}`)
+    } catch (error) {
+      setLoadError(error instanceof DataError ? error.message : 'Hindi mabuksan ang staff chat.')
+    } finally {
+      setOpeningStaffChat('')
+    }
+  }
+
   const selectedConversation = conversationId
     ? conversations?.find((conversation) => conversation.id === conversationId)
     : undefined
@@ -58,10 +90,8 @@ export function ChatPage() {
     const needle = query.trim().toLowerCase()
     if (!conversations || !needle) return conversations
     return conversations.filter((conversation) => {
-      const displayName = profile?.id === conversation.customer_id
-        ? conversation.shop.name
-        : conversation.customer.full_name
-      return displayName.toLowerCase().includes(needle)
+      const { name } = conversationDisplay(conversation, profile?.id)
+      return name.toLowerCase().includes(needle)
         || conversation.last_message?.body.toLowerCase().includes(needle)
     })
   }, [conversations, profile?.id, query])
@@ -107,31 +137,50 @@ export function ChatPage() {
             aria-label="Search conversations"
           />
         </label>
+        {isOwner && staff.length > 0 && (
+          <div className="chat-staff-strip" aria-label="Message a staff member">
+            <span className="chat-kicker">MESSAGE YOUR STAFF</span>
+            <div>
+              {staff.map((member) => (
+                <button
+                  type="button"
+                  key={member.barber.id}
+                  disabled={Boolean(openingStaffChat)}
+                  onClick={() => void startStaffChat(member.barber.id)}
+                >
+                  <DoodleIcon name="scissors" size={14} />
+                  {openingStaffChat === member.barber.id ? 'Opening…' : firstWord(member.barber.profile.full_name)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {loadError ? (
           <p className="form-error" role="alert">{loadError}</p>
         ) : conversations === null ? (
           <Loading label="Loading chats…" />
         ) : conversations.length === 0 ? (
           <p className="muted">
-            Wala pang conversation. Pumili ng shop sa map at pindutin ang <strong>Chat shop</strong>.
+            {isOwner
+              ? 'Wala pang conversation. Mag-message ng staff sa taas, o hintayin ang customer inquiries.'
+              : 'Wala pang conversation. Pumili ng shop sa map at pindutin ang Chat shop.'}
           </p>
         ) : filteredConversations?.length === 0 ? (
           <p className="muted">Walang chat na tugma sa search mo.</p>
         ) : (
           <div className="convo-list">
             {filteredConversations?.map((conversation) => {
-              const customerView = profile?.id === conversation.customer_id
-              const displayName = customerView ? conversation.shop.name : conversation.customer.full_name
+              const { name, staffThread } = conversationDisplay(conversation, profile?.id)
               return (
                 <Link
                   key={conversation.id}
                   to={`/chat/${routeSegment(conversation.id)}`}
                   className={`convo-item ${conversation.id === conversationId ? 'active' : ''}`}
                 >
-                  <Avatar name={displayName} size={44} />
+                  <Avatar name={name} size={44} />
                   <div className="convo-meta">
                     <div className="spread">
-                      <strong>{displayName}</strong>
+                      <strong>{name}{staffThread && <em className="chat-staff-tag">staff</em>}</strong>
                       <time>{relativeTime(conversation.last_message_at, nowEpochMs)}</time>
                     </div>
                     <div className="spread convo-preview-row">
@@ -237,8 +286,8 @@ const Thread = memo(function Thread({
     if (body) body.scrollTop = body.scrollHeight
   }, [messages])
 
-  const customerView = profile?.id === conversation.customer_id
-  const displayName = customerView ? conversation.shop.name : conversation.customer.full_name
+  const { name: displayName, context, staffThread } = conversationDisplay(conversation, profile?.id)
+  const showShopLink = !staffThread && profile?.id === conversation.customer_id
 
   if (!ready) return <Loading label="Opening chat…" />
 
@@ -249,11 +298,9 @@ const Thread = memo(function Thread({
         <Avatar name={displayName} size={42} />
         <div className="thread-identity">
           <strong>{displayName}</strong>
-          <span>{customerView
-            ? `${conversation.shop.address}, ${conversation.shop.city}`
-            : `Customer · ${conversation.shop.name}`}</span>
+          <span>{context}</span>
         </div>
-        {customerView && (
+        {showShopLink && (
           <Link className="btn btn-sm thread-shop-link" to={`/shops/${routeSegment(conversation.shop.id)}`}>Shop details</Link>
         )}
       </header>
@@ -360,4 +407,32 @@ function MessageComposer({ conversationId, disabled }: { conversationId: string;
       {sendError && <p className="form-error thread-send-error" role="alert">{sendError}</p>}
     </div>
   )
+}
+
+/**
+ * Sino ang kausap at anong konteksto — staff-thread aware. Ang staff thread
+ * ay nakikilala kapag ang "customer" participant ay ang may-ari ng shop.
+ */
+function conversationDisplay(conversation: ConversationDetailed, viewerId: string | undefined) {
+  const staffThread = conversation.customer_id === conversation.shop.owner_id
+  if (staffThread) {
+    const viewerIsOwner = viewerId === conversation.customer_id
+    return {
+      name: viewerIsOwner ? conversation.barber.profile.full_name : conversation.customer.full_name,
+      context: viewerIsOwner ? `Staff · ${conversation.shop.name}` : `Owner · ${conversation.shop.name}`,
+      staffThread,
+    }
+  }
+  const customerView = viewerId === conversation.customer_id
+  return {
+    name: customerView ? conversation.shop.name : conversation.customer.full_name,
+    context: customerView
+      ? `${conversation.shop.address}, ${conversation.shop.city}`
+      : `Customer · ${conversation.shop.name}`,
+    staffThread,
+  }
+}
+
+function firstWord(name: string) {
+  return name.trim().split(/\s+/)[0]
 }

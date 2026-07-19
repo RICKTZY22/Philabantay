@@ -5,7 +5,7 @@
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@barbershop/web"],
-      "port": 174
+      "port": 5174
     }
   ]
 }

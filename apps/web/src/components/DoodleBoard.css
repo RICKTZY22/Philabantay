@@ -39,6 +39,53 @@
 .doodle-rail-mark .brand-pole { width: 10px; height: 27px; }
 .doodle-rail-scissors { margin-top: auto; color: #164c50; transform: rotate(-12deg); }
 
+/* Owner skin follows the supplied indigo dashboard layout, while retaining
+   hand-drawn borders and keeping these rail icons decorative. */
+.doodle-board-wrap.is-owner .doodle-board {
+  grid-template-columns: 82px minmax(0, 1fr);
+  border-color: #34345f;
+  background: #efefff;
+  box-shadow: 12px 14px 0 rgba(59, 59, 105, .18), 0 18px 48px rgba(92, 112, 190, .16);
+}
+
+.doodle-board-wrap.is-owner .doodle-rail {
+  border-color: #34345f;
+  color: #fff;
+  background:
+    radial-gradient(circle at 30% 12%, rgba(255,255,255,.18), transparent 26%),
+    linear-gradient(180deg, #5d5bcf 0%, #4e50bd 56%, #4547a8 100%);
+}
+
+.doodle-board-wrap.is-owner .doodle-rail-mark,
+.doodle-board-wrap.is-owner .doodle-rail-scissors { color: #fff; }
+
+.doodle-owner-rail-stack {
+  display: grid;
+  width: calc(100% + 20px);
+  gap: 4px;
+  margin-top: 34px;
+}
+
+.doodle-owner-rail-stack > span {
+  min-height: 47px;
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,.7);
+  border-left: 3px solid transparent;
+}
+
+.doodle-owner-rail-stack > span:first-child {
+  color: #fff;
+  border-left-color: #f6a46f;
+  background: rgba(255,255,255,.14);
+}
+
+.doodle-board-wrap.is-owner .doodle-workspace { padding: 22px 24px 26px; }
+.doodle-board-wrap.is-owner .doodle-topbar { margin-bottom: 18px; }
+.doodle-board-wrap.is-owner .doodle-search,
+.doodle-board-wrap.is-owner .doodle-chip > span { border-color: #424271; }
+.doodle-board-wrap.is-owner .doodle-chip > span { background: #ffcfaa; }
+
 /* ---- Workspace + top bar ---- */
 .doodle-workspace { min-width: 0; padding: 20px; }
 
@@ -95,6 +142,7 @@
     border-bottom: 3px solid var(--ink);
   }
   .doodle-rail-scissors { margin: 0; }
+  .doodle-owner-rail-stack { display: none; }
   .doodle-workspace { padding: 16px; }
   .doodle-topbar { grid-template-columns: 1fr auto; }
   .doodle-live { display: none; }

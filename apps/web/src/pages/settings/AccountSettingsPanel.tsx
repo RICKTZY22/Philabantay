@@ -10,6 +10,7 @@ export function AccountSettingsPanel() {
   const [email, setEmail] = useState(profile?.email ?? '')
   const [phone, setPhone] = useState(profile?.phone ?? '')
   const [location, setLocation] = useState(profile?.location ?? '')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
 
@@ -19,17 +20,31 @@ export function AccountSettingsPanel() {
     setEmail(profile.email)
     setPhone(profile.phone ?? '')
     setLocation(profile.location ?? '')
+    setCurrentPassword('')
   }, [profile])
 
   if (!profile) return null
 
+  const emailChanged = email.trim().toLocaleLowerCase() !== profile.email
+
   async function save(event: FormEvent) {
     event.preventDefault()
     if (saving) return
+    if (emailChanged && !currentPassword) {
+      setMessage({ kind: 'error', text: 'Enter your current password to change the email address.' })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
-      await updateProfile({ full_name: fullName, email, phone, location })
+      await updateProfile({
+        full_name: fullName,
+        email,
+        phone,
+        location,
+        ...(emailChanged ? { current_password: currentPassword } : {}),
+      })
+      setCurrentPassword('')
       setMessage({ kind: 'ok', text: 'Account details saved.' })
     } catch (error) {
       setMessage({ kind: 'error', text: error instanceof DataError ? error.message : 'Hindi ma-save ang account details.' })
@@ -39,7 +54,7 @@ export function AccountSettingsPanel() {
   }
 
   const changed = fullName.trim() !== profile.full_name
-    || email.trim().toLocaleLowerCase() !== profile.email
+    || emailChanged
     || phone.trim() !== (profile.phone ?? '')
     || location.trim() !== (profile.location ?? '')
 
@@ -55,6 +70,9 @@ export function AccountSettingsPanel() {
           <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={80} required /></label>
           <label><span>Contact number</span><input value={phone} onChange={(event) => setPhone(event.target.value)} autoComplete="tel" maxLength={32} placeholder="+63 917 000 0000" /></label>
           <label className="is-wide"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" maxLength={254} required /></label>
+          {emailChanged && (
+            <label className="is-wide"><span>Current password</span><input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" maxLength={128} required /><small>Required to confirm an email change.</small></label>
+          )}
           <label className="is-wide"><span>City or municipality</span><input value={location} onChange={(event) => setLocation(event.target.value)} autoComplete="address-level2" maxLength={100} placeholder="Bacoor, Cavite" /><small>General area only—your live GPS location is never stored here.</small></label>
         </div>
         <SettingsActionRow message={message}>

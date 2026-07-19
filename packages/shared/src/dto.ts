@@ -1,7 +1,7 @@
 // Request/response shapes for the data-access layer. Both the mock (Phase 1)
 // and the Supabase/Express implementation (Phase 2) speak these.
 
-import type { BugCategory, OnboardingRole, Weekday } from './types'
+import type { AppointmentStatus, BugCategory, OnboardingRole, Weekday } from './types'
 
 export interface SignUpInput {
   email: string
@@ -13,6 +13,10 @@ export interface SignUpInput {
 export interface SignInInput {
   email: string
   password: string
+}
+
+export interface RefreshSessionInput {
+  refresh_token: string
 }
 
 /** One-time role choice after signup. Professional choices are requests only. */
@@ -27,6 +31,11 @@ export interface UpdateProfileInput {
   phone?: string | null
   location?: string | null
   avatar_url?: string
+  /**
+   * Required only when `email` is being changed: the account's current password,
+   * re-verified server-side before the sensitive email change is applied.
+   */
+  current_password?: string
 }
 
 export interface ChangePasswordInput {
@@ -86,6 +95,112 @@ export interface ShiftChangeRequestInput {
   message: string
 }
 
+/** Owner note attached to one staff member. */
+export interface StaffNoteInput {
+  barber_id: string
+  body: string
+}
+
+/** API-only mutation bodies kept shared so Express and future clients agree. */
+export interface SetShiftStatusInput {
+  on: boolean
+}
+
+export interface SetAcceptingBookingsInput {
+  accepting: boolean
+}
+
+export interface SetAppointmentStatusInput {
+  status: AppointmentStatus
+}
+
+/** Optimistic concurrency token supplied by every lifecycle command. */
+export interface AppointmentVersionInput {
+  expected_version: number
+}
+
+export interface AppointmentReasonInput extends AppointmentVersionInput {
+  reason: string
+}
+
+export interface CheckInAppointmentInput extends AppointmentVersionInput {
+  /** Customer self-check-in requires the short code shown by shop staff. */
+  code?: string
+  /** Owner manual fallback requires an auditable reason instead of a code. */
+  reason?: string
+}
+
+export interface ReassignAppointmentInput extends AppointmentReasonInput {
+  barber_id: string
+}
+
+export interface RescheduleAppointmentInput extends CreateAppointmentInput, AppointmentVersionInput {}
+
+export interface ResolveAppointmentDisputeInput extends AppointmentReasonInput {
+  resolution: 'completed' | 'cancelled'
+}
+
+export interface ResolveShiftChangeRequestInput {
+  status: 'approved' | 'declined'
+}
+
+export interface ResolveBarberApplicationInput {
+  status: 'accepted' | 'declined'
+}
+
+export interface OpenConversationInput {
+  shop_id: string
+}
+
+export interface OpenStaffConversationInput {
+  barber_id: string
+}
+
+export interface NotificationPreferencesInput {
+  booking_reminders: boolean
+  chat_notifications: boolean
+  email_updates: boolean
+  nearby_alerts: boolean
+}
+
+export interface CreateServiceInput {
+  shop_id: string
+  name: string
+  duration_min: number
+  price_cents: number
+  active?: boolean
+}
+
+export interface UpdateServiceInput {
+  name?: string
+  duration_min?: number
+  price_cents?: number
+  active?: boolean
+}
+
+export interface CreateShopInput {
+  name: string
+  address: string
+  city: string
+  lat: number
+  lng: number
+}
+
+export type UpdateShopInput = Partial<CreateShopInput>
+
+export interface CreateAttendanceRecordInput {
+  employment_id: string
+  barber_id: string
+  date: string
+  status: 'present' | 'absent'
+  notes?: string | null
+}
+
+export interface UpdateAttendanceRecordInput {
+  status?: 'present' | 'absent'
+  notes?: string | null
+}
+
 /** Error thrown by any data-layer implementation for expected failures. */
 export class DataError extends Error {
   code: DataErrorCode
@@ -103,4 +218,7 @@ export type DataErrorCode =
   | 'forbidden'
   | 'not_found'
   | 'slot_taken'
+  | 'stale_appointment'
   | 'validation'
+  | 'network'
+  | 'server'

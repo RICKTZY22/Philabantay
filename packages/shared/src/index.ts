@@ -1,4 +1,6 @@
 export * from './types'
+export * from './accounts'
+export * from './appointment-lifecycle'
 export * from './appointments'
 export * from './attendance'
 export * from './dto'

@@ -246,6 +246,13 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
   }, [bookings, conversations, nowEpochMs])
 
   const selectedShop = shops?.find((s) => s.id === selectedId) ?? null
+  // Search is independent from Discover filters. Keep a selected search result
+  // on the map even if its status, price, or service does not match the
+  // currently visible Discover collection, so the pin can still be focused.
+  const mapShops = useMemo(() => {
+    if (!selectedShop || filteredShops.some((shop) => shop.id === selectedShop.id)) return filteredShops
+    return [...filteredShops, selectedShop]
+  }, [filteredShops, selectedShop])
   const completedCuts = bookings.filter((booking) => booking.status === 'completed').length
   const loyaltyProgress = completedCuts % 10
   const availableIds = useMemo(() => new Set(availableBarbers.map((b) => b.id)), [availableBarbers])
@@ -536,7 +543,7 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
             <div className="cd-map-frame">
               <Suspense fallback={<div className="cd-map-loading">Iginuguhit ang mapa…</div>}>
                 <ShopMap
-                  shops={filteredShops}
+                  shops={mapShops}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                   userLocation={userLoc}

@@ -15,11 +15,27 @@ export const WEEKDAY_LABELS = [
 
 export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
+  requested: 'Requested',
   confirmed: 'Confirmed',
+  checked_in: 'Checked in',
+  in_progress: 'In progress',
+  awaiting_confirmation: 'Awaiting confirmation',
+  declined: 'Declined',
+  expired: 'Expired',
   cancelled: 'Cancelled',
   completed: 'Completed',
   no_show: 'No show',
+  customer_no_show: 'Customer no-show',
+  disputed: 'Disputed',
 }
+
+/** First-release defaults; later these become validated per-shop policies. */
+export const APPOINTMENT_POLICY_DEFAULTS = {
+  requestExpiryMinutes: 15,
+  checkInOpensMinutesBeforeStart: 30,
+  customerNoShowGraceMinutes: 15,
+  completionConfirmationMinutes: 120,
+} as const
 
 /** Slot generation granularity (minutes) when computing open times. */
 export const SLOT_STEP_MIN = 15

@@ -20,6 +20,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ 
 const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) => ({ default: m.AppDashboardPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
+const VerificationLockPage = lazy(() => import('./pages/VerificationLockPage').then((m) => ({ default: m.VerificationLockPage })))
 const SettingsAccountPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAccountPage })))
 const SettingsAvatarPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAvatarPage })))
 const SettingsNotificationsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsNotificationsPage })))
@@ -66,6 +67,14 @@ export function App() {
             </RequireAuth>
           }
         />
+        <Route
+          path="verification"
+          element={
+            <RequireAuth allowIncomplete allowVerificationLocked>
+              <VerificationLockPage />
+            </RequireAuth>
+          }
+        />
 
         {/* Public discovery: puwedeng tumingin ng shops kahit guest pa. */}
         <Route path="barbers" element={<BarbersPage />} />
@@ -101,6 +110,14 @@ export function App() {
         {/* Safe app home: role-aware pero walang privileged shop controls. */}
         <Route
           path="dashboard"
+          element={
+            <RequireAuth>
+              <AppDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="dashboard/owner/:ownerSection"
           element={
             <RequireAuth>
               <AppDashboardPage />

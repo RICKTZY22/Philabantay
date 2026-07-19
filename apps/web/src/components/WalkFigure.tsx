@@ -15,6 +15,8 @@ export type WalkHairStyle =
   | 'textured-crop'
   | 'pompadour'
 
+export type WalkCostume = 'street' | 'astronaut'
+
 interface WalkFigureProps {
   shirt?: string
   pants?: string
@@ -30,6 +32,7 @@ interface WalkFigureProps {
   className?: string
   style?: CSSProperties
   title?: string
+  costume?: WalkCostume
 }
 
 type AnimatedSvg = SVGSVGElement & {
@@ -53,13 +56,39 @@ export function WalkFigure({
   className = '',
   style,
   title,
+  costume = 'street',
 }: WalkFigureProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     const svg = svgRef.current as AnimatedSvg | null
-    if (walking) svg?.unpauseAnimations?.()
-    else svg?.pauseAnimations?.()
+    if (!svg) return undefined
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let isVisible = false
+
+    const syncAnimation = () => {
+      const shouldRun = walking && isVisible && !document.hidden && !reducedMotion.matches
+      if (shouldRun) svg.unpauseAnimations?.()
+      else svg.pauseAnimations?.()
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = Boolean(entry?.isIntersecting)
+      syncAnimation()
+    }, { rootMargin: '120px 0px' })
+
+    observer.observe(svg)
+    document.addEventListener('visibilitychange', syncAnimation)
+    reducedMotion.addEventListener('change', syncAnimation)
+    syncAnimation()
+
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', syncAnimation)
+      reducedMotion.removeEventListener('change', syncAnimation)
+      svg.pauseAnimations?.()
+    }
   }, [walking])
 
   if (view !== 'side') {
@@ -76,6 +105,7 @@ export function WalkFigure({
         className={className}
         style={style}
         title={title}
+        costume={costume}
       />
     )
   }
@@ -203,8 +233,9 @@ function FacingFigure({
   className,
   style,
   title,
+  costume,
 }: Required<Pick<WalkFigureProps, 'shirt' | 'pants' | 'hair' | 'skin' | 'hairStyle' | 'showGround' | 'fresh' | 'className'>> &
-  Pick<WalkFigureProps, 'style' | 'title'> & { view: 'front' | 'back' }) {
+  Pick<WalkFigureProps, 'style' | 'title'> & { view: 'front' | 'back'; costume: WalkCostume }) {
   const front = view === 'front'
 
   return (
@@ -217,6 +248,7 @@ function FacingFigure({
     >
       {title ? <title>{title}</title> : null}
       {showGround ? <path d="M 98 477 L 346 477" fill="none" stroke="#d8d5cf" strokeWidth="4.5" strokeLinecap="round" strokeDasharray="2 34" /> : null}
+      {costume === 'astronaut' ? <AstronautBackpack /> : null}
 
       <g stroke={INK} strokeLinecap="round" strokeLinejoin="round">
         {hairStyle === 'bob' ? <path d="M 181 93 Q 177 43 220 39 Q 263 43 259 94 L252 126 Q 238 111 220 113 Q 201 111 188 126 Z" fill={hair} strokeWidth="4.5" /> : null}
@@ -257,9 +289,42 @@ function FacingFigure({
           </g>
         )}
 
+        {costume === 'astronaut' && front ? <AstronautGear /> : null}
         {fresh ? <FreshSparkles /> : null}
       </g>
     </svg>
+  )
+}
+
+function AstronautBackpack() {
+  return (
+    <g stroke={INK} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="153" y="142" width="39" height="118" rx="12" fill="#d9e3ef" />
+      <rect x="158" y="156" width="28" height="41" rx="7" fill="#8ebbd2" />
+      <path d="M 159 215 H 186 M 160 228 H 185" fill="none" strokeWidth="3" />
+      <path d="M 164 248 Q 132 278 146 326" fill="none" stroke="#8ebbd2" strokeWidth="8" />
+      <path d="M 164 248 Q 132 278 146 326" fill="none" strokeWidth="3" />
+    </g>
+  )
+}
+
+function AstronautGear() {
+  return (
+    <g>
+      <ellipse cx="220" cy="87" rx="49" ry="58" fill="rgba(142, 204, 230, .18)" stroke={INK} strokeWidth="5" />
+      <path d="M 184 66 Q 220 38 256 66" fill="none" stroke="rgba(255,255,255,.82)" strokeWidth="7" />
+      <path d="M 184 126 Q 220 139 256 126" fill="none" stroke={INK} strokeWidth="8" />
+      <path d="M 188 130 Q 220 146 252 130" fill="none" stroke="#d9e3ef" strokeWidth="4" />
+      <rect x="194" y="163" width="52" height="48" rx="8" fill="#eef3f8" stroke={INK} strokeWidth="4" />
+      <rect x="202" y="172" width="36" height="13" rx="4" fill="#78b8d6" stroke={INK} strokeWidth="3" />
+      <circle cx="205" cy="198" r="4" fill="#f4b8c4" stroke={INK} strokeWidth="2" />
+      <circle cx="220" cy="198" r="4" fill="#ffd76a" stroke={INK} strokeWidth="2" />
+      <circle cx="235" cy="198" r="4" fill="#91d3aa" stroke={INK} strokeWidth="2" />
+      <ellipse cx="159" cy="269" rx="14" ry="17" fill="#f5f7fa" stroke={INK} strokeWidth="4" />
+      <ellipse cx="281" cy="269" rx="14" ry="17" fill="#f5f7fa" stroke={INK} strokeWidth="4" />
+      <path d="M 177 458 Q 195 475 214 462 M 226 462 Q 245 475 263 458" fill="none" stroke="#78b8d6" strokeWidth="6" />
+      <text x="220" y="238" textAnchor="middle" fill={INK} stroke="none" fontFamily="Gochi Hand, cursive" fontSize="15">PB</text>
+    </g>
   )
 }
 

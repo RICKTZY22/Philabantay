@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react'
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
-import { SHOP_NAME } from '@barbershop/shared'
+import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { isOwnerVerificationLocked, SHOP_NAME } from '@barbershop/shared'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
@@ -13,6 +13,7 @@ export function Layout() {
   const location = useLocation()
   const [headerVisible, setHeaderVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
+  const verificationLocked = Boolean(profile && isOwnerVerificationLocked(profile))
 
   // Route changes should open at the top instead of inheriting the scroll
   // position of a long dashboard/map page.
@@ -88,9 +89,15 @@ export function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [location.pathname, menuOpen, stickyHeader])
 
+  // Public discovery routes are normally reachable while signed in, but an
+  // owner awaiting verification is intentionally restricted to one screen.
+  if (verificationLocked && location.pathname !== '/verification') {
+    return <Navigate to="/verification" replace />
+  }
+
   return (
     <CurtainProvider>
-    <div className="app-shell">
+    <div className={`app-shell${onLanding ? ' is-landing' : ''}`}>
       <div className="bg-pattern" aria-hidden="true" />
       <DoodleDefs />
       <header
@@ -101,6 +108,11 @@ export function Layout() {
           {hideBrand ? (
             // Spacer keeps the hamburger right-aligned (space-between layout).
             <span aria-hidden="true" />
+          ) : verificationLocked ? (
+            <span className="brand" aria-label={SHOP_NAME}>
+              <span className="brand-pole" aria-hidden="true" />
+              {SHOP_NAME}
+            </span>
           ) : (
             <Link to={brandTo} className="brand">
               <span className="brand-pole" aria-hidden="true" />
@@ -109,10 +121,10 @@ export function Layout() {
           )}
           <div className="nav-links">
             {/* Signed in: isang malaking hamburger lang ang buong navigation. */}
-            {profile ? (
+            {profile && !verificationLocked ? (
               <AppMenu onOpenChange={setMenuOpen} />
             ) : (
-              !onLanding && (
+              !profile && !onLanding && (
                 <>
                   <NavLink to="/barbers" className="nav-link">Barbers</NavLink>
                   <NavLink to="/login" className="nav-link">Log in</NavLink>
@@ -124,8 +136,8 @@ export function Layout() {
         </nav>
       </header>
 
-      <main className="page">
-        <div className={`container${useWideWorkspace ? ' is-dashboard-wide' : ''}`}>
+      <main className={`page${onLanding ? ' is-landing-page' : ''}`}>
+        <div className={`container${useWideWorkspace ? ' is-dashboard-wide' : ''}${onLanding ? ' is-landing-container' : ''}`}>
           {/*
             IMPORTANT - HUWAG ILIPAT SA LABAS NG LAYOUT:
             Dito lang dapat nag-suspend ang lazy page para buhay pa rin ang nav,

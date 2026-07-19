@@ -13,13 +13,13 @@ import {
 } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
 import { useCurtain } from './CurtainTransition'
-import { DEMO_ACCOUNTS } from '../config/demoAccounts'
 import { safeInternalPath } from '../lib/security'
+import { WalkFigure } from './WalkFigure'
 import './AuthSlider.css'
 
 /**
- * Isang billboard, dalawang auth mode. Gumagalaw ang pink panel para hindi
- * duplicate page ang sign-in at sign-up, tapos curtain ang bahala sa handoff.
+ * One orbital access console, two auth modes. The control module slides between
+ * sign-in and sign-up while the form behavior and backend handoff stay shared.
  */
 export function AuthSlider({
   initialMode = 'signin',
@@ -40,13 +40,19 @@ export function AuthSlider({
   const [siBusy, setSiBusy] = useState(false)
 
   // Signup feature state: basic details muna; ibang flow ang account type later.
-  const [fullName, setFullName] = useState('')
+  // Hiwalay na boxes ang pangalan (first/middle/last) pero iisang full_name pa
+  // rin ang ipinapasa sa backend — walang binabago sa data layer.
+  const [firstName, setFirstName] = useState('')
+  const [middleName, setMiddleName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [suEmail, setSuEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [suPassword, setSuPassword] = useState('')
   const [suError, setSuError] = useState('')
   const [suFieldErrors, setSuFieldErrors] = useState<{
-    fullName?: string
+    firstName?: string
+    middleName?: string
+    lastName?: string
     email?: string
     phone?: string
     password?: string
@@ -73,11 +79,25 @@ export function AuthSlider({
     setSuFieldErrors({})
 
     // Local rules muna para instant ang feedback bago tumawag sa backend.
+    // First at last required; middle optional (na-validate lang kapag may laman).
+    const validatePart = (value: string, required: boolean) =>
+      required || value.trim() ? validateFullName(value) ?? undefined : undefined
+    // Iisang stored field pa rin: pinagsasama sa full_name, tinatanggal ang blangkong middle.
+    const composedName = [firstName, middleName, lastName]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(' ')
     const errors = {
-      fullName: validateFullName(fullName) ?? undefined,
+      firstName: validatePart(firstName, true),
+      middleName: validatePart(middleName, false),
+      lastName: validatePart(lastName, true),
       email: validateEmail(suEmail) ?? undefined,
       phone: validatePhone(phone) ?? undefined,
       password: validatePassword(suPassword) ?? undefined,
+    }
+    // Bantay sa kabuuang haba kahit valid ang bawat piraso ng pangalan.
+    if (!errors.firstName && !errors.lastName && composedName.length > MAX_FULL_NAME_LENGTH) {
+      errors.lastName = `Hanggang ${MAX_FULL_NAME_LENGTH} character lang ang buong pangalan.`
     }
     if (Object.values(errors).some(Boolean)) {
       setSuFieldErrors(errors)
@@ -89,8 +109,10 @@ export function AuthSlider({
       await signUp({
         email: suEmail,
         password: suPassword,
-        full_name: fullName,
-        phone,
+        full_name: composedName,
+        // Phone is optional; omit it entirely when blank so the backend does not
+        // reject an empty string against the phone format rule.
+        phone: phone.trim() || undefined,
       })
       // Signup intentionally stops at role onboarding; wala pang trusted role.
       go(roleOnboardingPath(safeFrom))
@@ -102,10 +124,10 @@ export function AuthSlider({
 
   return (
     <div className={`auth-slider ${mode === 'signup' ? 'is-signup' : ''}`}>
-      <AuthDoodles />
+      <StationChrome />
 
       {/* Sign-in feature panel */}
-      <form className="auth-half half-signin" onSubmit={submitSignIn} aria-hidden={mode !== 'signin'}>
+      <form className="auth-half half-signin" onSubmit={submitSignIn} aria-hidden={mode !== 'signin'} inert={mode !== 'signin'}>
         <span className="auth-mini-title">Sign in</span>
 
         <label className="field">
@@ -144,49 +166,64 @@ export function AuthSlider({
           <button type="button" onClick={() => setSiError('Facebook sign-in is ready for the Supabase OAuth connection.')}>Facebook</button>
         </div>
 
-        <div className="auth-demo">
-          <div className="divider" />
-          <p className="faint" style={{ margin: '0 0 8px' }}>Try a demo account:</p>
-          <div className="row">
-            {DEMO_ACCOUNTS.map((acc) => (
-              <button
-                type="button"
-                key={acc.email}
-                className="btn btn-sm"
-                onClick={() => {
-                  setSiEmail(acc.email)
-                  setSiPassword(acc.password)
-                }}
-              >
-                {acc.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
       </form>
 
       {/* Signup feature panel */}
-      <form className="auth-half half-signup" onSubmit={submitSignUp} aria-hidden={mode !== 'signup'}>
+      <form className="auth-half half-signup" onSubmit={submitSignUp} aria-hidden={mode !== 'signup'} inert={mode !== 'signup'}>
         <span className="auth-mini-title">Create account</span>
 
-        <label className="field">
-          <span>Full name</span>
-          <input
-            value={fullName}
-            onChange={(e) => {
-              setFullName(e.target.value)
-              setSuFieldErrors((errors) => ({ ...errors, fullName: undefined }))
-            }}
-            placeholder="Juan Dela Cruz"
-            autoComplete="name"
-            maxLength={MAX_FULL_NAME_LENGTH}
-            aria-invalid={Boolean(suFieldErrors.fullName)}
-            aria-describedby={suFieldErrors.fullName ? 'signup-name-error' : undefined}
-            required
-          />
-          {suFieldErrors.fullName && <span id="signup-name-error" className="field-error" role="alert">{suFieldErrors.fullName}</span>}
-        </label>
+        <div className="name-grid">
+          <label className="field">
+            <span>First name</span>
+            <input
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value)
+                setSuFieldErrors((errors) => ({ ...errors, firstName: undefined }))
+              }}
+              placeholder="Juan"
+              autoComplete="given-name"
+              maxLength={40}
+              aria-invalid={Boolean(suFieldErrors.firstName)}
+              aria-describedby={suFieldErrors.firstName ? 'signup-first-error' : undefined}
+              required
+            />
+            {suFieldErrors.firstName && <span id="signup-first-error" className="field-error" role="alert">{suFieldErrors.firstName}</span>}
+          </label>
+          <label className="field">
+            <span>Middle name <span className="faint">(optional)</span></span>
+            <input
+              value={middleName}
+              onChange={(e) => {
+                setMiddleName(e.target.value)
+                setSuFieldErrors((errors) => ({ ...errors, middleName: undefined }))
+              }}
+              placeholder="Santos"
+              autoComplete="additional-name"
+              maxLength={40}
+              aria-invalid={Boolean(suFieldErrors.middleName)}
+              aria-describedby={suFieldErrors.middleName ? 'signup-middle-error' : undefined}
+            />
+            {suFieldErrors.middleName && <span id="signup-middle-error" className="field-error" role="alert">{suFieldErrors.middleName}</span>}
+          </label>
+          <label className="field name-full">
+            <span>Last name</span>
+            <input
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value)
+                setSuFieldErrors((errors) => ({ ...errors, lastName: undefined }))
+              }}
+              placeholder="Dela Cruz"
+              autoComplete="family-name"
+              maxLength={40}
+              aria-invalid={Boolean(suFieldErrors.lastName)}
+              aria-describedby={suFieldErrors.lastName ? 'signup-last-error' : undefined}
+              required
+            />
+            {suFieldErrors.lastName && <span id="signup-last-error" className="field-error" role="alert">{suFieldErrors.lastName}</span>}
+          </label>
+        </div>
         <label className="field">
           <span>Email</span>
           <input
@@ -251,15 +288,20 @@ export function AuthSlider({
       {/* Mode switcher at visual cover ng dalawang forms */}
       <div className="auth-overlay">
         <div className="auth-overlay-doodle" aria-hidden="true">
-          <svg viewBox="0 0 150 150">
-            <path className="overlay-doodle-line" d="M32 116 C54 107 96 107 120 116" />
-            <path className="overlay-doodle-fill" d="M48 55 h54 l-7 47 H55 Z" />
-            <path className="overlay-doodle-line" d="M56 55 V37 Q56 25 68 25 h15 Q95 25 95 37 v18" />
-            <path className="overlay-doodle-line" d="M47 68 H32 M103 68 h16 M66 103 l-5 18 M86 103 l6 18" />
-            <path className="overlay-doodle-line" d="M62 40 h27 M75 25 v30" />
-            <circle cx="27" cy="68" r="5" className="overlay-doodle-dot" />
-            <circle cx="124" cy="68" r="5" className="overlay-doodle-dot" />
-          </svg>
+          <div className="auth-station-porthole">
+            <WalkFigure
+              view="front"
+              walking={false}
+              showGround={false}
+              showMotionLines={false}
+              costume="astronaut"
+              hairStyle="low-fade"
+              hair="#302a28"
+              skin="#c98762"
+              shirt="#f5f7fa"
+              pants="#dbe7f2"
+            />
+          </div>
         </div>
         <div className={`auth-overlay-inner ov-signin ${mode === 'signin' ? 'active' : ''}`}>
           <div className="auth-overlay-brand">
@@ -277,7 +319,7 @@ export function AuthSlider({
             <span className="brand-pole" aria-hidden="true" /> {SHOP_NAME}
           </div>
           <h2>Join the chair club</h2>
-          <p>Four quick details, then your Philabantay account is ready.</p>
+          <p>A few quick details, then your Philabantay account is ready.</p>
           <p className="auth-overlay-sub">May account ka na?</p>
           <button type="button" className="btn" onClick={() => setMode('signin')}>
             Sign in {'->'}
@@ -294,26 +336,17 @@ function roleOnboardingPath(from: string) {
   return `/onboarding/role?from=${encodeURIComponent(safeFrom)}`
 }
 
-function AuthDoodles() {
+function StationChrome() {
   return (
-    <div className="auth-doodles" aria-hidden="true">
-      <svg className="auth-doodle auth-doodle-comb" viewBox="0 0 120 48">
-        <path d="M8 10 Q58 6 112 11 L110 24 Q58 20 9 25 Z" />
-        <path d="M18 24 l-2 15 M30 23 l-1 17 M43 22 v15 M56 22 l1 18 M69 22 l2 15 M82 22 l3 18 M95 23 l3 14" />
-      </svg>
-
-      <svg className="auth-doodle auth-doodle-scissors" viewBox="0 0 98 70">
-        <circle cx="24" cy="17" r="11" />
-        <circle cx="24" cy="53" r="11" />
-        <path d="M33 23 L82 56 M33 47 L82 14 M51 35 l15 10" />
-      </svg>
-
-      <svg className="auth-doodle auth-doodle-spark" viewBox="0 0 64 64">
-        <path d="M32 5 v16 M32 43 v16 M5 32 h16 M43 32 h16 M13 13 l11 11 M40 40 l11 11 M51 13 L40 24 M24 40 L13 51" />
-      </svg>
-
-      <span className="auth-doodle-loop auth-doodle-loop-one" />
-      <span className="auth-doodle-loop auth-doodle-loop-two" />
+    <div className="auth-station-chrome" aria-hidden="true">
+      <span className="auth-station-label">PB ORBITAL ACCESS / MODULE 01</span>
+      <span className="auth-station-status"><i /><i /><i /></span>
+      <span className="auth-station-seam auth-station-seam-left" />
+      <span className="auth-station-seam auth-station-seam-right" />
+      <span className="auth-station-bolt auth-station-bolt-one" />
+      <span className="auth-station-bolt auth-station-bolt-two" />
+      <span className="auth-station-bolt auth-station-bolt-three" />
+      <span className="auth-station-bolt auth-station-bolt-four" />
     </div>
   )
 }

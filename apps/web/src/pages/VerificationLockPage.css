@@ -1,0 +1,114 @@
+.verification-lock {
+  position: relative;
+  width: min(980px, 100%);
+  min-height: clamp(620px, 72vh, 780px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 6px auto 42px;
+  padding: clamp(38px, 7vw, 82px);
+  overflow: hidden;
+  text-align: center;
+  border: 3px solid var(--ink);
+  border-radius: 38px 22px 42px 28px / 28px 42px 24px 38px;
+  background:
+    linear-gradient(rgba(43, 43, 43, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 43, 43, .045) 1px, transparent 1px),
+    var(--paper-soft);
+  background-size: 30px 30px;
+  box-shadow: 11px 14px 0 var(--shadow);
+}
+
+.verification-lock::before,
+.verification-lock::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border: 28px solid color-mix(in srgb, var(--pink) 48%, transparent);
+  border-radius: 50%;
+}
+
+.verification-lock::before { width: 210px; height: 210px; top: -125px; left: -105px; }
+.verification-lock::after { width: 270px; height: 270px; right: -155px; bottom: -165px; }
+
+.verification-lock > * { position: relative; z-index: 1; }
+
+.verification-lock-stamp {
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 47% 53% 55% 45% / 55% 45% 55% 45%;
+  background: var(--yellow);
+  box-shadow: 8px 10px 0 var(--shadow);
+  transform: rotate(-4deg);
+}
+
+.verification-lock-copy { display: grid; justify-items: center; gap: 8px; }
+.verification-lock-copy h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 1.02;
+}
+.verification-lock-copy p {
+  max-width: 720px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+  line-height: 1.45;
+}
+
+.verification-lock-status {
+  min-width: min(100%, 430px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  padding: 15px 22px;
+  border: 2px dashed var(--ink);
+  background: color-mix(in srgb, var(--pink) 55%, var(--paper-soft));
+}
+.verification-lock-status > div { display: grid; text-align: left; }
+.verification-lock-status strong { font: 700 1.25rem 'Kalam', cursive; }
+.verification-lock-status span { color: var(--muted); }
+.verification-lock-dot {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--yellow);
+}
+
+.verification-lock-note {
+  max-width: 660px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 18px;
+  text-align: left;
+  border-left: 4px solid var(--ink);
+  background: color-mix(in srgb, var(--green) 55%, transparent);
+}
+.verification-lock-note p { margin: 0; color: var(--muted); font-size: 1.08rem; }
+.verification-lock-note .doodle-icon { color: #367044; }
+
+.verification-lock .form-error { margin: 0; }
+.verification-lock-signout { min-width: 230px; margin-top: 4px; }
+
+@media (max-width: 640px) {
+  .verification-lock {
+    min-height: calc(100vh - 150px);
+    padding: 34px 20px 40px;
+    border-radius: 26px 18px 30px 20px;
+  }
+  .verification-lock-stamp { width: 118px; height: 118px; }
+  .verification-lock-stamp .doodle-icon { width: 58px; height: 58px; }
+  .verification-lock-status { min-width: 100%; }
+  .verification-lock-note { align-items: center; }
+  .verification-lock-signout { width: 100%; }
+}

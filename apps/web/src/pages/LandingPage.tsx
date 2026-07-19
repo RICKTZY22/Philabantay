@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { AuthSlider } from '../components/AuthSlider'
 import { WalkFigure } from '../components/WalkFigure'
@@ -8,7 +8,16 @@ import './LandingPage.css'
 
 const ACCENT = '#f4b8c4'
 const INK = '#2b2b2b'
-const EASE = 'cubic-bezier(.37,0,.63,1)'
+
+type DayPhase = 'morning' | 'afternoon' | 'dusk' | 'night'
+
+function localDayPhase(now = new Date()): DayPhase {
+  const hour = now.getHours() + now.getMinutes() / 60
+  if (hour >= 5 && hour < 11) return 'morning'
+  if (hour >= 11 && hour < 17) return 'afternoon'
+  if (hour >= 17 && hour < 19.5) return 'dusk'
+  return 'night'
+}
 
 interface Step {
   no: number
@@ -19,6 +28,85 @@ interface Step {
   tags: [string, string]
   footer: string
 }
+
+interface SystemStage {
+  label: string
+  title: string
+  body: string
+}
+
+interface CapabilityGroup {
+  role: string
+  eyebrow: string
+  color: string
+  items: string[]
+}
+
+const SYSTEM_STAGES: SystemStage[] = [
+  {
+    label: '01',
+    title: 'Discover',
+    body: 'Customers compare nearby shops, hours, services, prices, and live chair availability.',
+  },
+  {
+    label: '02',
+    title: 'Request',
+    body: 'A service, barber, date, and time become one trackable reservation request.',
+  },
+  {
+    label: '03',
+    title: 'Confirm',
+    body: 'The shop accepts or declines the request, so everyone sees the same booking status.',
+  },
+  {
+    label: '04',
+    title: 'Serve',
+    body: 'Chat, cut notes, check-in, and in-progress updates keep the visit clear.',
+  },
+  {
+    label: '05',
+    title: 'Complete',
+    body: 'An authorized barber or owner marks the service finished and closes the appointment.',
+  },
+  {
+    label: '06',
+    title: 'Improve',
+    body: 'Only completed visits unlock ratings, history, revenue, and performance insights.',
+  },
+]
+
+const CAPABILITY_GROUPS: CapabilityGroup[] = [
+  {
+    role: 'Customers',
+    eyebrow: 'FIND, BOOK, FOLLOW',
+    color: '#fbe7a2',
+    items: [
+      'Find shops, services, prices, barbers, and open slots',
+      'Book once, then follow the reservation status and reminders',
+      'Chat, keep cut history, and rate only after a completed visit',
+    ],
+  },
+  {
+    role: 'Barbers',
+    eyebrow: 'PLAN, SERVE, FINISH',
+    color: '#bee0f1',
+    items: [
+      'See reservations, shifts, exceptions, and attendance',
+      'Keep cut notes and move visits through the correct status',
+      'Track completed cuts, ratings, and performance signals',
+    ],
+  },
+  {
+    role: 'Shop owners',
+    eyebrow: 'OPERATE, SUPPORT, GROW',
+    color: '#f8cad6',
+    items: [
+      'Set up the shop, hours, services, prices, and staff',
+      'Manage reservations, assignments, attendance, and messages',
+      'Review revenue, visitors, services, ratings, and staff reports',
+    ],
+  },
+]
 
 const CUSTOMER_STEPS: Step[] = [
   {
@@ -139,35 +227,39 @@ const BARBER_STEPS: Step[] = [
 export function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
-  const [audience, setAudience] = useState<'customer' | 'barber'>('customer')
+  const [dayPhase, setDayPhase] = useState<DayPhase>(() => localDayPhase())
   // /login and /signup redirect here carrying the desired form mode + `from`.
   const navState = location.state as { authMode?: 'signin' | 'signup'; from?: string } | null
 
-  // Scroll-driven reveals + the scissor-walker route for "how it works".
-  useJourneyScroll(rootRef, audience)
+  // Ambient scenes are paused when off-screen. The five-step journey itself
+  // stays in normal document flow and never runs a scroll-frame JS loop.
+  useJourneyScroll(rootRef)
 
-  const steps = audience === 'customer' ? CUSTOMER_STEPS : BARBER_STEPS
+  useEffect(() => {
+    const updatePhase = () => setDayPhase(localDayPhase())
+    const timer = window.setInterval(updatePhase, 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const heroVars = { '--accent': ACCENT } as CSSProperties // --walk is set on .phil in CSS
 
   return (
-    <div className="phil" ref={rootRef} style={heroVars}>
+    <div className="phil" ref={rootRef} style={heroVars} data-day-phase={dayPhase}>
       <main className="phil-hero-main" style={{ position: 'relative', zIndex: 1 }}>
+        <SpaceDoodleBackdrop />
         <section className="phil-hero phil-hero-auth">
           {/* The auth slider IS the billboard now — one form, front and center. */}
-          <div className="phil-billboard-col phil-billboard-col-wide">
+          <div className="phil-billboard-col phil-billboard-col-wide phil-auth-station-wrap">
             <AuthSlider
               initialMode={navState?.authMode ?? 'signin'}
               from={navState?.from ?? '/dashboard'}
             />
-            <div className="phil-posts">
-              <div className="phil-post" />
-              <div className="phil-post" />
-            </div>
           </div>
         </section>
 
-        {/* Street */}
-        <div className="phil-street">
+        {/* The hero is intentionally space-only. Keep the legacy street source
+            out of the render tree while the city lives in the final chapter. */}
+        {false && <div className="phil-street">
           <div className="phil-city-label" aria-hidden="true">Paranaque City</div>
           <Building pos={{ left: '2%', bottom: 136 }} w={110} h={214} body="#e7d9c5" roof="#b8a68c" windows={[{ l: 14, t: 22, w: 24, h: 26 }, { l: 60, t: 22, w: 24, h: 26 }, { l: 14, t: 74, w: 24, h: 26 }, { l: 60, t: 74, w: 24, h: 26 }, { l: 14, t: 126, w: 24, h: 26 }, { l: 60, t: 126, w: 24, h: 26 }]} />
           <Building pos={{ left: '12%', bottom: 136 }} w={88} h={150} body="#d9e2ea" roof="#9fb3c2" windows={[{ l: 12, t: 20, w: 22, h: 24 }, { l: 50, t: 20, w: 22, h: 24 }, { l: 12, t: 66, w: 22, h: 24 }, { l: 50, t: 66, w: 22, h: 24 }]} />
@@ -227,133 +319,478 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </main>
 
       {/* How it works */}
       <section id="how" className="phil-how">
-        <ScatterDoodles />
+        <HowStreetBackdrop />
 
-        <div data-anim="s2title" className="phil-how-title">
-          <div style={{ background: ACCENT, border: `2px solid ${INK}`, borderRadius: '255px 15px 225px 15px / 15px 225px 15px 255px', padding: '5px 18px', fontFamily: "'Gochi Hand', cursive", fontSize: 18, boxShadow: '2px 3px 0 rgba(43,43,43,.85)' }}>how it works</div>
-          <h2>
-            {audience === 'customer' ? (
-              <>From scruffy to sharp,<br />in five scribbly steps.</>
-            ) : (
-              <>From open chair to full book,<br />in five shop-side steps.</>
-            )}
-          </h2>
+        <div className="phil-how-title">
+          <div className="phil-how-label">how Philabantay works</div>
+          <h2>One booking, clear from search<br />to finished cut.</h2>
         </div>
 
-        <div className="phil-audience-switch" role="group" aria-label="Choose how-it-works guide">
-          <button
-            type="button"
-            className={audience === 'customer' ? 'is-active' : ''}
-            aria-pressed={audience === 'customer'}
-            onClick={() => setAudience('customer')}
-          >
-            <span className="phil-switch-kicker">I NEED A CUT</span>
-            Customer
-          </button>
-          <span className="phil-switch-flip" aria-hidden="true">
-            <svg viewBox="0 0 46 46"><path d="M10 17 Q16 7 29 10 L35 13 M35 13 L29 15 M35 13 L34 7 M36 29 Q30 39 17 36 L11 33 M11 33 L17 31 M11 33 L12 39" /></svg>
-          </span>
-          <button
-            type="button"
-            className={audience === 'barber' ? 'is-active' : ''}
-            aria-pressed={audience === 'barber'}
-            onClick={() => setAudience('barber')}
-          >
-            <span className="phil-switch-kicker">I RUN A CHAIR</span>
-            Barber
-          </button>
+        <ol className="phil-system-lifecycle" aria-label="Appointment lifecycle">
+          {SYSTEM_STAGES.map((stage, index) => (
+            <li data-reveal key={stage.label} style={{ '--motion-index': index } as CSSProperties}>
+              <span>{stage.label}</span>
+              <div>
+                <h3>{stage.title}</h3>
+                <p>{stage.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div className="phil-role-journeys">
+          <JourneyGuide
+            tone="customer"
+            eyebrow="FOR THE PERSON IN THE CHAIR"
+            title="The customer journey"
+            description="From finding a real opening to reviewing a finished cut."
+            steps={CUSTOMER_STEPS}
+          />
+          <JourneyGuide
+            tone="shop"
+            eyebrow="FOR BARBERS AND OWNERS"
+            title="The shop-side workflow"
+            description="From setting up the shop to serving, closing, and learning from each visit."
+            steps={BARBER_STEPS}
+          />
         </div>
 
-        <div
-          key={audience}
-          data-anim="stepswrap"
-          className={`phil-steps phil-card-stack phil-journey-flip phil-journey-${audience}`}
-          aria-label={`${audience} how-it-works guide`}
-        >
-          <div className="phil-stack-kicker" aria-hidden="true">
-            <span>{audience === 'customer' ? 'YOUR BARBERSHOP RUN' : 'YOUR SHOP-SIDE RUN'}</span>
-            <span>5 QUICK STOPS</span>
-          </div>
-          <div className="phil-stack-orbit phil-stack-orbit-one" aria-hidden="true" />
-          <div className="phil-stack-orbit phil-stack-orbit-two" aria-hidden="true" />
-          <JourneyDoodles />
-          <svg className="phil-route-map" aria-hidden="true">
-            <path data-anim="path-guide" className="phil-path-guide" />
-            <path data-anim="path" className="phil-path" />
-          </svg>
-          <div className="phil-progress-note" aria-hidden="true">scroll to snip 1 - 5</div>
-          <div data-anim="s2walker" className="phil-s2walker" aria-hidden="true">
-            <div style={{ animation: `bob .5s ${EASE} infinite alternate` }}>
-              <svg width="56" height="84" viewBox="0 0 56 84" style={{ overflow: 'visible' }}>
-                <g stroke={INK} strokeLinecap="round" fill="none">
-                  <g style={{ transformBox: 'view-box', transformOrigin: '28px 34px', animation: 'bladeA .4s ease-in-out infinite alternate' }}>
-                    <line x1="28" y1="34" x2="13" y2="76" strokeWidth="5" />
-                    <circle cx="17" cy="15" r="9" strokeWidth="4" />
-                    <line x1="22" y1="23" x2="28" y2="34" strokeWidth="4" />
-                  </g>
-                  <g style={{ transformBox: 'view-box', transformOrigin: '28px 34px', animation: 'bladeB .4s ease-in-out infinite alternate' }}>
-                    <line x1="28" y1="34" x2="43" y2="76" strokeWidth="5" />
-                    <circle cx="39" cy="15" r="9" strokeWidth="4" />
-                    <line x1="34" y1="23" x2="28" y2="34" strokeWidth="4" />
-                  </g>
-                  <circle cx="28" cy="34" r="3.5" fill={INK} strokeWidth="2" />
-                </g>
-              </svg>
-            </div>
-          </div>
-
-          {steps.map((step) => {
-            const rot = step.no % 2 === 1 ? 4 : -4
-            const tilt = step.no % 2 === 1 ? -4 : 4
-            const enterX = step.no % 2 === 1 ? -90 : 90
-            return (
-              <article className={`phil-pile-slot phil-pile-slot-${step.no}`} key={step.no}>
-                <div
-                  data-anim="card"
-                  data-tilt={tilt}
-                  data-order={step.no - 1}
-                  data-enter-x={enterX}
-                  className="phil-card phil-pile-card"
-                  style={{ '--step-color': step.color } as CSSProperties}
-                >
-                  <div className="phil-pile-sheet">
-                    <div className="phil-pile-head">
-                      <div data-anim="icon" data-rot={rot} className="phil-pile-icon" style={{ transform: `rotate(${rot}deg)` }}>
-                        {step.icon}
-                      </div>
-                      <span className="phil-pile-route">Philabantay route</span>
-                      <div data-anim="badge" className="phil-badge-no">
-                        <span className="badge-half badge-left">{step.no}</span>
-                        <span className="badge-half badge-right">{step.no}</span>
-                      </div>
-                    </div>
-                    <span className="step-no">step {step.no}</span>
-                    <h3>{step.title}</h3>
-                    <p>{step.body}</p>
-                    <div className="phil-pile-tags">
-                      {step.tags.map((tag) => <span key={tag}>{tag}</span>)}
-                    </div>
-                  </div>
-                  <div className="phil-pile-footer">
-                    <span>STEP {step.no} OF 5</span>
-                    <strong>{step.footer}</strong>
-                  </div>
-                </div>
+        <section className="phil-capabilities" aria-labelledby="phil-capabilities-title">
+          <header>
+            <span>WHAT THE SYSTEM HANDLES</span>
+            <h2 id="phil-capabilities-title">Useful before, during, and after every cut.</h2>
+            <p>Each role gets the tools it needs without exposing another shop&apos;s work.</p>
+          </header>
+          <div className="phil-capability-grid">
+            {CAPABILITY_GROUPS.map((group, index) => (
+              <article
+                data-reveal
+                key={group.role}
+                style={{ '--capability-color': group.color, '--motion-index': index } as CSSProperties}
+              >
+                <span>{group.eyebrow}</span>
+                <h3>{group.role}</h3>
+                <ul>
+                  {group.items.map((item) => <li key={item}>{item}</li>)}
+                </ul>
               </article>
-            )
-          })}
-        </div>
+            ))}
+          </div>
+        </section>
 
         {/* The shop itself closes the page — walk in scruffy, walk out sharp. */}
         <div className="phil-shopfront-outro">
-          <Storefront />
+          <Storefront fullBleed />
         </div>
       </section>
+    </div>
+  )
+}
+
+function JourneyGuide({
+  tone,
+  eyebrow,
+  title,
+  description,
+  steps,
+}: {
+  tone: 'customer' | 'shop'
+  eyebrow: string
+  title: string
+  description: string
+  steps: Step[]
+}) {
+  return (
+    <section className={`phil-journey-guide is-${tone}`} aria-labelledby={`phil-${tone}-journey-title`}>
+      <header data-reveal>
+        <span>{eyebrow}</span>
+        <h2 id={`phil-${tone}-journey-title`}>{title}</h2>
+        <p>{description}</p>
+      </header>
+      <ol className="phil-journey-list">
+        {steps.map((step) => (
+          <li
+            data-reveal
+            key={step.no}
+            style={{ '--step-color': step.color, '--motion-index': step.no } as CSSProperties}
+          >
+            <div className="phil-journey-step-icon" aria-hidden="true">{step.icon}</div>
+            <div className="phil-journey-step-copy">
+              <span>STEP {step.no} · {step.footer}</span>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function SpaceDoodleBackdrop() {
+  return (
+    <div className="phil-space-world" aria-hidden="true">
+      <div className="phil-space-moon"><span /></div>
+      <div className="phil-space-planet phil-space-planet-one"><span /></div>
+      <div className="phil-space-planet phil-space-planet-two"><span /></div>
+      <div className="phil-space-galaxy phil-space-galaxy-one">
+        <i /><i /><i />
+      </div>
+      <div className="phil-space-galaxy phil-space-galaxy-two">
+        <i /><i /><i />
+      </div>
+      <div className="phil-space-meteors">
+        <i /><i /><i /><i />
+      </div>
+      <div className="phil-space-astronaut phil-space-astronaut-one">
+        <WalkFigure
+          view="front"
+          walking={false}
+          showGround={false}
+          showMotionLines={false}
+          costume="astronaut"
+          hairStyle="curly"
+          hair="#3f3029"
+          skin="#d69b74"
+          shirt="#f5f7fa"
+          pants="#dbe7f2"
+        />
+      </div>
+      <div className="phil-space-astronaut phil-space-astronaut-two">
+        <WalkFigure
+          view="front"
+          walking={false}
+          showGround={false}
+          showMotionLines={false}
+          costume="astronaut"
+          hairStyle="bob"
+          hair="#302a28"
+          skin="#e0ad86"
+          shirt="#f5f7fa"
+          pants="#dbe7f2"
+        />
+      </div>
+      <div className="phil-space-ship">
+        <svg viewBox="0 0 210 100">
+          <g stroke={INK} strokeWidth="5" strokeLinejoin="round">
+            <path d="M30 58 Q86 8 177 31 L199 51 Q126 83 35 72 Z" fill="#f8f5eb" />
+            <path d="M73 43 Q96 9 128 30 L136 43 Z" fill="#8ecce6" />
+            <path d="M36 59 L8 43 L19 71 Z" fill="#f4b8c4" />
+            <circle cx="94" cy="55" r="8" fill="#ffd76a" />
+            <circle cx="122" cy="51" r="8" fill="#9c87d8" />
+            <circle cx="150" cy="47" r="8" fill="#6fc1c9" />
+          </g>
+        </svg>
+      </div>
+      <svg className="phil-space-constellation" viewBox="0 0 220 120">
+        <path d="M18 83 L55 41 L98 64 L139 24 L194 56" />
+        {[['18','83'], ['55','41'], ['98','64'], ['139','24'], ['194','56']].map(([cx, cy]) => (
+          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4" />
+        ))}
+      </svg>
+      <div className="phil-space-horizon" />
+    </div>
+  )
+}
+
+/** One lightweight sky layer stays pinned behind the compact workflow guide. */
+function HowStreetBackdrop() {
+  return (
+    <div className="phil-how-neighborhood" aria-hidden="true">
+      <div className="phil-sky-cloud phil-sky-cloud-one" />
+      <div className="phil-sky-balloon">
+        <svg viewBox="0 0 100 150">
+          <g stroke={INK} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M50 8 C20 8 8 30 13 57 C18 84 34 101 50 112 C66 101 82 84 87 57 C92 30 80 8 50 8 Z" fill="#f4b8c4" />
+            <path d="M50 10 C35 22 32 77 50 109 C68 77 65 22 50 10 Z" fill="#fbe7a2" />
+            <path d="M18 53 H82" fill="none" opacity=".45" />
+            <path d="M37 107 L32 126 M63 107 L68 126" fill="none" />
+            <path d="M29 125 H71 L66 143 H34 Z" fill="#c99563" />
+          </g>
+        </svg>
+      </div>
+      <div className="phil-sky-birds phil-sky-birds-one">
+        <svg viewBox="0 0 180 55"><path d="M5 35 Q22 14 39 35 Q56 14 73 35 M96 29 Q109 12 123 29 Q137 12 153 29" /></svg>
+      </div>
+      {false && <>
+      <div className="phil-how-sidewalk phil-how-sidewalk-top"><span /></div>
+      <div className="phil-how-sidewalk phil-how-sidewalk-middle"><span /></div>
+
+      <div className="phil-how-building-group phil-how-building-group-left">
+        <Building
+          pos={{ left: 18, top: 96 }}
+          w={126}
+          h={214}
+          body="#dfd1bd"
+          roof="#a89478"
+          windows={[
+            { l: 15, t: 25, w: 24, h: 26 }, { l: 78, t: 25, w: 24, h: 26 },
+            { l: 15, t: 80, w: 24, h: 26 }, { l: 78, t: 80, w: 24, h: 26 },
+            { l: 15, t: 135, w: 24, h: 26 }, { l: 78, t: 135, w: 24, h: 26 },
+          ]}
+        />
+        <Building
+          pos={{ left: 132, top: 164 }}
+          w={98}
+          h={146}
+          body="#d5e3ec"
+          roof="#93aebf"
+          windows={[
+            { l: 13, t: 24, w: 22, h: 24 }, { l: 57, t: 24, w: 22, h: 24 },
+            { l: 13, t: 75, w: 22, h: 24 }, { l: 57, t: 75, w: 22, h: 24 },
+          ]}
+        />
+      </div>
+
+      <div className="phil-how-building-group phil-how-building-group-right">
+        <Building
+          pos={{ right: 20, top: 92 }}
+          w={132}
+          h={218}
+          body="#d8dfea"
+          roof="#929fb9"
+          windows={[
+            { l: 16, t: 25, w: 24, h: 26 }, { l: 81, t: 25, w: 24, h: 26 },
+            { l: 16, t: 82, w: 24, h: 26 }, { l: 81, t: 82, w: 24, h: 26 },
+            { l: 16, t: 139, w: 24, h: 26 }, { l: 81, t: 139, w: 24, h: 26 },
+          ]}
+        />
+        <Building
+          pos={{ right: 140, top: 155 }}
+          w={102}
+          h={155}
+          body="#eddfbd"
+          roof="#bcae77"
+          windows={[
+            { l: 13, t: 24, w: 23, h: 25 }, { l: 61, t: 24, w: 23, h: 25 },
+            { l: 13, t: 77, w: 23, h: 25 }, { l: 61, t: 77, w: 23, h: 25 },
+          ]}
+        />
+      </div>
+
+      <div className="phil-how-walker phil-how-walker-one">
+        <WalkFigure
+          hairStyle="curly"
+          hair="#3f3029"
+          shirt="#4f6fd9"
+          pants="#3a4668"
+          skin="#d69b74"
+          showMotionLines={false}
+          showGround={false}
+        />
+      </div>
+      <div className="phil-how-walker phil-how-walker-two">
+        <WalkFigure
+          direction="left"
+          hairStyle="bob"
+          hair="#2f2926"
+          shirt="#d94f4f"
+          pants="#6b4a3a"
+          skin="#e0ad86"
+          showMotionLines={false}
+          showGround={false}
+        />
+      </div>
+      <div className="phil-how-walker phil-how-walker-three">
+        <WalkFigure
+          hairStyle="low-fade"
+          hair="#2f2926"
+          shirt="#3f9b62"
+          pants="#4a5d3a"
+          skin="#a96f50"
+          showMotionLines={false}
+          showGround={false}
+          fresh
+        />
+      </div>
+      <div className="phil-how-walker phil-how-walker-four">
+        <WalkFigure
+          direction="left"
+          hairStyle="spiky"
+          hair="#2f2926"
+          shirt="#e0913f"
+          pants="#7a4a68"
+          skin="#c98762"
+          showMotionLines={false}
+          showGround={false}
+        />
+      </div>
+      </>}
+      {false && <><JourneyCityBackdrop /><JourneyDoodles /><ScatterDoodles /></>}
+    </div>
+  )
+}
+
+function JourneyCityBackdrop() {
+  return (
+    <div className="phil-journey-city" aria-hidden="true">
+      <div className="phil-journey-city-row phil-journey-city-row-one">
+        <div className="phil-journey-skyline">
+          <Building
+            pos={{ left: 18, bottom: 76 }}
+            w={118}
+            h={188}
+            body="#d5e3ec"
+            roof="#93aebf"
+            windows={[
+              { l: 14, t: 24, w: 22, h: 24 }, { l: 70, t: 24, w: 22, h: 24 },
+              { l: 14, t: 76, w: 22, h: 24 }, { l: 70, t: 76, w: 22, h: 24 },
+              { l: 14, t: 128, w: 22, h: 24 }, { l: 70, t: 128, w: 22, h: 24 },
+            ]}
+          />
+          <Building
+            pos={{ left: 122, bottom: 76 }}
+            w={92}
+            h={132}
+            body="#ead7d1"
+            roof="#c5a29a"
+            windows={[
+              { l: 12, t: 23, w: 20, h: 23 }, { l: 52, t: 23, w: 20, h: 23 },
+              { l: 12, t: 72, w: 20, h: 23 }, { l: 52, t: 72, w: 20, h: 23 },
+            ]}
+          />
+          <Building
+            pos={{ right: 22, bottom: 76 }}
+            w={124}
+            h={202}
+            body="#eddfbd"
+            roof="#bcae77"
+            windows={[
+              { l: 15, t: 25, w: 23, h: 25 }, { l: 76, t: 25, w: 23, h: 25 },
+              { l: 15, t: 80, w: 23, h: 25 }, { l: 76, t: 80, w: 23, h: 25 },
+              { l: 15, t: 135, w: 23, h: 25 }, { l: 76, t: 135, w: 23, h: 25 },
+            ]}
+          />
+          <span className="phil-journey-city-tree phil-journey-city-tree-one" />
+          <span className="phil-journey-city-lamp phil-journey-city-lamp-one" />
+        </div>
+        <div className="phil-journey-road"><span /></div>
+        <div className="phil-journey-city-walker is-right">
+          <WalkFigure
+            hairStyle="messy"
+            hair="#3f3029"
+            shirt="#4f6fd9"
+            pants="#3a4668"
+            skin="#d69b74"
+            showGround={false}
+            showMotionLines={false}
+          />
+        </div>
+      </div>
+
+      <div className="phil-journey-city-row phil-journey-city-row-two">
+        <div className="phil-journey-skyline">
+          <Building
+            pos={{ left: 10, bottom: 76 }}
+            w={106}
+            h={158}
+            body="#dbe6d5"
+            roof="#99b38f"
+            windows={[
+              { l: 13, t: 24, w: 22, h: 24 }, { l: 62, t: 24, w: 22, h: 24 },
+              { l: 13, t: 76, w: 22, h: 24 }, { l: 62, t: 76, w: 22, h: 24 },
+            ]}
+          />
+          <Building
+            pos={{ right: 112, bottom: 76 }}
+            w={98}
+            h={140}
+            body="#dfd1bd"
+            roof="#a89478"
+            windows={[
+              { l: 13, t: 24, w: 21, h: 23 }, { l: 57, t: 24, w: 21, h: 23 },
+              { l: 13, t: 73, w: 21, h: 23 }, { l: 57, t: 73, w: 21, h: 23 },
+            ]}
+          />
+          <Building
+            pos={{ right: 18, bottom: 76 }}
+            w={102}
+            h={186}
+            body="#d8dfea"
+            roof="#929fb9"
+            windows={[
+              { l: 13, t: 24, w: 22, h: 24 }, { l: 60, t: 24, w: 22, h: 24 },
+              { l: 13, t: 77, w: 22, h: 24 }, { l: 60, t: 77, w: 22, h: 24 },
+              { l: 13, t: 130, w: 22, h: 24 }, { l: 60, t: 130, w: 22, h: 24 },
+            ]}
+          />
+          <span className="phil-journey-city-tree phil-journey-city-tree-two" />
+          <span className="phil-journey-city-lamp phil-journey-city-lamp-two" />
+        </div>
+        <div className="phil-journey-road"><span /></div>
+        <div className="phil-journey-city-walker is-left">
+          <WalkFigure
+            direction="left"
+            hairStyle="bob"
+            hair="#2f2926"
+            shirt="#d94f4f"
+            pants="#6b4a3a"
+            skin="#e0ad86"
+            showGround={false}
+            showMotionLines={false}
+          />
+        </div>
+      </div>
+
+      <div className="phil-journey-city-row phil-journey-city-row-three">
+        <div className="phil-journey-skyline">
+          <Building
+            pos={{ left: 20, bottom: 76 }}
+            w={126}
+            h={204}
+            body="#eadcc8"
+            roof="#bfa887"
+            windows={[
+              { l: 15, t: 25, w: 23, h: 25 }, { l: 77, t: 25, w: 23, h: 25 },
+              { l: 15, t: 81, w: 23, h: 25 }, { l: 77, t: 81, w: 23, h: 25 },
+              { l: 15, t: 137, w: 23, h: 25 }, { l: 77, t: 137, w: 23, h: 25 },
+            ]}
+          />
+          <Building
+            pos={{ left: 134, bottom: 76 }}
+            w={88}
+            h={136}
+            body="#efd2cf"
+            roof="#c59690"
+            windows={[
+              { l: 11, t: 23, w: 20, h: 23 }, { l: 50, t: 23, w: 20, h: 23 },
+              { l: 11, t: 72, w: 20, h: 23 }, { l: 50, t: 72, w: 20, h: 23 },
+            ]}
+          />
+          <Building
+            pos={{ right: 24, bottom: 76 }}
+            w={118}
+            h={174}
+            body="#d5e4d5"
+            roof="#94b294"
+            windows={[
+              { l: 14, t: 24, w: 22, h: 24 }, { l: 70, t: 24, w: 22, h: 24 },
+              { l: 14, t: 77, w: 22, h: 24 }, { l: 70, t: 77, w: 22, h: 24 },
+              { l: 14, t: 128, w: 22, h: 24 }, { l: 70, t: 128, w: 22, h: 24 },
+            ]}
+          />
+          <span className="phil-journey-city-tree phil-journey-city-tree-three" />
+          <span className="phil-journey-city-lamp phil-journey-city-lamp-three" />
+        </div>
+        <div className="phil-journey-road"><span /></div>
+        <div className="phil-journey-city-walker is-right is-late">
+          <WalkFigure
+            hairStyle="taper-fade"
+            hair="#2f2926"
+            shirt="#3f9b62"
+            pants="#4a5d3a"
+            skin="#a96f50"
+            showGround={false}
+            showMotionLines={false}
+            fresh
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -383,37 +820,6 @@ function JourneyDoodles() {
             <circle cx="40" cy="66" r="5" fill="#f4b8c4" opacity=".8" />
             <circle cx="80" cy="66" r="5" fill="#f4b8c4" opacity=".8" />
           </svg>
-        </div>
-      </div>
-
-      <div data-anim="doodle" data-depth="26" className="phil-journey-doodle phil-route-person phil-route-customer">
-        <div className="phil-person-bob">
-          <WalkFigure
-            hairStyle="curly"
-            hair="#3f3029"
-            shirt="#4f6fd9"
-            pants="#3a4668"
-            skin="#d69b74"
-            walking={false}
-            showGround={false}
-            showMotionLines={false}
-          />
-        </div>
-      </div>
-
-      <div data-anim="doodle" data-depth="30" className="phil-journey-doodle phil-route-person phil-route-barber">
-        <div className="phil-person-bob phil-person-bob-late">
-          <WalkFigure
-            hairStyle="low-fade"
-            hair="#2f2926"
-            shirt="#d9903d"
-            pants="#4a5d3a"
-            skin="#b97952"
-            walking={false}
-            fresh
-            showGround={false}
-            showMotionLines={false}
-          />
         </div>
       </div>
 

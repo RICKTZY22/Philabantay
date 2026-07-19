@@ -24,10 +24,12 @@ of people:
 - **Shop owners** get a shop dashboard and a rotating join code they hand to
   barbers they have hired.
 
-Everything runs today against an in-browser **mock backend** (data lives in
-`localStorage`), so every feature is fully clickable with no server. The whole
-app is written to swap that mock for real Supabase later without touching the
-screens. See [ARCHITECTURE.md](ARCHITECTURE.md#the-one-big-idea-the-databackend-contract).
+The same UI can run against the in-browser **mock backend** or the implemented
+Express/Supabase backend. `VITE_DATA_BACKEND=api` selects `ApiBackend`; the
+current local frontend configuration uses that real API path. See
+[ARCHITECTURE.md](ARCHITECTURE.md#the-one-big-idea-the-databackend-contract).
+Some screens are ahead of their durable backend contract, so the
+current-versus-planned notes below remain important.
 
 The look is a hand-drawn "doodle" theme with GSAP animations and a barber-curtain
 transition between routes.
@@ -46,22 +48,15 @@ The important rule, enforced in the mock and documented for production in
 always makes you a customer.** Choosing "barber" or "shop owner" during
 onboarding only records a *request* (`requested_role`) and sets
 `verification_status: 'pending'`. The account stays customer-level until a
-trusted process (or, for barbers, a valid shop join code) promotes it. That is
-why a "pending barber" still sees a barber-flavored dashboard preview but cannot
-actually take bookings yet.
+trusted process promotes it. The current owner lock is implemented across UI,
+Express, and RLS; the complete verification-submission/admin-review path and
+consistent pending-barber lock remain planned. A join code links an already
+granted barber to a shop—it must never grant the professional role itself.
 
-### Demo accounts
+### Accounts
 
-Handy for clicking around (defined in `apps/web/src/config/demoAccounts.ts`, all
-password `demo1234`):
-
-| Role | Email | Who |
-| --- | --- | --- |
-| Customer | `customer@demo.test` | Demo Customer |
-| Barber | `miguel@demo.test` | Miguel Santos (employed at the Tondo shop) |
-| Shop owner | `owner@demo.test` | Elena Reyes (owns the Tondo shop) |
-
-The landing page also has one-click buttons that autofill these.
+No login is bundled with the application. Create an account through the signup
+flow; local and deployed environments use the same account-creation path.
 
 ---
 
@@ -87,7 +82,7 @@ a single hamburger drawer (`components/AppMenu.tsx`), whose items come from
 | **Customer dashboard** | Home for customers: greeting, quick stats, the live shop map with filters, nearest-shops list, appointment calendar, and a rewards/stamp card. | `components/CustomerDashboard.tsx` (rendered by `pages/AppDashboardPage.tsx`) |
 | **Live shop map** | Leaflet map of shops with open/busy/closed pins and a "you are here" marker. | `components/ShopMap.tsx` |
 | **Appointments** | Booking calendar with upcoming and past cuts, a detail modal to cancel or reschedule, and post-cut ratings. | `pages/AppointmentsPage.tsx`, `components/AppointmentCalendar.tsx` |
-| **Chat** | Inbox + thread for messaging a shop. Realtime-ish updates across tabs. | `pages/ChatPage.tsx` |
+| **Chat** | Inbox + thread for messaging a shop. Mock mode uses cross-tab broadcasts; API mode uses authenticated polling behind the same subscription contract. | `pages/ChatPage.tsx` |
 | **Favorites** | Heart a shop or a barber. Two separate lists (shops vs barbers). | Backed by `favorites.*`; UI on shop/barber pages and dashboard |
 
 ### Barber app
@@ -102,7 +97,11 @@ a single hamburger drawer (`components/AppMenu.tsx`), whose items come from
 
 | Feature | What it does | Lives in |
 | --- | --- | --- |
-| **Owner dashboard** | Reservations overview, metrics, charts, and the **barber join code** with a "generate new code" button. Only the join code is live data; the reservations/metrics/charts are sample data for the preview. | `components/ShopOwnerDashboard.tsx` |
+| **Owner overview** | Live shop bookings drive range-based completed-service-value/deal charts, top visitors, top services, and join-code controls. | `components/ShopOwnerDashboard.tsx` |
+| **Owner reservations** | Searchable/filterable shop ledger with customer, barber, service, time, state, and owner booking actions. | `components/ShopOwnerDashboard.tsx` |
+| **Owner staff** | Staff roster, weekly shift editing, attendance, notes, and shift-change decisions. | `components/OwnerStaffPanel.tsx` |
+| **Owner barber performance** | Rating/count, completed cuts, completed service value, no-show signal, and accepting-bookings state. | `components/ShopOwnerDashboard.tsx` |
+| **Owner messages** | Customer shop threads plus staff conversations in the shared notebook chat UI. | `pages/ChatPage.tsx` |
 
 ### Account and shared
 
@@ -239,9 +238,10 @@ Customer clicks "Chat shop" (ShopProfilePage or the dashboard shop popup)
        and to other tabs via a BroadcastChannel
 ```
 
-Files: `pages/ChatPage.tsx`, `services/mock/MockBackend.ts` (`chat.*`). The
-"realtime" is a `BroadcastChannel` in the mock; Phase 2 swaps in Supabase
-Realtime behind the same `chat.subscribe()` contract.
+Files: `pages/ChatPage.tsx`, `services/mock/MockBackend.ts` (`chat.*`), and
+`packages/shared/src/services.ts` (`ApiBackend`). Mock mode uses
+`BroadcastChannel`; API mode delivers local sends immediately and polls the
+protected message route behind the same `chat.subscribe()` contract.
 
 ### 5. Finding a nearby, currently-open shop or barber
 
@@ -296,8 +296,12 @@ Most flows are genuinely wired through the data layer. A few pieces are
 intentionally sample/placeholder for the demo and are **not** backed by the
 service contract yet:
 
-- **Owner dashboard** reservations, metrics, and charts are static sample data.
-  Only the join code (`employment.getMyShopJoinCode` / `rotate...`) is live.
+- **Owner dashboard** reservations, metrics, staff, and performance now use
+  backend records. Money totals remain completed booked-service value estimates
+  because payment collection is not modeled.
+- **Owner Shop Setup** is incomplete in the frontend/shared contract even though
+  basic Express shop/service create/update routes exist. Shop publication,
+  operating hours, photos, and policies are planned.
 - **Shop profile** live-queue, opening hours, photo gallery, "latest review",
   and per-barber "specialty" labels are hardcoded/local, not from the backend.
 - **Notification settings** persist only to `localStorage` (`bsh_prefs`); nothing

@@ -1,0 +1,1905 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Philabantay System Atlas</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Philabantay System Atlas" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Philabantay System Atlas&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(--background) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: light-dark(rgb(255 255 255), rgb(24 24 24));
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 12.5px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;philabantay-system-atlas&quot;&gt;
+  &lt;div class=&quot;viz-controls&quot; role=&quot;group&quot; aria-label=&quot;Choose a system view&quot;&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;system&quot; aria-pressed=&quot;true&quot;&gt;End-to-end&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;booking&quot; aria-pressed=&quot;false&quot;&gt;Booking&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;roles&quot; aria-pressed=&quot;false&quot;&gt;Roles &amp;amp; UML&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;dfd&quot; aria-pressed=&quot;false&quot;&gt;Data flow&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;database&quot; aria-pressed=&quot;false&quot;&gt;Database&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;security&quot; aria-pressed=&quot;false&quot;&gt;Security&lt;/button&gt;
+    &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-view=&quot;roadmap&quot; aria-pressed=&quot;false&quot;&gt;Roadmap&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;atlas-legend viz-row&quot; aria-label=&quot;Status legend&quot;&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;&lt;span class=&quot;atlas-swatch status-current&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;Current&lt;/span&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;&lt;span class=&quot;atlas-swatch status-partial&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;Partial&lt;/span&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;&lt;span class=&quot;atlas-swatch status-planned&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;Planned&lt;/span&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;&lt;span class=&quot;atlas-swatch status-decision&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;Decision&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;atlas-stage&quot;&gt;
+    &lt;svg class=&quot;atlas-svg&quot; viewBox=&quot;0 0 960 640&quot; role=&quot;img&quot; aria-labelledby=&quot;atlas-svg-title atlas-svg-desc&quot;&gt;
+      &lt;title id=&quot;atlas-svg-title&quot;&gt;Philabantay end-to-end system&lt;/title&gt;
+      &lt;desc id=&quot;atlas-svg-desc&quot;&gt;A visual map from account creation through verification, shop setup, booking, fulfillment, ratings, closeout, and analytics.&lt;/desc&gt;
+      &lt;g id=&quot;atlas-svg-content&quot;&gt;&lt;/g&gt;
+    &lt;/svg&gt;
+    &lt;div class=&quot;atlas-mobile&quot; id=&quot;atlas-mobile&quot; aria-label=&quot;Mobile flow view&quot;&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;card atlas-detail text-small&quot; id=&quot;atlas-detail&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;style&gt;
+  #philabantay-system-atlas {
+    color: var(--foreground);
+    width: 100%;
+  }
+
+  #philabantay-system-atlas .atlas-legend {
+    margin-block: 0.75rem;
+  }
+
+  #philabantay-system-atlas .atlas-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    margin-inline-end: 0.35rem;
+    vertical-align: -0.05rem;
+  }
+
+  #philabantay-system-atlas .status-current {
+    background: var(--viz-series-1);
+  }
+
+  #philabantay-system-atlas .status-partial {
+    background: var(--viz-series-2);
+  }
+
+  #philabantay-system-atlas .status-planned {
+    background: var(--viz-series-3);
+  }
+
+  #philabantay-system-atlas .status-decision {
+    background: var(--viz-series-4);
+  }
+
+  #philabantay-system-atlas .atlas-stage {
+    position: relative;
+    width: 100%;
+  }
+
+  #philabantay-system-atlas .atlas-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    font-family: inherit;
+    color: var(--foreground);
+  }
+
+  #philabantay-system-atlas .atlas-svg .node-shape,
+  #philabantay-system-atlas .atlas-svg .cluster-shape {
+    fill: var(--card);
+    stroke: var(--border);
+    stroke-width: 1.5;
+  }
+
+  #philabantay-system-atlas .atlas-svg .node.current .node-shape {
+    fill: color-mix(in srgb, var(--viz-series-1) 13%, var(--card));
+  }
+
+  #philabantay-system-atlas .atlas-svg .node.partial .node-shape {
+    fill: color-mix(in srgb, var(--viz-series-2) 13%, var(--card));
+  }
+
+  #philabantay-system-atlas .atlas-svg .node.planned .node-shape {
+    fill: color-mix(in srgb, var(--viz-series-3) 13%, var(--card));
+  }
+
+  #philabantay-system-atlas .atlas-svg .node.decision .node-shape {
+    fill: color-mix(in srgb, var(--viz-series-4) 13%, var(--card));
+  }
+
+  #philabantay-system-atlas .atlas-svg .node.planned .node-shape {
+    stroke-dasharray: 5 4;
+  }
+
+  #philabantay-system-atlas .atlas-svg .node-title,
+  #philabantay-system-atlas .atlas-svg .cluster-title {
+    fill: var(--foreground);
+    font-weight: 500;
+  }
+
+  #philabantay-system-atlas .atlas-svg .node-copy,
+  #philabantay-system-atlas .atlas-svg .node-status,
+  #philabantay-system-atlas .atlas-svg .cluster-item,
+  #philabantay-system-atlas .atlas-svg .edge-label,
+  #philabantay-system-atlas .atlas-svg .lane-label {
+    fill: var(--muted-foreground);
+    font-weight: 400;
+  }
+
+  #philabantay-system-atlas .atlas-svg .status-mark.current {
+    fill: var(--viz-series-1);
+  }
+
+  #philabantay-system-atlas .atlas-svg .status-mark.partial {
+    fill: var(--viz-series-2);
+  }
+
+  #philabantay-system-atlas .atlas-svg .status-mark.planned {
+    fill: var(--viz-series-3);
+  }
+
+  #philabantay-system-atlas .atlas-svg .status-mark.decision {
+    fill: var(--viz-series-4);
+  }
+
+  #philabantay-system-atlas .atlas-svg .edge,
+  #philabantay-system-atlas .atlas-svg .timeline-line {
+    fill: none;
+    stroke: var(--muted-foreground);
+    stroke-width: 1.5;
+  }
+
+  #philabantay-system-atlas .atlas-svg .edge-label {
+    paint-order: stroke;
+    stroke: var(--background);
+    stroke-width: 5;
+    stroke-linejoin: round;
+  }
+
+  #philabantay-system-atlas .atlas-svg .cluster-shape {
+    fill: color-mix(in srgb, var(--muted) 30%, transparent);
+  }
+
+  #philabantay-system-atlas .atlas-svg .cluster-divider {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+
+  #philabantay-system-atlas .atlas-mobile {
+    display: none;
+  }
+
+  #philabantay-system-atlas .atlas-detail {
+    margin-top: 0.75rem;
+  }
+
+  #philabantay-system-atlas .mobile-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    align-items: start;
+    position: relative;
+    padding-block: 0.65rem;
+  }
+
+  #philabantay-system-atlas .mobile-step:not(:last-child)::after {
+    content: &quot;&quot;;
+    position: absolute;
+    inset-inline-start: 0.45rem;
+    top: 1.7rem;
+    bottom: -0.45rem;
+    border-inline-start: 1px solid var(--border);
+  }
+
+  #philabantay-system-atlas .mobile-dot {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    margin-top: 0.2rem;
+    z-index: 1;
+  }
+
+  #philabantay-system-atlas .mobile-title {
+    display: block;
+    font-weight: 500;
+  }
+
+  #philabantay-system-atlas .mobile-copy {
+    display: block;
+    color: var(--muted-foreground);
+  }
+
+  @media (max-width: 680px) {
+    #philabantay-system-atlas .atlas-svg {
+      display: none;
+    }
+
+    #philabantay-system-atlas .atlas-mobile {
+      display: block;
+    }
+  }
+&lt;/style&gt;
+
+&lt;script&gt;
+  (function () {
+    var root = document.getElementById(&quot;philabantay-system-atlas&quot;);
+    var svg = root.querySelector(&quot;.atlas-svg&quot;);
+    var content = document.getElementById(&quot;atlas-svg-content&quot;);
+    var detail = document.getElementById(&quot;atlas-detail&quot;);
+    var mobile = document.getElementById(&quot;atlas-mobile&quot;);
+    var title = document.getElementById(&quot;atlas-svg-title&quot;);
+    var desc = document.getElementById(&quot;atlas-svg-desc&quot;);
+    var statusNames = {
+      current: &quot;Current&quot;,
+      partial: &quot;Partial&quot;,
+      planned: &quot;Planned&quot;,
+      decision: &quot;Decision&quot;
+    };
+
+    function escapeText(value) {
+      return String(value)
+        .replace(/&amp;/g, &quot;&amp;amp;&quot;)
+        .replace(/&lt;/g, &quot;&amp;lt;&quot;)
+        .replace(/&gt;/g, &quot;&amp;gt;&quot;)
+        .replace(/&quot;/g, &quot;&amp;quot;&quot;)
+        .replace(/&#x27;/g, &quot;&amp;#039;&quot;);
+    }
+
+    function textLines(lines, x, y, className, lineGap, anchor) {
+      var values = Array.isArray(lines) ? lines : [lines];
+      var out = &#x27;&lt;text class=&quot;&#x27; + className + &#x27;&quot; x=&quot;&#x27; + x + &#x27;&quot; y=&quot;&#x27; + y + &#x27;&quot; text-anchor=&quot;&#x27; + (anchor || &quot;start&quot;) + &#x27;&quot;&gt;&#x27;;
+      values.forEach(function (line, index) {
+        out += &#x27;&lt;tspan x=&quot;&#x27; + x + &#x27;&quot; dy=&quot;&#x27; + (index === 0 ? 0 : lineGap) + &#x27;&quot;&gt;&#x27; + escapeText(line) + &#x27;&lt;/tspan&gt;&#x27;;
+      });
+      return out + &quot;&lt;/text&gt;&quot;;
+    }
+
+    function nodeMarkup(node) {
+      var shape;
+      if (node.shape === &quot;diamond&quot;) {
+        var cx = node.x + node.w / 2;
+        var cy = node.y + node.h / 2;
+        shape = &#x27;&lt;polygon class=&quot;node-shape&quot; points=&quot;&#x27; +
+          cx + &quot;,&quot; + node.y + &quot; &quot; +
+          (node.x + node.w) + &quot;,&quot; + cy + &quot; &quot; +
+          cx + &quot;,&quot; + (node.y + node.h) + &quot; &quot; +
+          node.x + &quot;,&quot; + cy + &#x27;&quot;&gt;&lt;/polygon&gt;&#x27;;
+      } else {
+        shape = &#x27;&lt;rect class=&quot;node-shape&quot; x=&quot;&#x27; + node.x + &#x27;&quot; y=&quot;&#x27; + node.y + &#x27;&quot; width=&quot;&#x27; + node.w + &#x27;&quot; height=&quot;&#x27; + node.h + &#x27;&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&#x27;;
+      }
+
+      var titleX = node.shape === &quot;diamond&quot; ? node.x + node.w / 2 : node.x + 18;
+      var titleY = node.y + (node.shape === &quot;diamond&quot; ? 36 : 28);
+      var anchor = node.shape === &quot;diamond&quot; ? &quot;middle&quot; : &quot;start&quot;;
+      var titleGap = 18;
+      var titleLinesValue = Array.isArray(node.title) ? node.title : [node.title];
+      var copyY = titleY + (titleLinesValue.length * titleGap) + 8;
+      var markX = node.shape === &quot;diamond&quot; ? node.x + node.w / 2 : node.x + 12;
+      var markY = node.shape === &quot;diamond&quot; ? node.y + node.h - 20 : node.y + node.h - 15;
+      var statusX = node.shape === &quot;diamond&quot; ? node.x + node.w / 2 : node.x + node.w - 12;
+      var statusAnchor = node.shape === &quot;diamond&quot; ? &quot;middle&quot; : &quot;end&quot;;
+
+      return &#x27;&lt;g class=&quot;node &#x27; + node.status + &#x27;&quot;&gt;&#x27; +
+        shape +
+        &#x27;&lt;circle class=&quot;status-mark &#x27; + node.status + &#x27;&quot; cx=&quot;&#x27; + markX + &#x27;&quot; cy=&quot;&#x27; + markY + &#x27;&quot; r=&quot;5&quot;&gt;&lt;/circle&gt;&#x27; +
+        textLines(titleLinesValue, titleX, titleY, &quot;node-title&quot;, titleGap, anchor) +
+        (node.copy ? textLines(node.copy, node.shape === &quot;diamond&quot; ? node.x + node.w / 2 : node.x + 18, copyY, &quot;node-copy text-small&quot;, 16, anchor) : &quot;&quot;) +
+        textLines(statusNames[node.status], statusX, node.y + node.h - 11, &quot;node-status text-small&quot;, 14, statusAnchor) +
+        &quot;&lt;/g&gt;&quot;;
+    }
+
+    function edgePoints(from, to) {
+      var fromCx = from.x + from.w / 2;
+      var fromCy = from.y + from.h / 2;
+      var toCx = to.x + to.w / 2;
+      var toCy = to.y + to.h / 2;
+      var dx = toCx - fromCx;
+      var dy = toCy - fromCy;
+      var start;
+      var end;
+
+      if (Math.abs(dx) &gt;= Math.abs(dy)) {
+        start = { x: dx &gt;= 0 ? from.x + from.w : from.x, y: fromCy };
+        end = { x: dx &gt;= 0 ? to.x : to.x + to.w, y: toCy };
+      } else {
+        start = { x: fromCx, y: dy &gt;= 0 ? from.y + from.h : from.y };
+        end = { x: toCx, y: dy &gt;= 0 ? to.y : to.y + to.h };
+      }
+      return { start: start, end: end };
+    }
+
+    function edgeMarkup(edge, nodeMap) {
+      var from = nodeMap[edge.from];
+      var to = nodeMap[edge.to];
+      var points = edgePoints(from, to);
+      var start = points.start;
+      var end = points.end;
+      var horizontal = Math.abs(end.x - start.x) &gt;= Math.abs(end.y - start.y);
+      var path;
+
+      if (horizontal) {
+        var midX = (start.x + end.x) / 2;
+        path = &quot;M &quot; + start.x + &quot; &quot; + start.y + &quot; C &quot; + midX + &quot; &quot; + start.y + &quot;, &quot; + midX + &quot; &quot; + end.y + &quot;, &quot; + end.x + &quot; &quot; + end.y;
+      } else {
+        var midY = (start.y + end.y) / 2;
+        path = &quot;M &quot; + start.x + &quot; &quot; + start.y + &quot; C &quot; + start.x + &quot; &quot; + midY + &quot;, &quot; + end.x + &quot; &quot; + midY + &quot;, &quot; + end.x + &quot; &quot; + end.y;
+      }
+
+      var labelX = (start.x + end.x) / 2 + (edge.labelDx || 0);
+      var labelY = (start.y + end.y) / 2 - 7 + (edge.labelDy || 0);
+      return &#x27;&lt;path class=&quot;edge&quot; d=&quot;&#x27; + path + &#x27;&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27; +
+        (edge.label ? textLines(edge.label, labelX, labelY, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;) : &quot;&quot;);
+    }
+
+    function graphMarkup(view) {
+      var map = {};
+      view.nodes.forEach(function (node) {
+        map[node.id] = node;
+      });
+      var out = &#x27;&lt;defs&gt;&lt;marker id=&quot;atlas-arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;var(--muted-foreground)&quot;&gt;&lt;/path&gt;&lt;/marker&gt;&lt;/defs&gt;&#x27;;
+      view.edges.forEach(function (edge) {
+        out += edgeMarkup(edge, map);
+      });
+      view.nodes.forEach(function (node) {
+        out += nodeMarkup(node);
+      });
+      return out;
+    }
+
+    function clusterMarkup(cluster) {
+      var out = &#x27;&lt;g class=&quot;cluster&quot;&gt;&#x27;;
+      out += &#x27;&lt;rect class=&quot;cluster-shape&quot; x=&quot;&#x27; + cluster.x + &#x27;&quot; y=&quot;&#x27; + cluster.y + &#x27;&quot; width=&quot;&#x27; + cluster.w + &#x27;&quot; height=&quot;&#x27; + cluster.h + &#x27;&quot; rx=&quot;12&quot;&gt;&lt;/rect&gt;&#x27;;
+      out += textLines(cluster.title, cluster.x + 16, cluster.y + 27, &quot;cluster-title&quot;, 16, &quot;start&quot;);
+      out += &#x27;&lt;line class=&quot;cluster-divider&quot; x1=&quot;&#x27; + (cluster.x + 14) + &#x27;&quot; y1=&quot;&#x27; + (cluster.y + 39) + &#x27;&quot; x2=&quot;&#x27; + (cluster.x + cluster.w - 14) + &#x27;&quot; y2=&quot;&#x27; + (cluster.y + 39) + &#x27;&quot;&gt;&lt;/line&gt;&#x27;;
+      var columns = cluster.columns || 1;
+      var perColumn = Math.ceil(cluster.items.length / columns);
+      cluster.items.forEach(function (item, index) {
+        var column = Math.floor(index / perColumn);
+        var row = index % perColumn;
+        var itemX = cluster.x + 16 + column * ((cluster.w - 32) / columns);
+        var itemY = cluster.y + 62 + row * 23;
+        out += &#x27;&lt;circle class=&quot;status-mark &#x27; + (item.status || &quot;current&quot;) + &#x27;&quot; cx=&quot;&#x27; + itemX + &#x27;&quot; cy=&quot;&#x27; + (itemY - 4) + &#x27;&quot; r=&quot;4&quot;&gt;&lt;/circle&gt;&#x27;;
+        out += textLines(item.label, itemX + 11, itemY, &quot;cluster-item text-small&quot;, 14, &quot;start&quot;);
+      });
+      return out + &quot;&lt;/g&gt;&quot;;
+    }
+
+    function databaseMarkup() {
+      var clusters = [
+        {
+          x: 20, y: 35, w: 275, h: 145, title: &quot;Identity&quot;,
+          items: [
+            { label: &quot;auth.users&quot; },
+            { label: &quot;users&quot; },
+            { label: &quot;barbers&quot; }
+          ]
+        },
+        {
+          x: 340, y: 35, w: 285, h: 170, title: &quot;Shop &amp; catalogue&quot;, columns: 2,
+          items: [
+            { label: &quot;shops&quot; },
+            { label: &quot;services&quot; },
+            { label: &quot;hiring_listings&quot; },
+            { label: &quot;shop_join_codes&quot; }
+          ]
+        },
+        {
+          x: 665, y: 35, w: 275, h: 225, title: &quot;Employment &amp; staff&quot;, columns: 2,
+          items: [
+            { label: &quot;barber_employment&quot; },
+            { label: &quot;barber_applications&quot; },
+            { label: &quot;shift_patterns&quot; },
+            { label: &quot;shift_exceptions&quot; },
+            { label: &quot;attendance_records&quot; },
+            { label: &quot;shift_change_requests&quot; },
+            { label: &quot;staff_notes&quot; }
+          ]
+        },
+        {
+          x: 20, y: 330, w: 285, h: 175, title: &quot;Booking truth&quot;,
+          items: [
+            { label: &quot;appointments&quot; },
+            { label: &quot;appointment_events&quot; },
+            { label: &quot;ratings&quot; }
+          ]
+        },
+        {
+          x: 350, y: 330, w: 275, h: 175, title: &quot;Communication&quot;,
+          items: [
+            { label: &quot;conversations&quot; },
+            { label: &quot;messages&quot; },
+            { label: &quot;notification_preferences&quot; }
+          ]
+        },
+        {
+          x: 670, y: 330, w: 270, h: 175, title: &quot;Personal &amp; operations&quot;,
+          items: [
+            { label: &quot;favorite_shops&quot; },
+            { label: &quot;favorite_barbers&quot; },
+            { label: &quot;bug_reports&quot; }
+          ]
+        }
+      ];
+      var out = &#x27;&lt;defs&gt;&lt;marker id=&quot;atlas-arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;var(--muted-foreground)&quot;&gt;&lt;/path&gt;&lt;/marker&gt;&lt;/defs&gt;&#x27;;
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 295 108 C 315 108, 320 115, 340 115&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;owns / extends&quot;, 318, 92, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 625 120 C 645 120, 645 135, 665 135&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;employs&quot;, 646, 104, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 485 205 C 485 260, 162 270, 162 330&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;service snapshot&quot;, 330, 267, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 802 260 C 802 292, 220 290, 220 330&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;assigned barber&quot;, 520, 287, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 305 418 C 330 418, 330 418, 350 418&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;visit context&quot;, 328, 403, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      clusters.forEach(function (cluster) {
+        out += clusterMarkup(cluster);
+      });
+      out += textLines(&quot;22 public tables • Row Level Security enabled&quot;, 480, 575, &quot;lane-label&quot;, 16, &quot;middle&quot;);
+      out += textLines(&quot;Planned additions: verification evidence • shop hours/media/publication • closeout • payment/outbox&quot;, 480, 605, &quot;lane-label text-small&quot;, 16, &quot;middle&quot;);
+      return out;
+    }
+
+    function securityMarkup() {
+      var clusters = [
+        {
+          x: 25, y: 150, w: 205, h: 320, title: &quot;1 • Browser — untrusted&quot;,
+          items: [
+            { label: &quot;Supabase session&quot; },
+            { label: &quot;Bearer access token&quot; },
+            { label: &quot;Shared DTO validation&quot; },
+            { label: &quot;Helpful UI guards&quot; }
+          ]
+        },
+        {
+          x: 265, y: 150, w: 205, h: 320, title: &quot;2 • Express API&quot;,
+          items: [
+            { label: &quot;JWT verification&quot; },
+            { label: &quot;Role + verification&quot;, status: &quot;partial&quot; },
+            { label: &quot;Owner / participant scope&quot; },
+            { label: &quot;Zod request validation&quot; },
+            { label: &quot;Service role bypasses RLS&quot; },
+            { label: &quot;Rate limits&quot;, status: &quot;planned&quot; }
+          ]
+        },
+        {
+          x: 505, y: 150, w: 205, h: 320, title: &quot;3 • Postgres&quot;,
+          items: [
+            { label: &quot;RLS tenant isolation&quot; },
+            { label: &quot;Foreign keys + checks&quot; },
+            { label: &quot;RPC actor/state checks&quot; },
+            { label: &quot;Version locking&quot; },
+            { label: &quot;Overlap exclusion&quot; },
+            { label: &quot;Immutable events&quot; }
+          ]
+        },
+        {
+          x: 745, y: 150, w: 190, h: 320, title: &quot;4 • Private systems&quot;,
+          items: [
+            { label: &quot;Supabase Auth&quot; },
+            { label: &quot;Private ID storage&quot;, status: &quot;planned&quot; },
+            { label: &quot;Notification outbox&quot;, status: &quot;planned&quot; },
+            { label: &quot;Audit / monitoring&quot;, status: &quot;partial&quot; },
+            { label: &quot;Backups + recovery&quot;, status: &quot;planned&quot; }
+          ]
+        }
+      ];
+      var threats = [
+        { x: 25, label: &quot;Self-promotion&quot; },
+        { x: 250, label: &quot;Cross-shop IDOR&quot; },
+        { x: 475, label: &quot;Double booking&quot; },
+        { x: 700, label: &quot;Forged completion&quot; }
+      ];
+      var out = &#x27;&lt;defs&gt;&lt;marker id=&quot;atlas-arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;var(--muted-foreground)&quot;&gt;&lt;/path&gt;&lt;/marker&gt;&lt;/defs&gt;&#x27;;
+      threats.forEach(function (threat, index) {
+        out += &#x27;&lt;g class=&quot;node decision&quot;&gt;&lt;rect class=&quot;node-shape&quot; x=&quot;&#x27; + threat.x + &#x27;&quot; y=&quot;35&quot; width=&quot;190&quot; height=&quot;55&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&#x27;;
+        out += textLines(threat.label, threat.x + 95, 68, &quot;node-title&quot;, 16, &quot;middle&quot;);
+        out += &quot;&lt;/g&gt;&quot;;
+        var targetX = 128 + index * 240;
+        out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M &#x27; + (threat.x + 95) + &#x27; 90 C &#x27; + (threat.x + 95) + &#x27; 115, &#x27; + targetX + &#x27; 120, &#x27; + targetX + &#x27; 150&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      });
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 230 310 L 265 310&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 470 310 L 505 310&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 710 310 L 745 310&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      clusters.forEach(function (cluster) {
+        out += clusterMarkup(cluster);
+      });
+      out += textLines(&quot;An action is trusted only after API authorization and database enforcement agree.&quot;, 480, 550, &quot;lane-label&quot;, 16, &quot;middle&quot;);
+      return out;
+    }
+
+    function dfdMarkup() {
+      var groups = [
+        {
+          x: 20, y: 55, w: 180, h: 460, title: &quot;External actors&quot;,
+          items: [
+            { label: &quot;Customer&quot; },
+            { label: &quot;Barber&quot; },
+            { label: &quot;Shop owner&quot; },
+            { label: &quot;Admin&quot;, status: &quot;planned&quot; },
+            { label: &quot;Scheduler&quot;, status: &quot;partial&quot; }
+          ]
+        },
+        {
+          x: 255, y: 25, w: 385, h: 550, title: &quot;Domain processes&quot;, columns: 2,
+          items: [
+            { label: &quot;P1 Identity &amp; verification&quot;, status: &quot;partial&quot; },
+            { label: &quot;P2 Shop catalogue&quot;, status: &quot;partial&quot; },
+            { label: &quot;P3 Hiring &amp; employment&quot;, status: &quot;partial&quot; },
+            { label: &quot;P4 Availability &amp; booking&quot; },
+            { label: &quot;P5 Fulfillment &amp; closeout&quot;, status: &quot;partial&quot; },
+            { label: &quot;P6 Chat &amp; notification&quot;, status: &quot;partial&quot; },
+            { label: &quot;P7 Ratings &amp; analytics&quot;, status: &quot;partial&quot; }
+          ]
+        },
+        {
+          x: 695, y: 25, w: 245, h: 550, title: &quot;Data stores&quot;,
+          items: [
+            { label: &quot;D1 Auth users &amp; profiles&quot; },
+            { label: &quot;D2 Verification evidence&quot;, status: &quot;planned&quot; },
+            { label: &quot;D3 Shops/services/media&quot;, status: &quot;partial&quot; },
+            { label: &quot;D4 Employment/workforce&quot; },
+            { label: &quot;D5 Appointments/events&quot; },
+            { label: &quot;D6 Conversations/messages&quot; },
+            { label: &quot;D7 Ratings/payments&quot;, status: &quot;partial&quot; },
+            { label: &quot;D8 Notification/audit&quot;, status: &quot;partial&quot; }
+          ]
+        }
+      ];
+      var out = &#x27;&lt;defs&gt;&lt;marker id=&quot;atlas-arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;6&quot; markerHeight=&quot;6&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M 0 0 L 10 5 L 0 10 z&quot; fill=&quot;var(--muted-foreground)&quot;&gt;&lt;/path&gt;&lt;/marker&gt;&lt;/defs&gt;&#x27;;
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 200 235 C 225 235, 230 235, 255 235&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;requests • evidence • actions&quot;, 228, 218, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 255 370 C 230 370, 225 370, 200 370&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;status • schedules • insights&quot;, 228, 395, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 640 225 C 665 225, 670 225, 695 225&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;authorized writes&quot;, 668, 208, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      out += &#x27;&lt;path class=&quot;edge&quot; d=&quot;M 695 385 C 670 385, 665 385, 640 385&quot; marker-end=&quot;url(#atlas-arrow)&quot;&gt;&lt;/path&gt;&#x27;;
+      out += textLines(&quot;scoped state&quot;, 668, 410, &quot;edge-label text-small&quot;, 14, &quot;middle&quot;);
+      groups.forEach(function (group) {
+        out += clusterMarkup(group);
+      });
+      out += textLines(&quot;The browser never writes trusted roles or lifecycle states directly.&quot;, 480, 615, &quot;lane-label&quot;, 16, &quot;middle&quot;);
+      return out;
+    }
+
+    function roadmapMarkup() {
+      var nodes = [
+        { id: &quot;h1&quot;, x: 15, y: 45, w: 135, h: 82, title: [&quot;Jul 09&quot;, &quot;Mock MVP&quot;], copy: [&quot;Doodle UI&quot;], status: &quot;current&quot; },
+        { id: &quot;h2&quot;, x: 170, y: 45, w: 135, h: 82, title: [&quot;Jul 11&quot;, &quot;Routing&quot;], copy: [&quot;Landing pass&quot;], status: &quot;current&quot; },
+        { id: &quot;h3&quot;, x: 325, y: 45, w: 135, h: 82, title: [&quot;Jul 13&quot;, &quot;Security&quot;], copy: [&quot;Role expansion&quot;], status: &quot;current&quot; },
+        { id: &quot;h4&quot;, x: 480, y: 45, w: 135, h: 82, title: [&quot;Jul 16&quot;, &quot;Dashboards&quot;], copy: [&quot;Audit pass&quot;], status: &quot;current&quot; },
+        { id: &quot;h5&quot;, x: 635, y: 45, w: 135, h: 82, title: [&quot;Jul 17&quot;, &quot;Real backend&quot;], copy: [&quot;Supabase + API&quot;], status: &quot;partial&quot; },
+        { id: &quot;h6&quot;, x: 790, y: 45, w: 150, h: 82, title: [&quot;Jul 18&quot;, &quot;Booking truth&quot;], copy: [&quot;Lifecycle + docs&quot;], status: &quot;partial&quot; },
+
+        { id: &quot;a&quot;, x: 15, y: 260, w: 135, h: 82, title: [&quot;A&quot;, &quot;Baseline&quot;], copy: [&quot;Tests + modularity&quot;], status: &quot;planned&quot; },
+        { id: &quot;b&quot;, x: 170, y: 260, w: 135, h: 82, title: [&quot;B&quot;, &quot;Verification&quot;], copy: [&quot;Admin review&quot;], status: &quot;planned&quot; },
+        { id: &quot;c&quot;, x: 325, y: 260, w: 135, h: 82, title: [&quot;C&quot;, &quot;Shop setup&quot;], copy: [&quot;Publish + map&quot;], status: &quot;planned&quot; },
+        { id: &quot;d&quot;, x: 480, y: 260, w: 135, h: 82, title: [&quot;D&quot;, &quot;Hiring&quot;], copy: [&quot;Safe employment&quot;], status: &quot;planned&quot; },
+        { id: &quot;e&quot;, x: 635, y: 260, w: 135, h: 82, title: [&quot;E&quot;, &quot;Operations UI&quot;], copy: [&quot;All role actions&quot;], status: &quot;planned&quot; },
+        { id: &quot;f&quot;, x: 790, y: 260, w: 150, h: 82, title: [&quot;F&quot;, &quot;Closeout&quot;], copy: [&quot;Attention queue&quot;], status: &quot;planned&quot; },
+
+        { id: &quot;g&quot;, x: 90, y: 470, w: 140, h: 82, title: [&quot;G&quot;, &quot;Ratings&quot;], copy: [&quot;Trust + moderation&quot;], status: &quot;planned&quot; },
+        { id: &quot;h&quot;, x: 255, y: 470, w: 140, h: 82, title: [&quot;H&quot;, &quot;Analytics&quot;], copy: [&quot;Finalized facts&quot;], status: &quot;planned&quot; },
+        { id: &quot;i&quot;, x: 420, y: 470, w: 140, h: 82, title: [&quot;I&quot;, &quot;Polish&quot;], copy: [&quot;Notify + a11y&quot;], status: &quot;planned&quot; },
+        { id: &quot;j&quot;, x: 585, y: 470, w: 140, h: 82, title: [&quot;J&quot;, &quot;Commerce&quot;], copy: [&quot;Optional&quot;], status: &quot;decision&quot; },
+        { id: &quot;k&quot;, x: 750, y: 470, w: 140, h: 82, title: [&quot;K&quot;, &quot;Production&quot;], copy: [&quot;Release + operate&quot;], status: &quot;planned&quot; }
+      ];
+      var edges = [
+        { from: &quot;h1&quot;, to: &quot;h2&quot; }, { from: &quot;h2&quot;, to: &quot;h3&quot; }, { from: &quot;h3&quot;, to: &quot;h4&quot; },
+        { from: &quot;h4&quot;, to: &quot;h5&quot; }, { from: &quot;h5&quot;, to: &quot;h6&quot; }, { from: &quot;h6&quot;, to: &quot;a&quot;, label: &quot;stabilize first&quot;, labelDy: 10 },
+        { from: &quot;a&quot;, to: &quot;b&quot; }, { from: &quot;b&quot;, to: &quot;c&quot; }, { from: &quot;c&quot;, to: &quot;d&quot; },
+        { from: &quot;d&quot;, to: &quot;e&quot; }, { from: &quot;e&quot;, to: &quot;f&quot; }, { from: &quot;f&quot;, to: &quot;g&quot;, label: &quot;operational truth&quot;, labelDy: 10 },
+        { from: &quot;g&quot;, to: &quot;h&quot; }, { from: &quot;h&quot;, to: &quot;i&quot; }, { from: &quot;i&quot;, to: &quot;j&quot; }, { from: &quot;j&quot;, to: &quot;k&quot; }
+      ];
+      return graphMarkup({ nodes: nodes, edges: edges });
+    }
+
+    var views = {
+      system: {
+        title: &quot;Philabantay end-to-end system&quot;,
+        desc: &quot;A visual map from account creation through verification, shop setup, booking, fulfillment, ratings, closeout, and analytics.&quot;,
+        detail: &quot;The booking core is current; professional verification, complete Shop Setup, and daily closeout are the largest planned gaps.&quot;,
+        mobile: [
+          [&quot;Create account&quot;, &quot;Customer permissions are the safe starting point.&quot;, &quot;current&quot;],
+          [&quot;Choose customer or professional path&quot;, &quot;Barber and owner requests remain restricted while pending.&quot;, &quot;partial&quot;],
+          [&quot;Admin verification&quot;, &quot;Review evidence before granting professional privileges.&quot;, &quot;planned&quot;],
+          [&quot;Shop Setup or employment&quot;, &quot;Owners publish a shop; barbers join a verified shop.&quot;, &quot;partial&quot;],
+          [&quot;Discover and request&quot;, &quot;Customer chooses service, barber preference, date, and time.&quot;, &quot;current&quot;],
+          [&quot;Accept and assign&quot;, &quot;Owner accepts, declines, or assigns an eligible barber.&quot;, &quot;current&quot;],
+          [&quot;Check in and perform service&quot;, &quot;Code, start, and finish events establish physical fulfillment.&quot;, &quot;current&quot;],
+          [&quot;Confirm, dispute, or time out&quot;, &quot;Finish does not immediately mean completed.&quot;, &quot;current&quot;],
+          [&quot;Rate, close out, and analyze&quot;, &quot;Only finalized facts feed trust and shop reporting.&quot;, &quot;partial&quot;]
+        ],
+        nodes: [
+          { id: &quot;signup&quot;, x: 35, y: 45, w: 155, h: 82, title: &quot;Create account&quot;, copy: [&quot;Base access: customer&quot;], status: &quot;current&quot; },
+          { id: &quot;customer&quot;, x: 250, y: 25, w: 175, h: 82, title: &quot;Customer active&quot;, copy: [&quot;No verification&quot;], status: &quot;current&quot; },
+          { id: &quot;professional&quot;, x: 250, y: 145, w: 175, h: 90, title: [&quot;Barber / owner&quot;, &quot;request&quot;], copy: [&quot;Owner partial • barber planned&quot;], status: &quot;partial&quot; },
+          { id: &quot;review&quot;, x: 500, y: 145, w: 175, h: 90, title: &quot;Admin review&quot;, copy: [&quot;Approve • reject • RFI&quot;], status: &quot;planned&quot; },
+          { id: &quot;shop&quot;, x: 750, y: 60, w: 175, h: 90, title: &quot;Owner Shop Setup&quot;, copy: [&quot;Basic writes • publishing planned&quot;], status: &quot;partial&quot; },
+          { id: &quot;employment&quot;, x: 750, y: 185, w: 175, h: 90, title: [&quot;Barber hiring&quot;, &quot;&amp; employment&quot;], copy: [&quot;Active core current&quot;], status: &quot;partial&quot; },
+          { id: &quot;discover&quot;, x: 35, y: 350, w: 175, h: 90, title: &quot;Discover &amp; request&quot;, copy: [&quot;Shop • service • time&quot;], status: &quot;current&quot; },
+          { id: &quot;accept&quot;, x: 275, y: 350, w: 175, h: 90, title: &quot;Accept &amp; assign&quot;, copy: [&quot;Owner decision&quot;], status: &quot;current&quot; },
+          { id: &quot;service&quot;, x: 515, y: 350, w: 175, h: 90, title: [&quot;Check in&quot;, &quot;Perform service&quot;], copy: [&quot;Barber event chain&quot;], status: &quot;current&quot; },
+          { id: &quot;confirm&quot;, x: 755, y: 350, w: 175, h: 90, title: [&quot;Confirm&quot;, &quot;or dispute&quot;], copy: [&quot;Customer / timer&quot;], status: &quot;current&quot; },
+          { id: &quot;rating&quot;, x: 275, y: 520, w: 175, h: 82, title: &quot;Verified rating&quot;, copy: [&quot;Completed visit only&quot;], status: &quot;current&quot; },
+          { id: &quot;closeout&quot;, x: 515, y: 520, w: 175, h: 82, title: &quot;Daily closeout&quot;, copy: [&quot;Review uncertain visits&quot;], status: &quot;planned&quot; },
+          { id: &quot;analytics&quot;, x: 755, y: 520, w: 175, h: 82, title: &quot;Owner analytics&quot;, copy: [&quot;Finalized facts only&quot;], status: &quot;partial&quot; }
+        ],
+        edges: [
+          { from: &quot;signup&quot;, to: &quot;customer&quot;, label: &quot;customer&quot; },
+          { from: &quot;signup&quot;, to: &quot;professional&quot;, label: &quot;professional&quot; },
+          { from: &quot;professional&quot;, to: &quot;review&quot;, label: &quot;evidence&quot; },
+          { from: &quot;review&quot;, to: &quot;shop&quot;, label: &quot;owner approved&quot; },
+          { from: &quot;review&quot;, to: &quot;employment&quot;, label: &quot;barber approved&quot; },
+          { from: &quot;customer&quot;, to: &quot;discover&quot; },
+          { from: &quot;shop&quot;, to: &quot;discover&quot;, label: &quot;published catalogue&quot; },
+          { from: &quot;discover&quot;, to: &quot;accept&quot; },
+          { from: &quot;employment&quot;, to: &quot;accept&quot;, label: &quot;eligible staff&quot; },
+          { from: &quot;accept&quot;, to: &quot;service&quot; },
+          { from: &quot;service&quot;, to: &quot;confirm&quot; },
+          { from: &quot;confirm&quot;, to: &quot;rating&quot;, label: &quot;completed&quot; },
+          { from: &quot;confirm&quot;, to: &quot;closeout&quot;, label: &quot;unresolved&quot; },
+          { from: &quot;rating&quot;, to: &quot;analytics&quot; },
+          { from: &quot;closeout&quot;, to: &quot;analytics&quot; }
+        ]
+      },
+      booking: {
+        title: &quot;Appointment lifecycle&quot;,
+        desc: &quot;The authoritative appointment state machine from requested through completion, cancellation, no-show, expiry, or dispute.&quot;,
+        detail: &quot;The backend lifecycle is current while the complete cross-role UI is partial. Finish opens awaiting confirmation; it does not complete the visit immediately.&quot;,
+        mobile: [
+          [&quot;Requested&quot;, &quot;Owner must decide before the request expires.&quot;, &quot;current&quot;],
+          [&quot;Confirmed&quot;, &quot;Owner accepts and an eligible barber is assigned.&quot;, &quot;current&quot;],
+          [&quot;Checked in&quot;, &quot;Customer PIN or audited owner fallback.&quot;, &quot;current&quot;],
+          [&quot;In progress&quot;, &quot;Only the assigned active barber can start.&quot;, &quot;current&quot;],
+          [&quot;Awaiting confirmation&quot;, &quot;Barber finished; customer can confirm or dispute.&quot;, &quot;current&quot;],
+          [&quot;Completed&quot;, &quot;Customer confirms or the 120-minute deadline passes.&quot;, &quot;current&quot;],
+          [&quot;Side exits&quot;, &quot;Declined, expired, cancelled, customer no-show, or disputed.&quot;, &quot;current&quot;]
+        ],
+        nodes: [
+          { id: &quot;requested&quot;, x: 30, y: 255, w: 150, h: 82, title: &quot;Requested&quot;, copy: [&quot;15-minute response&quot;], status: &quot;current&quot; },
+          { id: &quot;decision&quot;, x: 225, y: 245, w: 155, h: 105, title: [&quot;Owner&quot;, &quot;decision&quot;], copy: [], status: &quot;decision&quot;, shape: &quot;diamond&quot; },
+          { id: &quot;declined&quot;, x: 415, y: 45, w: 155, h: 82, title: &quot;Declined&quot;, copy: [&quot;Reason recorded&quot;], status: &quot;current&quot; },
+          { id: &quot;confirmed&quot;, x: 415, y: 255, w: 155, h: 82, title: &quot;Confirmed&quot;, copy: [&quot;Accepted + assigned&quot;], status: &quot;current&quot; },
+          { id: &quot;expired&quot;, x: 210, y: 495, w: 155, h: 82, title: &quot;Expired&quot;, copy: [&quot;No response&quot;], status: &quot;current&quot; },
+          { id: &quot;cancelled&quot;, x: 405, y: 495, w: 155, h: 82, title: &quot;Cancelled&quot;, copy: [&quot;Before start&quot;], status: &quot;current&quot; },
+          { id: &quot;noshow&quot;, x: 600, y: 495, w: 165, h: 82, title: &quot;Customer no-show&quot;, copy: [&quot;After grace period&quot;], status: &quot;current&quot; },
+          { id: &quot;checked&quot;, x: 610, y: 255, w: 150, h: 82, title: &quot;Checked in&quot;, copy: [&quot;Code / fallback&quot;], status: &quot;current&quot; },
+          { id: &quot;progress&quot;, x: 800, y: 255, w: 150, h: 82, title: &quot;In progress&quot;, copy: [&quot;Assigned barber&quot;], status: &quot;current&quot; },
+          { id: &quot;await&quot;, x: 790, y: 60, w: 160, h: 90, title: [&quot;Awaiting&quot;, &quot;confirmation&quot;], copy: [&quot;Finish recorded&quot;], status: &quot;current&quot; },
+          { id: &quot;complete&quot;, x: 600, y: 60, w: 150, h: 82, title: &quot;Completed&quot;, copy: [&quot;Confirm / timeout&quot;], status: &quot;current&quot; },
+          { id: &quot;disputed&quot;, x: 600, y: 160, w: 150, h: 72, title: &quot;Disputed&quot;, copy: [&quot;Needs resolution&quot;], status: &quot;current&quot; }
+        ],
+        edges: [
+          { from: &quot;requested&quot;, to: &quot;decision&quot; },
+          { from: &quot;decision&quot;, to: &quot;declined&quot;, label: &quot;decline&quot; },
+          { from: &quot;decision&quot;, to: &quot;confirmed&quot;, label: &quot;accept&quot; },
+          { from: &quot;requested&quot;, to: &quot;expired&quot;, label: &quot;deadline&quot; },
+          { from: &quot;requested&quot;, to: &quot;cancelled&quot;, label: &quot;cancel&quot; },
+          { from: &quot;confirmed&quot;, to: &quot;cancelled&quot;, label: &quot;cancel&quot; },
+          { from: &quot;confirmed&quot;, to: &quot;noshow&quot;, label: &quot;no check-in&quot; },
+          { from: &quot;confirmed&quot;, to: &quot;checked&quot;, label: &quot;valid code&quot; },
+          { from: &quot;checked&quot;, to: &quot;progress&quot;, label: &quot;start&quot; },
+          { from: &quot;progress&quot;, to: &quot;await&quot;, label: &quot;finish&quot; },
+          { from: &quot;await&quot;, to: &quot;complete&quot;, label: &quot;confirm / timeout&quot; },
+          { from: &quot;await&quot;, to: &quot;disputed&quot;, label: &quot;dispute&quot; },
+          { from: &quot;disputed&quot;, to: &quot;complete&quot;, label: &quot;resolved fulfilled&quot; },
+          { from: &quot;disputed&quot;, to: &quot;cancelled&quot;, label: &quot;resolved otherwise&quot; }
+        ]
+      },
+      roles: {
+        title: &quot;Roles and domain relationships&quot;,
+        desc: &quot;A UML-style relationship map separating identity, professional verification, shop ownership, employment, bookings, events, and ratings.&quot;,
+        detail: &quot;Granted role, verification status, shop ownership, and active employment are separate facts and must all be checked where relevant.&quot;,
+        mobile: [
+          [&quot;Auth user → public profile&quot;, &quot;Authentication identity and application authorization remain separate.&quot;, &quot;current&quot;],
+          [&quot;Customer&quot;, &quot;Books appointments, messages participants, and rates completed visits.&quot;, &quot;current&quot;],
+          [&quot;Barber&quot;, &quot;Requires verification and active employment for shop operations.&quot;, &quot;partial&quot;],
+          [&quot;Owner&quot;, &quot;Requires verification and owns one or more shop records.&quot;, &quot;partial&quot;],
+          [&quot;Admin&quot;, &quot;Reviews professional evidence and trusted status changes.&quot;, &quot;planned&quot;],
+          [&quot;Appointment aggregate&quot;, &quot;Links customer, barber, shop, service, events, and one rating.&quot;, &quot;current&quot;]
+        ],
+        nodes: [
+          { id: &quot;auth&quot;, x: 40, y: 45, w: 150, h: 78, title: &quot;Auth user&quot;, copy: [&quot;Supabase identity&quot;], status: &quot;current&quot; },
+          { id: &quot;profile&quot;, x: 265, y: 45, w: 180, h: 88, title: &quot;User profile&quot;, copy: [&quot;Role + verification&quot;], status: &quot;current&quot; },
+          { id: &quot;verify&quot;, x: 520, y: 45, w: 185, h: 88, title: [&quot;Verification&quot;, &quot;submission&quot;], copy: [&quot;Evidence + decision&quot;], status: &quot;planned&quot; },
+          { id: &quot;admin&quot;, x: 780, y: 45, w: 150, h: 78, title: &quot;Admin&quot;, copy: [&quot;Trusted reviewer&quot;], status: &quot;planned&quot; },
+          { id: &quot;customer&quot;, x: 70, y: 245, w: 155, h: 80, title: &quot;Customer&quot;, copy: [&quot;Base capability&quot;], status: &quot;current&quot; },
+          { id: &quot;barber&quot;, x: 295, y: 205, w: 155, h: 80, title: &quot;Barber&quot;, copy: [&quot;Professional profile&quot;], status: &quot;current&quot; },
+          { id: &quot;owner&quot;, x: 295, y: 340, w: 155, h: 80, title: &quot;Shop owner&quot;, copy: [&quot;Verified operator&quot;], status: &quot;partial&quot; },
+          { id: &quot;employment&quot;, x: 520, y: 205, w: 180, h: 88, title: &quot;Employment stint&quot;, copy: [&quot;Barber ↔ shop&quot;], status: &quot;current&quot; },
+          { id: &quot;shop&quot;, x: 520, y: 340, w: 180, h: 88, title: &quot;Shop&quot;, copy: [&quot;Owner + catalogue&quot;], status: &quot;current&quot; },
+          { id: &quot;service&quot;, x: 765, y: 205, w: 165, h: 80, title: &quot;Service&quot;, copy: [&quot;Price + duration&quot;], status: &quot;current&quot; },
+          { id: &quot;appointment&quot;, x: 285, y: 515, w: 190, h: 88, title: &quot;Appointment&quot;, copy: [&quot;Lifecycle root&quot;], status: &quot;current&quot; },
+          { id: &quot;event&quot;, x: 545, y: 515, w: 165, h: 80, title: &quot;Event history&quot;, copy: [&quot;Append-only&quot;], status: &quot;current&quot; },
+          { id: &quot;rating&quot;, x: 780, y: 515, w: 150, h: 80, title: &quot;Rating&quot;, copy: [&quot;0..1 per visit&quot;], status: &quot;current&quot; }
+        ],
+        edges: [
+          { from: &quot;auth&quot;, to: &quot;profile&quot;, label: &quot;1 : 1&quot; },
+          { from: &quot;profile&quot;, to: &quot;customer&quot;, label: &quot;base role&quot; },
+          { from: &quot;profile&quot;, to: &quot;barber&quot;, label: &quot;0..1&quot; },
+          { from: &quot;profile&quot;, to: &quot;owner&quot;, label: &quot;owns shops&quot; },
+          { from: &quot;profile&quot;, to: &quot;verify&quot;, label: &quot;requests role&quot; },
+          { from: &quot;admin&quot;, to: &quot;verify&quot;, label: &quot;reviews&quot; },
+          { from: &quot;barber&quot;, to: &quot;employment&quot;, label: &quot;history&quot; },
+          { from: &quot;employment&quot;, to: &quot;shop&quot;, label: &quot;belongs to&quot; },
+          { from: &quot;owner&quot;, to: &quot;shop&quot;, label: &quot;1 : many&quot; },
+          { from: &quot;shop&quot;, to: &quot;service&quot;, label: &quot;offers&quot; },
+          { from: &quot;customer&quot;, to: &quot;appointment&quot;, label: &quot;books&quot; },
+          { from: &quot;employment&quot;, to: &quot;appointment&quot;, label: &quot;performs&quot; },
+          { from: &quot;shop&quot;, to: &quot;appointment&quot;, label: &quot;fulfills&quot; },
+          { from: &quot;service&quot;, to: &quot;appointment&quot;, label: &quot;snapshotted&quot; },
+          { from: &quot;appointment&quot;, to: &quot;event&quot;, label: &quot;1 : many&quot; },
+          { from: &quot;appointment&quot;, to: &quot;rating&quot;, label: &quot;0..1&quot; }
+        ]
+      },
+      dfd: {
+        title: &quot;Data flow and trust boundaries&quot;,
+        desc: &quot;Customer, barber, owner, admin, and scheduler data flows through React and Express into Supabase Auth, Postgres, private storage, and notification systems.&quot;,
+        detail: &quot;The browser proposes actions; Express authenticates and authorizes them; Postgres settles tenant scope, state transitions, and concurrency.&quot;,
+        mobile: [
+          [&quot;Human actors&quot;, &quot;Customer, barber, owner, and admin submit actions.&quot;, &quot;current&quot;],
+          [&quot;React + ApiBackend&quot;, &quot;Adds the bearer token and sends validated DTO-shaped requests.&quot;, &quot;current&quot;],
+          [&quot;Express gates&quot;, &quot;JWT, role, verification, ownership, and participant checks.&quot;, &quot;current&quot;],
+          [&quot;Postgres/RPC&quot;, &quot;RLS, constraints, version locks, and immutable events.&quot;, &quot;current&quot;],
+          [&quot;Private evidence storage&quot;, &quot;Identity documents use non-public paths and audited access.&quot;, &quot;planned&quot;],
+          [&quot;Scheduler and notification provider&quot;, &quot;Due transitions exist; full delivery outbox remains planned.&quot;, &quot;partial&quot;]
+        ],
+        custom: dfdMarkup,
+        nodes: [
+          { id: &quot;customer&quot;, x: 20, y: 55, w: 140, h: 70, title: &quot;Customer&quot;, copy: [&quot;Bookings • ratings&quot;], status: &quot;current&quot; },
+          { id: &quot;barber&quot;, x: 20, y: 175, w: 140, h: 70, title: &quot;Barber&quot;, copy: [&quot;Service actions&quot;], status: &quot;current&quot; },
+          { id: &quot;owner&quot;, x: 20, y: 295, w: 140, h: 70, title: &quot;Owner&quot;, copy: [&quot;Shop operations&quot;], status: &quot;current&quot; },
+          { id: &quot;admin&quot;, x: 20, y: 415, w: 140, h: 70, title: &quot;Admin&quot;, copy: [&quot;Trusted review&quot;], status: &quot;planned&quot; },
+          { id: &quot;scheduler&quot;, x: 20, y: 535, w: 140, h: 70, title: &quot;Scheduler&quot;, copy: [&quot;Due transitions&quot;], status: &quot;partial&quot; },
+          { id: &quot;web&quot;, x: 220, y: 225, w: 160, h: 90, title: [&quot;React web&quot;, &quot;+ ApiBackend&quot;], copy: [&quot;Bearer JWT + DTO&quot;], status: &quot;current&quot; },
+          { id: &quot;api&quot;, x: 440, y: 225, w: 165, h: 90, title: &quot;Express API&quot;, copy: [&quot;AuthZ + validation&quot;], status: &quot;current&quot; },
+          { id: &quot;rpc&quot;, x: 665, y: 225, w: 165, h: 90, title: &quot;Domain RPC&quot;, copy: [&quot;Atomic commands&quot;], status: &quot;current&quot; },
+          { id: &quot;auth&quot;, x: 790, y: 35, w: 150, h: 75, title: &quot;Supabase Auth&quot;, copy: [&quot;Identity + JWT&quot;], status: &quot;current&quot; },
+          { id: &quot;db&quot;, x: 790, y: 355, w: 150, h: 80, title: &quot;Postgres&quot;, copy: [&quot;22 RLS tables&quot;], status: &quot;current&quot; },
+          { id: &quot;files&quot;, x: 560, y: 515, w: 170, h: 82, title: &quot;Private files&quot;, copy: [&quot;Verification media&quot;], status: &quot;planned&quot; },
+          { id: &quot;notify&quot;, x: 790, y: 515, w: 150, h: 82, title: &quot;Notifications&quot;, copy: [&quot;Outbox + provider&quot;], status: &quot;planned&quot; }
+        ],
+        edges: [
+          { from: &quot;customer&quot;, to: &quot;web&quot; }, { from: &quot;barber&quot;, to: &quot;web&quot; },
+          { from: &quot;owner&quot;, to: &quot;web&quot; }, { from: &quot;admin&quot;, to: &quot;web&quot; },
+          { from: &quot;scheduler&quot;, to: &quot;api&quot;, label: &quot;worker command&quot; },
+          { from: &quot;web&quot;, to: &quot;api&quot;, label: &quot;HTTP + JWT&quot; },
+          { from: &quot;api&quot;, to: &quot;auth&quot;, label: &quot;verify identity&quot; },
+          { from: &quot;api&quot;, to: &quot;rpc&quot;, label: &quot;authorized command&quot; },
+          { from: &quot;rpc&quot;, to: &quot;db&quot;, label: &quot;transaction&quot; },
+          { from: &quot;api&quot;, to: &quot;files&quot;, label: &quot;signed private access&quot; },
+          { from: &quot;api&quot;, to: &quot;notify&quot;, label: &quot;delivery job&quot; }
+        ]
+      },
+      database: {
+        title: &quot;Database domain map&quot;,
+        desc: &quot;The 22 current public RLS tables grouped by identity, shop, employment, bookings, communication, and personal operations, with planned extension areas.&quot;,
+        detail: &quot;Appointments and events are the operational source of truth; payment-confirmed revenue, verification evidence, shop publication, and closeout records are still planned.&quot;,
+        mobile: [
+          [&quot;Identity&quot;, &quot;auth.users → users → optional barbers profile.&quot;, &quot;current&quot;],
+          [&quot;Shop &amp; catalogue&quot;, &quot;shops, services, hiring listings, and join codes.&quot;, &quot;current&quot;],
+          [&quot;Employment &amp; staff&quot;, &quot;Employment stints own shifts, exceptions, attendance, requests, and notes.&quot;, &quot;current&quot;],
+          [&quot;Booking truth&quot;, &quot;appointments → appointment_events → optional rating.&quot;, &quot;current&quot;],
+          [&quot;Communication&quot;, &quot;conversations, messages, and notification preferences.&quot;, &quot;current&quot;],
+          [&quot;Personal &amp; operations&quot;, &quot;Favorites and bug reports.&quot;, &quot;current&quot;],
+          [&quot;Planned extensions&quot;, &quot;Verification evidence, shop hours/media, closeout, payments, and delivery outbox.&quot;, &quot;planned&quot;]
+        ],
+        custom: databaseMarkup
+      },
+      security: {
+        title: &quot;Security defense layers&quot;,
+        desc: &quot;A layered defense from the untrusted browser through Express authorization, Postgres RLS and constraints, to private identity and delivery systems.&quot;,
+        detail: &quot;Hiding a button is never authorization: sensitive actions must pass JWT verification, API scope checks, and database enforcement.&quot;,
+        mobile: [
+          [&quot;Browser — untrusted&quot;, &quot;Session and UI guards improve UX but do not establish permission.&quot;, &quot;current&quot;],
+          [&quot;Express API&quot;, &quot;Verifies JWT, role, verification, ownership, participants, and DTOs.&quot;, &quot;current&quot;],
+          [&quot;Postgres&quot;, &quot;RLS, constraints, version locks, exclusion rules, and events.&quot;, &quot;current&quot;],
+          [&quot;Private systems&quot;, &quot;Auth is current; evidence storage, outbox, and stronger monitoring are planned.&quot;, &quot;partial&quot;],
+          [&quot;Threats addressed&quot;, &quot;Self-promotion, cross-shop IDOR, double booking, forged completion, and secret leakage.&quot;, &quot;decision&quot;]
+        ],
+        custom: securityMarkup
+      },
+      roadmap: {
+        title: &quot;Digital roadmap from MVP to production&quot;,
+        desc: &quot;A timeline from the July 2026 mock-backed MVP through the Supabase booking foundation and planned verification, shop, hiring, operations, trust, analytics, and production phases.&quot;,
+        detail: &quot;The dependency order is deliberate: stabilize → verify professionals → publish shops → hire safely → finish operations before optional commerce.&quot;,
+        mobile: [
+          [&quot;Jul 09–16 • MVP and UI foundation&quot;, &quot;Mock backend, routes, role dashboards, security cleanup, and audits.&quot;, &quot;current&quot;],
+          [&quot;Jul 17–18 • Real backend and booking truth&quot;, &quot;Supabase, Express, RLS, lifecycle commands, worker, and documentation.&quot;, &quot;partial&quot;],
+          [&quot;A • Stabilize baseline&quot;, &quot;Modularity, tests, contracts, and local verification.&quot;, &quot;planned&quot;],
+          [&quot;B–D • Verification, Shop Setup, hiring&quot;, &quot;Establish trusted professionals and published businesses.&quot;, &quot;planned&quot;],
+          [&quot;E–F • Cross-role operations and closeout&quot;, &quot;Expose lifecycle actions and resolve uncertain daily work.&quot;, &quot;planned&quot;],
+          [&quot;G–I • Ratings, analytics, notifications, accessibility&quot;, &quot;Turn finalized visits into trustworthy improvement tools.&quot;, &quot;planned&quot;],
+          [&quot;J • Commerce&quot;, &quot;Optional only after appointment truth is stable.&quot;, &quot;decision&quot;],
+          [&quot;K • Production&quot;, &quot;Security gates, release verification, monitoring, and continuous operations.&quot;, &quot;planned&quot;]
+        ],
+        custom: roadmapMarkup
+      }
+    };
+
+    function mobileMarkup(items) {
+      return items.map(function (item) {
+        return &#x27;&lt;div class=&quot;mobile-step&quot;&gt;&#x27; +
+          &#x27;&lt;span class=&quot;mobile-dot status-&#x27; + item[2] + &#x27;&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&#x27; +
+          &#x27;&lt;span&gt;&lt;span class=&quot;mobile-title&quot;&gt;&#x27; + escapeText(item[0]) + &#x27;&lt;/span&gt;&#x27; +
+          &#x27;&lt;span class=&quot;mobile-copy text-small&quot;&gt;&#x27; + escapeText(item[1]) + &#x27;&lt;/span&gt;&lt;/span&gt;&#x27; +
+          &quot;&lt;/div&gt;&quot;;
+      }).join(&quot;&quot;);
+    }
+
+    function setView(name) {
+      var view = views[name];
+      if (!view) {
+        return;
+      }
+      root.querySelectorAll(&quot;[data-view]&quot;).forEach(function (button) {
+        button.setAttribute(&quot;aria-pressed&quot;, button.getAttribute(&quot;data-view&quot;) === name ? &quot;true&quot; : &quot;false&quot;);
+      });
+      title.textContent = view.title;
+      desc.textContent = view.desc;
+      content.innerHTML = view.custom ? view.custom() : graphMarkup(view);
+      detail.textContent = view.detail;
+      mobile.innerHTML = mobileMarkup(view.mobile);
+    }
+
+    root.querySelectorAll(&quot;[data-view]&quot;).forEach(function (button) {
+      button.addEventListener(&quot;click&quot;, function () {
+        setView(button.getAttribute(&quot;data-view&quot;));
+      });
+    });
+
+    setView(&quot;system&quot;);
+  }());
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>
