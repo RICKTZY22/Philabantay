@@ -1,0 +1,6 @@
+# Supabase CLI local state — generated, never commit.
+.branches
+.temp
+
+# Local secrets (root .gitignore also covers these).
+.env
