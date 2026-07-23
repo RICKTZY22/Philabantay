@@ -26,6 +26,8 @@ import type {
   CreateOwnerShopInput,
   UpdateOwnerShopInput,
   ShopVersionInput,
+  SetShopHoursInput,
+  CreateShopClosureInput,
 } from './dto'
 import { DataError } from './dto'
 import {
@@ -91,6 +93,8 @@ import type {
   ShopStaffMember,
   ShopWithStatus,
   OwnerShop,
+  ShopOperatingHours,
+  ShopClosure,
   HiringShop,
   HiringListing,
   BarberApplication,
@@ -278,6 +282,16 @@ export interface OwnerShopService {
   publish(input: ShopVersionInput): Promise<OwnerShop>
   /** Return a published shop to an unlisted draft; version-checked. */
   unpublish(input: ShopVersionInput): Promise<OwnerShop>
+  /** The owner's weekly operating hours (empty array until set). */
+  getHours(): Promise<ShopOperatingHours[]>
+  /** Replace-all update of the owner's weekly operating hours. */
+  setHours(input: SetShopHoursInput): Promise<ShopOperatingHours[]>
+  /** Date-specific closures / replacement-hours days for the owner's shop. */
+  getClosures(): Promise<ShopClosure[]>
+  /** Create or update (upsert by date) one closure. */
+  saveClosure(input: CreateShopClosureInput): Promise<ShopClosure>
+  /** Remove one closure by id. */
+  removeClosure(closureId: string): Promise<void>
 }
 
 export interface FavoriteService {
@@ -911,6 +925,11 @@ export class ApiBackend implements DataBackend {
     update: (input) => this.request<OwnerShop>('/owner/shop', { method: 'PATCH', body: input }),
     publish: (input) => this.request<OwnerShop>('/owner/shop/publish', { method: 'POST', body: input }),
     unpublish: (input) => this.request<OwnerShop>('/owner/shop/unpublish', { method: 'POST', body: input }),
+    getHours: () => this.request<ShopOperatingHours[]>('/owner/shop/hours'),
+    setHours: (input) => this.request<ShopOperatingHours[]>('/owner/shop/hours', { method: 'PUT', body: input }),
+    getClosures: () => this.request<ShopClosure[]>('/owner/shop/closures'),
+    saveClosure: (input) => this.request<ShopClosure>('/owner/shop/closures', { method: 'POST', body: input }),
+    removeClosure: (closureId) => this.request<void>(`/owner/shop/closures/${encoded(closureId)}`, { method: 'DELETE' }),
   }
 
   readonly favorites: FavoriteService = {

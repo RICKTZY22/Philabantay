@@ -84,7 +84,48 @@
 .shop-field textarea { resize: vertical; }
 .shop-field-note { margin: 0; color: var(--muted); font-size: 0.92rem; }
 
-.shop-setup-aside { display: grid; gap: clamp(16px, 2.4vw, 24px); }
+.shop-setup-main { display: grid; gap: clamp(16px, 2.4vw, 24px); min-width: 0; }
+.shop-setup-aside { display: grid; gap: clamp(16px, 2.4vw, 24px); min-width: 0; }
+
+/* Operating hours editor */
+.shop-hours { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.shop-hours-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.shop-hours-day { flex: 1 1 90px; font-weight: 700; }
+.shop-hours-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
+.shop-hours-toggle input { width: 18px; height: 18px; }
+.shop-hours-row input[type="time"] {
+  padding: 6px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  font: inherit;
+}
+.shop-hours-row input:disabled { opacity: .45; }
+
+/* Date closures editor */
+.shop-closures { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.shop-closure-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 2px dashed color-mix(in srgb, var(--ink), transparent 40%);
+  border-radius: 10px;
+}
+.shop-closure-date { font-weight: 700; }
+.shop-closure-detail { flex: 1 1 160px; color: var(--muted); }
+.shop-closure-form { display: grid; gap: 10px; margin-top: 6px; }
+.shop-closure-times { display: flex; align-items: center; gap: 8px; }
+.shop-closure-times input[type="time"] {
+  padding: 6px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  font: inherit;
+}
 .shop-setup-panel { display: grid; gap: 12px; }
 .shop-setup-panel h2 { margin: 0; font-size: clamp(1.2rem, 2vw, 1.45rem); }
 .shop-setup-muted { margin: 0; color: var(--muted); line-height: 1.5; }

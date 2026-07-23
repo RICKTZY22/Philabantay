@@ -7,17 +7,23 @@ export interface ShopPublicationReadiness {
   missing: string[]
 }
 
+/** Counts of related records the readiness rule needs beyond the shop row. */
+export interface ShopPublicationCounts {
+  activeServices: number
+  operatingHours: number
+}
+
 /**
  * Pure publication-readiness rule shared by the owner UI (to render the
  * checklist) and the backend (to enforce it before flipping to `published`).
  *
- * P2-01 requires shop identity, a map location, a timezone, at least one chair,
- * and at least one active service. Operating-hours and media requirements are
- * layered in by P2-02 once those editors exist.
+ * Requires shop identity, a map location, a timezone, at least one chair, at
+ * least one operating-hours block, and at least one active service. Media
+ * requirements are layered in later by P2-02 once that editor exists.
  */
 export function shopPublicationReadiness(
   shop: Pick<OwnerShop, 'name' | 'address' | 'city' | 'lat' | 'lng' | 'timezone' | 'chair_count'>,
-  activeServiceCount: number,
+  counts: ShopPublicationCounts,
 ): ShopPublicationReadiness {
   const missing: string[] = []
   if (!shop.name?.trim()) missing.push('shop name')
@@ -26,6 +32,7 @@ export function shopPublicationReadiness(
   if (!Number.isFinite(shop.lat) || !Number.isFinite(shop.lng)) missing.push('map location')
   if (!shop.timezone?.trim()) missing.push('timezone')
   if (!(shop.chair_count >= 1)) missing.push('at least one chair')
-  if (activeServiceCount < 1) missing.push('at least one active service')
+  if (counts.operatingHours < 1) missing.push('at least one operating-hours block')
+  if (counts.activeServices < 1) missing.push('at least one active service')
   return { ready: missing.length === 0, missing }
 }

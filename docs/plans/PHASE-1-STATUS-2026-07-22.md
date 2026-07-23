@@ -1,5 +1,11 @@
 # Phase 1 execution status — 2026-07-22
 
+> **Superseded 2026-07-23.** Phase 1 is now complete and the automated gate is
+> green. Several packet states below (for example P1-05 "Open" and P1-07
+> "Blocked") were accurate on 2026-07-22 but are now done. See
+> [ROADMAP-STATUS.md](ROADMAP-STATUS.md) for current cross-phase status; this
+> file is retained as the historical 2026-07-22 checkpoint.
+
 This is the current integration checkpoint for agents. It records verified
 evidence, not visual completion. Phase 2 must not start until P1-07 is green.
 

@@ -27,6 +27,8 @@ import {
   type Message,
   type HiringShop,
   type OwnerShop,
+  type ShopOperatingHours,
+  type ShopClosure,
   type Profile,
   type PublicService,
   type PublicShop,
@@ -1125,6 +1127,16 @@ export function createMockBackend(): DataBackend {
     }
   }
 
+  // Mock parity for shop operating hours; stored on the shop object (JSON store
+  // round-trips extra keys) so no MockDB schema bump is needed.
+  type MockShopHoursCarrier = { operating_hours?: ShopOperatingHours[]; closures?: ShopClosure[] }
+  function mockShopHours(shop: Shop): ShopOperatingHours[] {
+    return (shop as unknown as MockShopHoursCarrier).operating_hours ?? []
+  }
+  function mockShopClosures(shop: Shop): ShopClosure[] {
+    return (shop as unknown as MockShopHoursCarrier).closures ?? []
+  }
+
   const ownerShop: DataBackend['ownerShop'] = {
     async getMine() {
       await delay()
@@ -1189,7 +1201,8 @@ export function createMockBackend(): DataBackend {
         const shop = requireOwnedShop() as MutableOwnerShop
         assertShopVersion(shop, input.expected_version)
         const activeServices = db.services.filter((svc) => svc.shop_id === shop.id && svc.active).length
-        const readiness = shopPublicationReadiness(toOwnerShop(shop), activeServices)
+        const operatingHours = mockShopHours(shop).filter((block) => !block.closed).length
+        const readiness = shopPublicationReadiness(toOwnerShop(shop), { activeServices, operatingHours })
         if (!readiness.ready) {
           throw new DataError('validation', `Hindi pa ready i-publish. Kulang: ${readiness.missing.join(', ')}.`)
         }
@@ -1210,6 +1223,76 @@ export function createMockBackend(): DataBackend {
         shop.version = (shop.version ?? 1) + 1
         shop.updated_at = new Date().toISOString()
         return toOwnerShop(shop)
+      })
+    },
+
+    async getHours() {
+      await delay()
+      reloadFromStorage()
+      const user = requireUser()
+      const shop = db.shops.find((candidate) => candidate.owner_id === user.id)
+      return shop ? clone(mockShopHours(shop)) : []
+    },
+
+    async setHours(input) {
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const rows: ShopOperatingHours[] = input.blocks
+          .map((block, index) => {
+            const closed = block.closed ?? false
+            return {
+              id: crypto.randomUUID(),
+              shop_id: shop.id,
+              weekday: block.weekday,
+              open_time: closed ? null : (block.open_time ?? null),
+              close_time: closed ? null : (block.close_time ?? null),
+              closed,
+              block_order: block.block_order ?? index,
+            }
+          })
+          .sort((a, b) => a.weekday - b.weekday || a.block_order - b.block_order)
+        ;(shop as unknown as MockShopHoursCarrier).operating_hours = rows
+        return clone(rows)
+      })
+    },
+
+    async getClosures() {
+      await delay()
+      reloadFromStorage()
+      const user = requireUser()
+      const shop = db.shops.find((candidate) => candidate.owner_id === user.id)
+      return shop ? clone(mockShopClosures(shop)) : []
+    },
+
+    async saveClosure(input) {
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const closed = input.closed ?? true
+        const closures = mockShopClosures(shop).slice()
+        const existing = closures.findIndex((closure) => closure.local_date === input.local_date)
+        const row: ShopClosure = {
+          id: existing >= 0 ? closures[existing].id : crypto.randomUUID(),
+          shop_id: shop.id,
+          local_date: input.local_date,
+          closed,
+          replacement_open_time: closed ? null : (input.replacement_open_time ?? null),
+          replacement_close_time: closed ? null : (input.replacement_close_time ?? null),
+          reason: input.reason ?? null,
+        }
+        if (existing >= 0) closures[existing] = row
+        else closures.push(row)
+        closures.sort((a, b) => a.local_date.localeCompare(b.local_date))
+        ;(shop as unknown as MockShopHoursCarrier).closures = closures
+        return clone(row)
+      })
+    },
+
+    async removeClosure(closureId) {
+      await withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const remaining = mockShopClosures(shop).filter((closure) => closure.id !== closureId)
+        ;(shop as unknown as MockShopHoursCarrier).closures = remaining
+        return null
       })
     },
   }

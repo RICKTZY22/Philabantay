@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import {
   createOwnerShopInputSchema,
+  createShopClosureInputSchema,
   createServiceInputSchema,
   idParamsSchema,
   setAcceptingBookingsInputSchema,
   setShiftStatusInputSchema,
+  setShopHoursInputSchema,
   shopVersionInputSchema,
   updateOwnerShopInputSchema,
   updateServiceInputSchema,
@@ -26,6 +28,36 @@ const OWNER_SHOP_COLUMNS = [
   'default_buffer_min', 'description', 'public_contact_phone', 'published_at',
   'version', 'created_at', 'updated_at',
 ].join(',')
+
+const HOURS_COLUMNS = 'id,shop_id,weekday,open_time,close_time,closed,block_order'
+
+function normalizeHoursRow(row: Record<string, unknown>) {
+  const time = (value: unknown) => (typeof value === 'string' ? value.slice(0, 5) : null)
+  return {
+    id: row.id,
+    shop_id: row.shop_id,
+    weekday: row.weekday,
+    open_time: time(row.open_time),
+    close_time: time(row.close_time),
+    closed: row.closed,
+    block_order: row.block_order,
+  }
+}
+
+const CLOSURE_COLUMNS = 'id,shop_id,local_date,closed,replacement_open_time,replacement_close_time,reason'
+
+function normalizeClosureRow(row: Record<string, unknown>) {
+  const time = (value: unknown) => (typeof value === 'string' ? value.slice(0, 5) : null)
+  return {
+    id: row.id,
+    shop_id: row.shop_id,
+    local_date: row.local_date,
+    closed: row.closed,
+    replacement_open_time: time(row.replacement_open_time),
+    replacement_close_time: time(row.replacement_close_time),
+    reason: row.reason ?? null,
+  }
+}
 
 export function createCatalogRouter(dependencies: ApiDependencies): Router {
   const router = Router()
@@ -120,6 +152,13 @@ export function createCatalogRouter(dependencies: ApiDependencies): Router {
       .eq('active', true)
     if (countError) throw fromDatabaseError(countError)
 
+    const { count: hoursCount, error: hoursCountError } = await dependencies.database
+      .from('shop_operating_hours')
+      .select('id', { count: 'exact', head: true })
+      .eq('shop_id', current.id as string)
+      .eq('closed', false)
+    if (hoursCountError) throw fromDatabaseError(hoursCountError)
+
     const readiness = shopPublicationReadiness({
       name: current.name as string,
       address: current.address as string,
@@ -128,7 +167,7 @@ export function createCatalogRouter(dependencies: ApiDependencies): Router {
       lng: current.lng as number,
       timezone: current.timezone as string,
       chair_count: current.chair_count as number,
-    }, count ?? 0)
+    }, { activeServices: count ?? 0, operatingHours: hoursCount ?? 0 })
     if (!readiness.ready) {
       throw new ApiError(422, 'validation', `This shop is not ready to publish. Add: ${readiness.missing.join(', ')}.`)
     }
@@ -168,6 +207,111 @@ export function createCatalogRouter(dependencies: ApiDependencies): Router {
     if (error) throw fromDatabaseError(error)
     if (!data) throw await versionConflict(request.auth.profile.id)
     response.json({ data })
+  })
+
+  // ---- Operating hours (replace-all) ----
+  const listShopHours = async (shopId: string) => {
+    const { data, error } = await dependencies.database
+      .from('shop_operating_hours')
+      .select(HOURS_COLUMNS)
+      .eq('shop_id', shopId)
+      .order('weekday', { ascending: true })
+      .order('block_order', { ascending: true })
+    if (error) throw fromDatabaseError(error)
+    return ((data as unknown as Record<string, unknown>[]) ?? []).map(normalizeHoursRow)
+  }
+
+  router.get('/owner/shop/hours', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const shop = await loadOwnerShop(request.auth.profile.id)
+    if (!shop) {
+      response.json({ data: [] })
+      return
+    }
+    response.json({ data: await listShopHours(shop.id as string) })
+  })
+
+  router.put('/owner/shop/hours', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const shop = await loadOwnerShop(request.auth.profile.id)
+    if (!shop) throw new ApiError(404, 'not_found', 'Create your shop before setting hours.')
+    const shopId = shop.id as string
+    const input = parseBody(request, setShopHoursInputSchema)
+    const rows = input.blocks.map((block, index) => {
+      const closed = block.closed ?? false
+      return {
+        shop_id: shopId,
+        weekday: block.weekday,
+        closed,
+        open_time: closed ? null : (block.open_time ?? null),
+        close_time: closed ? null : (block.close_time ?? null),
+        block_order: block.block_order ?? index,
+      }
+    })
+    const { error: deleteError } = await dependencies.database
+      .from('shop_operating_hours').delete().eq('shop_id', shopId)
+    if (deleteError) throw fromDatabaseError(deleteError)
+    if (rows.length > 0) {
+      const { error: insertError } = await dependencies.database
+        .from('shop_operating_hours').insert(rows)
+      if (insertError) throw fromDatabaseError(insertError)
+    }
+    response.json({ data: await listShopHours(shopId) })
+  })
+
+  // ---- Date-specific closures (upsert by date) ----
+  router.get('/owner/shop/closures', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const shop = await loadOwnerShop(request.auth.profile.id)
+    if (!shop) {
+      response.json({ data: [] })
+      return
+    }
+    const { data, error } = await dependencies.database
+      .from('shop_closures')
+      .select(CLOSURE_COLUMNS)
+      .eq('shop_id', shop.id as string)
+      .order('local_date', { ascending: true })
+    if (error) throw fromDatabaseError(error)
+    response.json({ data: ((data as unknown as Record<string, unknown>[]) ?? []).map(normalizeClosureRow) })
+  })
+
+  router.post('/owner/shop/closures', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const shop = await loadOwnerShop(request.auth.profile.id)
+    if (!shop) throw new ApiError(404, 'not_found', 'Create your shop before adding closures.')
+    const input = parseBody(request, createShopClosureInputSchema)
+    const closed = input.closed ?? true
+    const row = {
+      shop_id: shop.id as string,
+      local_date: input.local_date,
+      closed,
+      replacement_open_time: closed ? null : (input.replacement_open_time ?? null),
+      replacement_close_time: closed ? null : (input.replacement_close_time ?? null),
+      reason: input.reason ?? null,
+      updated_at: new Date().toISOString(),
+    }
+    const { data, error } = await dependencies.database
+      .from('shop_closures')
+      .upsert(row, { onConflict: 'shop_id,local_date' })
+      .select(CLOSURE_COLUMNS)
+      .single()
+    if (error) throw fromDatabaseError(error)
+    response.status(201).json({ data: normalizeClosureRow(data as unknown as Record<string, unknown>) })
+  })
+
+  router.delete('/owner/shop/closures/:id', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const { id } = parseParams(request, idParamsSchema)
+    const shop = await loadOwnerShop(request.auth.profile.id)
+    if (!shop) throw new ApiError(404, 'not_found', 'No shop found for this owner account.')
+    const { error } = await dependencies.database
+      .from('shop_closures')
+      .delete()
+      .eq('id', id)
+      .eq('shop_id', shop.id as string)
+    if (error) throw fromDatabaseError(error)
+    response.status(204).end()
   })
 
   // ================= Services (owner-managed) =================

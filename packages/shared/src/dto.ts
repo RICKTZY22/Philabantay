@@ -218,6 +218,29 @@ export interface ShopVersionInput {
   expected_version: number
 }
 
+/** One weekday block in a replace-all hours update. */
+export interface ShopHoursBlockInput {
+  weekday: Weekday
+  open_time?: string | null
+  close_time?: string | null
+  closed?: boolean
+  block_order?: number
+}
+
+/** Replace-all weekly operating hours for the owner's shop. */
+export interface SetShopHoursInput {
+  blocks: ShopHoursBlockInput[]
+}
+
+/** Create or update (upsert by date) one shop closure / replacement-hours day. */
+export interface CreateShopClosureInput {
+  local_date: string
+  closed?: boolean
+  replacement_open_time?: string | null
+  replacement_close_time?: string | null
+  reason?: string | null
+}
+
 export interface CreateAttendanceRecordInput {
   employment_id: string
   barber_id: string

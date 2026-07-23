@@ -301,6 +301,31 @@ export interface OwnerShop extends PublicShop {
   updated_at: string
 }
 
+/** One weekly operating-hours block for a shop. A closed weekday has closed=true. */
+export interface ShopOperatingHours {
+  id: string
+  shop_id: string
+  weekday: Weekday
+  /** Local wall-clock "HH:MM"; null on a closed weekday. */
+  open_time: string | null
+  close_time: string | null
+  closed: boolean
+  block_order: number
+}
+
+/** A date-specific override of a shop's weekly hours. */
+export interface ShopClosure {
+  id: string
+  shop_id: string
+  /** ISO date "YYYY-MM-DD". */
+  local_date: string
+  closed: boolean
+  /** Replacement wall-clock "HH:MM" when open with different hours; null when closed. */
+  replacement_open_time: string | null
+  replacement_close_time: string | null
+  reason: string | null
+}
+
 export type EmploymentType = 'full_time' | 'part_time' | 'chair_rental'
 export type BarberApplicationStatus = 'pending' | 'accepted' | 'declined'
 

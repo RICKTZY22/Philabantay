@@ -155,8 +155,8 @@ git diff --check
 
 | Phase | Product review | Security/data review | Frontend/accessibility review | Automated gate | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Pending | Partial: P1-03/P1-04/P1-06 green | Pending | Partial: clean 42-test API gate plus shared/web/build | In progress |
-| 2 | Pending | Pending | Pending | Pending | Not started |
+| 1 | Pending | RLS/API matrix green 2026-07-23; independent re-scan pending | Pending (browser/a11y smoke) | Passed 52/52 2026-07-23 (typecheck, 81 unit, build) | Automated gate green; human reviews pending |
+| 2 | Pending | P2-01 matrix green; P2-02 hours pending Docker | Pending | P2-01 passed 2026-07-23; P2-02 slice 1 static-green | In progress (P2-01 done) |
 | 3 | Pending | Pending | Pending | Pending | Not started |
 | 4 | Pending | Pending | Pending | Pending | Not started |
 | 5 | Pending | Pending | Pending | Pending | Not started |

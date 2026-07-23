@@ -47,6 +47,8 @@ import type {
   CreateOwnerShopInput,
   UpdateOwnerShopInput,
   ShopVersionInput,
+  SetShopHoursInput,
+  CreateShopClosureInput,
 } from './dto'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
@@ -343,6 +345,24 @@ export const updateOwnerShopInputSchema: z.ZodType<UpdateOwnerShopInput> = owner
 
 export const shopVersionInputSchema: z.ZodType<ShopVersionInput> = z.strictObject({
   expected_version: z.number().int().min(1),
+})
+
+export const setShopHoursInputSchema: z.ZodType<SetShopHoursInput> = z.strictObject({
+  blocks: z.array(z.strictObject({
+    weekday: weekdaySchema,
+    open_time: wallClockSchema.nullable().optional(),
+    close_time: wallClockSchema.nullable().optional(),
+    closed: z.boolean().optional(),
+    block_order: z.number().int().min(0).max(20).optional(),
+  })).max(28),
+})
+
+export const createShopClosureInputSchema: z.ZodType<CreateShopClosureInput> = z.strictObject({
+  local_date: dateKeySchema,
+  closed: z.boolean().optional(),
+  replacement_open_time: wallClockSchema.nullable().optional(),
+  replacement_close_time: wallClockSchema.nullable().optional(),
+  reason: z.string().trim().max(200).nullable().optional(),
 })
 
 export const createAttendanceRecordInputSchema: z.ZodType<CreateAttendanceRecordInput> = z.strictObject({

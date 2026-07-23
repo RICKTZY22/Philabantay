@@ -437,6 +437,70 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     }
   })
 
+  it('lets an owner set and read shop hours and isolates them from other tenants', async () => {
+    const put = await request(app)
+      .put('/api/v1/owner/shop/hours')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ blocks: [
+        { weekday: 1, open_time: '09:00', close_time: '18:00' },
+        { weekday: 0, closed: true },
+      ] })
+    expect(put.status).toBe(200)
+    expect(put.body.data).toHaveLength(2)
+
+    const get = await request(app).get('/api/v1/owner/shop/hours').set('Authorization', `Bearer ${owner.token}`)
+    expect(get.status).toBe(200)
+    const monday = get.body.data.find((block: { weekday: number }) => block.weekday === 1)
+    expect(monday.open_time).toBe('09:00')
+    expect(monday.close_time).toBe('18:00')
+
+    // A different owner sees only their own (unset) hours, never this shop's.
+    const otherGet = await request(app).get('/api/v1/owner/shop/hours').set('Authorization', `Bearer ${otherOwner.token}`)
+    expect(otherGet.status).toBe(200)
+    expect(otherGet.body.data).toEqual([])
+
+    // Direct RLS: a customer JWT cannot read another shop's hours rows.
+    const directRead = await customer.client
+      .from('shop_operating_hours')
+      .select('id')
+      .eq('shop_id', fixtures.primaryShopId)
+    expect(directRead.data ?? []).toEqual([])
+  })
+
+  it('lets an owner manage shop closures and isolates them from other tenants', async () => {
+    const closed = await request(app)
+      .post('/api/v1/owner/shop/closures')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ local_date: '2030-12-25', closed: true, reason: 'Holiday' })
+    expect(closed.status).toBe(201)
+    expect(closed.body.data.closed).toBe(true)
+
+    const shortDay = await request(app)
+      .post('/api/v1/owner/shop/closures')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ local_date: '2030-12-24', closed: false, replacement_open_time: '09:00', replacement_close_time: '12:00' })
+    expect(shortDay.status).toBe(201)
+    expect(shortDay.body.data.replacement_close_time).toBe('12:00')
+
+    const list = await request(app).get('/api/v1/owner/shop/closures').set('Authorization', `Bearer ${owner.token}`)
+    expect(list.body.data).toHaveLength(2)
+
+    // A different owner cannot see this shop's closures.
+    const otherList = await request(app).get('/api/v1/owner/shop/closures').set('Authorization', `Bearer ${otherOwner.token}`)
+    expect(otherList.body.data).toEqual([])
+
+    // Direct RLS: a customer JWT cannot read this shop's closures.
+    const directRead = await customer.client.from('shop_closures').select('id').eq('shop_id', fixtures.primaryShopId)
+    expect(directRead.data ?? []).toEqual([])
+
+    const remove = await request(app)
+      .delete(`/api/v1/owner/shop/closures/${closed.body.data.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(remove.status).toBe(204)
+    const after = await request(app).get('/api/v1/owner/shop/closures').set('Authorization', `Bearer ${owner.token}`)
+    expect(after.body.data).toHaveLength(1)
+  })
+
   it('returns only the public shop summary after joining by code', async () => {
     const joiningEmail = fixtureEmail('catalogue-join-barber')
     const joiningBarberId = await createFixtureUser(joiningEmail, 'Catalogue Join Barber')
