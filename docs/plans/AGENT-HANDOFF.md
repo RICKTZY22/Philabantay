@@ -7,14 +7,14 @@ in parallel without creating incompatible frontend/backend behavior.
 
 Every agent reads, in order:
 
-1. `plans/README.md`
-2. `plans/00-V1-PRODUCT-CONTRACT.md`
+1. `docs/plans/README.md`
+2. `docs/plans/00-V1-PRODUCT-CONTRACT.md`
 3. the active phase file
 4. the relevant master specification
-5. `docs/CODE-PATTERNS.md`
-6. `docs/ARCHITECTURE.md`
+5. `docs/systemarch/CODE-PATTERNS.md`
+6. `docs/systemarch/ARCHITECTURE.md`
 7. current shared types/services and relevant migrations/routes
-8. `plans/OPEN-QUESTIONS.md`
+8. `docs/plans/OPEN-QUESTIONS.md`
 
 The agent reports which requirement IDs it owns before editing.
 
@@ -91,11 +91,11 @@ Copy this into an agent prompt:
 [IDs from QA-TRACEABILITY-MATRIX.md]
 
 ### Read first
-- plans/00-V1-PRODUCT-CONTRACT.md
-- plans/[active phase].md
-- plans/[relevant master spec].md
-- docs/CODE-PATTERNS.md
-- docs/ARCHITECTURE.md
+- docs/plans/00-V1-PRODUCT-CONTRACT.md
+- docs/plans/[active phase].md
+- docs/plans/[relevant master spec].md
+- docs/systemarch/CODE-PATTERNS.md
+- docs/systemarch/ARCHITECTURE.md
 
 ### Current evidence
 [Existing files/migrations/routes]
@@ -121,9 +121,9 @@ Do not mark the phase complete.
 
 ```markdown
 You are implementing the frontend lane of Philabantay V1. Read
-plans/README.md, plans/00-V1-PRODUCT-CONTRACT.md, the active phase file,
-plans/UI-FRONTEND-MASTER-SPEC.md, docs/CODE-PATTERNS.md, and
-docs/ARCHITECTURE.md first.
+docs/plans/README.md, docs/plans/00-V1-PRODUCT-CONTRACT.md, the active phase file,
+docs/plans/UI-FRONTEND-MASTER-SPEC.md, docs/systemarch/CODE-PATTERNS.md, and
+docs/systemarch/ARCHITECTURE.md first.
 
 Use only the shared DataBackend contract. Do not import the mock backend, call
 Supabase directly, hardcode accounts, create placeholder operational data, or
@@ -146,9 +146,9 @@ remaining blockers.
 
 ```markdown
 You are implementing the backend lane of Philabantay V1. Read
-plans/README.md, plans/00-V1-PRODUCT-CONTRACT.md, the active phase file,
-plans/BACKEND-DATA-SECURITY-MASTER-SPEC.md, docs/CODE-PATTERNS.md,
-docs/ARCHITECTURE.md, and the current migration chain first.
+docs/plans/README.md, docs/plans/00-V1-PRODUCT-CONTRACT.md, the active phase file,
+docs/plans/BACKEND-DATA-SECURITY-MASTER-SPEC.md, docs/systemarch/CODE-PATTERNS.md,
+docs/systemarch/ARCHITECTURE.md, and the current migration chain first.
 
 Implement inside out: shared type/DTO/Zod/pure rule -> forward migration with
 constraints/indexes/RLS/grants -> transactional RPC -> Express JWT/capability/

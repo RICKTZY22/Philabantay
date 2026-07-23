@@ -21,6 +21,9 @@ const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) 
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
 const VerificationLockPage = lazy(() => import('./pages/VerificationLockPage').then((m) => ({ default: m.VerificationLockPage })))
+const AdminVerificationPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminVerificationPage })))
+const AdminVerificationDetailPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminVerificationDetailPage })))
+const AdminProfessionalPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminProfessionalPage })))
 const SettingsAccountPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAccountPage })))
 const SettingsAvatarPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsAvatarPage })))
 const SettingsNotificationsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsNotificationsPage })))
@@ -149,6 +152,9 @@ export function App() {
           }
         />
         <Route path="dashboard/barber" element={<Navigate to="/schedule" replace />} />
+        <Route path="admin/verifications" element={<RequireAuth role="admin"><AdminVerificationPage /></RequireAuth>} />
+        <Route path="admin/verifications/:submissionId" element={<RequireAuth role="admin"><AdminVerificationDetailPage /></RequireAuth>} />
+        <Route path="admin/users/:userId" element={<RequireAuth role="admin"><AdminProfessionalPage /></RequireAuth>} />
         {/* Catch-all para friendly pa rin kapag mali o luma ang URL. */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>

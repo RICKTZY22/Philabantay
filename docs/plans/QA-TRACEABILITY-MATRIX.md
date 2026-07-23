@@ -155,7 +155,7 @@ git diff --check
 
 | Phase | Product review | Security/data review | Frontend/accessibility review | Automated gate | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Pending | Pending | Pending | Pending | Not started |
+| 1 | Pending | Partial: P1-03/P1-04/P1-06 green | Pending | Partial: clean 42-test API gate plus shared/web/build | In progress |
 | 2 | Pending | Pending | Pending | Pending | Not started |
 | 3 | Pending | Pending | Pending | Pending | Not started |
 | 4 | Pending | Pending | Pending | Pending | Not started |
@@ -163,3 +163,30 @@ git diff --check
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.
+
+## 8. Recurring logic and loophole audit
+
+The current baseline is recorded in
+[`LOGIC-LOOPHOLE-RESCAN-2026-07-22.md`](LOGIC-LOOPHOLE-RESCAN-2026-07-22.md).
+After every integrated work packet, append its API, direct-RLS, race/retry and
+browser verdict to that report. New findings receive a stable `LR-###` ID and
+map back to a requirement row above; never delete an old finding to make a gate
+look green.
+
+Current integrated evidence (2026-07-22): a clean local Supabase reset applied
+all migrations through `20260722000700_command_boundary_and_lock_order`.
+The API suite passed 42/42, including 22 Docker-backed Express/direct-RLS/
+command-boundary/race tests; shared passed 27/27; web passed 19/19; workspace
+typecheck, production build, and `git diff --check` passed. Database lint
+completed with three non-blocking unused-variable warnings in wrapped
+appointment functions. P1-03, P1-04, and P1-06 are green; the backend half of
+the P1-02 professional lock is green for pending, rejected, and suspended
+barber and owner requests.
+
+Live browser smoke evidence: pending owner and barber operational deep links
+redirect to `/verification`; the operational menu is absent; sign out works;
+and the lock layout has no horizontal overflow at 390 px. The same smoke test
+found a forbidden public landing/sign-in flash during session restoration and
+copy that falsely implies a verification submission/review case exists. These
+remain frontend P1-02 blockers. P1-05 and the full P1-07 admin/browser/
+accessibility matrix remain open, so this is not a Phase 1 sign-off.

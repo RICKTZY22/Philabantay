@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import {
   createAttendanceRecordInputSchema,
+  endEmploymentInputSchema,
   idParamsSchema,
   joinShopInputSchema,
   resolveBarberApplicationInputSchema,
@@ -14,6 +15,7 @@ import type { ApiDependencies } from '../lib/supabase'
 import { requireActiveEmployment, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams } from '../http/validation'
+import { PUBLIC_SHOP_COLUMNS } from './public-catalog'
 
 function joinCode(): string {
   return `PB${randomBytes(4).toString('hex').toUpperCase()}`
@@ -25,7 +27,7 @@ export function createEmploymentRouter(dependencies: ApiDependencies): Router {
   router.get('/employment/hiring-shops', async (_request, response) => {
     const { data, error } = await dependencies.database
       .from('hiring_listings')
-      .select('*,shop:shops(*)')
+      .select(`shop_id,role_title,employment_type,requirements,open_positions,accepting_applications,updated_at,shop:shops(${PUBLIC_SHOP_COLUMNS})`)
       .eq('accepting_applications', true)
       .gt('open_positions', 0)
       .order('updated_at', { ascending: false })
@@ -48,7 +50,7 @@ export function createEmploymentRouter(dependencies: ApiDependencies): Router {
 
   router.get('/employment/me/shop', async (request, response) => {
     const employment = await requireActiveEmployment(dependencies, request)
-    const { data, error } = await dependencies.database.from('shops').select('*').eq('id', employment.shop_id as string).single()
+    const { data, error } = await dependencies.database.from('shops').select(PUBLIC_SHOP_COLUMNS).eq('id', employment.shop_id as string).single()
     if (error) throw fromDatabaseError(error)
     response.json({ data })
   })
@@ -105,32 +107,16 @@ export function createEmploymentRouter(dependencies: ApiDependencies): Router {
   router.post('/employment/join', async (request, response) => {
     requireRole(request, 'barber')
     const input = parseBody(request, joinShopInputSchema)
-    const { data: codeRow, error: codeError } = await dependencies.database
-      .from('shop_join_codes')
-      .select('shop_id')
-      .eq('code', input.code.trim().toUpperCase())
-      .maybeSingle()
-    if (codeError) throw fromDatabaseError(codeError)
-    if (!codeRow) throw new ApiError(404, 'invalid_code', 'Shop join code is invalid.')
-
-    const { data: existing, error: existingError } = await dependencies.database
-      .from('barber_employment')
-      .select('id')
-      .eq('barber_id', request.auth.profile.id)
-      .eq('status', 'active')
-      .is('ended_at', null)
-      .maybeSingle()
-    if (existingError) throw fromDatabaseError(existingError)
-    if (existing) throw new ApiError(409, 'already_employed', 'End the current employment before joining another shop.')
-
-    const { error } = await dependencies.database.from('barber_employment').insert({
-      barber_id: request.auth.profile.id,
-      shop_id: codeRow.shop_id,
-      status: 'active',
-      hired_at: new Date().toISOString().slice(0, 10),
+    const { data: employment, error } = await dependencies.database.rpc('api_join_shop_by_code', {
+      p_barber_id: request.auth.profile.id,
+      p_code: input.code,
     })
     if (error) throw fromDatabaseError(error)
-    const { data: shop, error: shopError } = await dependencies.database.from('shops').select('*').eq('id', codeRow.shop_id).single()
+    const { data: shop, error: shopError } = await dependencies.database
+      .from('shops')
+      .select(PUBLIC_SHOP_COLUMNS)
+      .eq('id', employment.shop_id as string)
+      .single()
     if (shopError) throw fromDatabaseError(shopError)
     response.status(201).json({ data: shop })
   })
@@ -171,6 +157,27 @@ export function createEmploymentRouter(dependencies: ApiDependencies): Router {
     response.json({ data })
   })
 
+  router.post('/employment/:id/end', async (request, response) => {
+    const { id } = parseParams(request, idParamsSchema)
+    const input = parseBody(request, endEmploymentInputSchema)
+    const { data: employment, error: lookupError } = await dependencies.database
+      .from('barber_employment')
+      .select('id,shop_id')
+      .eq('id', id)
+      .maybeSingle()
+    if (lookupError) throw fromDatabaseError(lookupError)
+    if (!employment) throw new ApiError(404, 'not_found', 'Employment record not found.')
+    await requireOwnedShop(dependencies, request, employment.shop_id as string)
+
+    const { data, error } = await dependencies.database.rpc('api_end_employment', {
+      p_employment_id: id,
+      p_owner_id: request.auth.profile.id,
+      p_reason: input.reason,
+    })
+    if (error) throw fromDatabaseError(error)
+    response.json({ data })
+  })
+
   router.get('/employment/absences', async (request, response) => {
     const employment = await requireActiveEmployment(dependencies, request)
     const { data, error } = await dependencies.database
@@ -197,11 +204,11 @@ export function createEmploymentRouter(dependencies: ApiDependencies): Router {
   router.post('/shift-change-requests', async (request, response) => {
     const input = parseBody(request, shiftChangeRequestInputSchema)
     const employment = await requireActiveEmployment(dependencies, request)
-    const { data, error } = await dependencies.database
-      .from('shift_change_requests')
-      .insert({ ...input, employment_id: employment.id, barber_id: employment.barber_id, shop_id: employment.shop_id, status: 'pending' })
-      .select('*')
-      .single()
+    const { data, error } = await dependencies.database.rpc('api_create_shift_change_request', {
+      p_employment_id: employment.id as string,
+      p_date: input.date,
+      p_message: input.message,
+    })
     if (error) throw fromDatabaseError(error)
     response.status(201).json({ data })
   })

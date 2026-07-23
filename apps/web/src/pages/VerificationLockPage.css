@@ -1,18 +1,12 @@
-.verification-lock {
-  position: relative;
-  width: min(980px, 100%);
-  min-height: clamp(620px, 72vh, 780px);
+.verification {
+  width: min(1040px, 100%);
+  margin: 6px auto 48px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  margin: 6px auto 42px;
-  padding: clamp(38px, 7vw, 82px);
-  overflow: hidden;
-  text-align: center;
+  gap: clamp(18px, 3vw, 26px);
+  padding: clamp(22px, 4vw, 44px);
   border: 3px solid var(--ink);
-  border-radius: 38px 22px 42px 28px / 28px 42px 24px 38px;
+  border-radius: 34px 22px 38px 26px / 26px 38px 24px 34px;
   background:
     linear-gradient(rgba(43, 43, 43, .045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(43, 43, 43, .045) 1px, transparent 1px),
@@ -21,94 +15,302 @@
   box-shadow: 11px 14px 0 var(--shadow);
 }
 
-.verification-lock::before,
-.verification-lock::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  border: 28px solid color-mix(in srgb, var(--pink) 48%, transparent);
-  border-radius: 50%;
+/* Header: stamp + copy. */
+.verification-head {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(16px, 3vw, 28px);
 }
 
-.verification-lock::before { width: 210px; height: 210px; top: -125px; left: -105px; }
-.verification-lock::after { width: 270px; height: 270px; right: -155px; bottom: -165px; }
-
-.verification-lock > * { position: relative; z-index: 1; }
-
-.verification-lock-stamp {
-  width: 150px;
-  height: 150px;
+.verification-stamp {
+  flex: none;
+  width: clamp(96px, 14vw, 132px);
+  height: clamp(96px, 14vw, 132px);
   display: grid;
   place-items: center;
   border: 3px solid var(--ink);
   border-radius: 47% 53% 55% 45% / 55% 45% 55% 45%;
   background: var(--yellow);
-  box-shadow: 8px 10px 0 var(--shadow);
+  box-shadow: 6px 8px 0 var(--shadow);
   transform: rotate(-4deg);
 }
+.verification-stamp.is-unverified { background: var(--blue); }
+.verification-stamp.is-rejected { background: var(--pink); }
+.verification-stamp.is-suspended { background: var(--danger); }
 
-.verification-lock-copy { display: grid; justify-items: center; gap: 8px; }
-.verification-lock-copy h1 {
-  max-width: 760px;
+.verification-head-copy { display: grid; gap: 6px; }
+.verification-head-copy h1 {
   margin: 0;
-  font-size: clamp(2.25rem, 5vw, 4rem);
-  line-height: 1.02;
+  font-size: clamp(1.7rem, 3.8vw, 2.9rem);
+  line-height: 1.06;
 }
-.verification-lock-copy p {
-  max-width: 720px;
-  margin: 6px 0 0;
+.verification-head-copy p {
+  margin: 2px 0 0;
+  max-width: 62ch;
   color: var(--muted);
-  font-size: clamp(1.1rem, 2.2vw, 1.4rem);
-  line-height: 1.45;
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  line-height: 1.5;
 }
 
-.verification-lock-status {
-  min-width: min(100%, 430px);
+/* Status badge line. */
+.verification-status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 13px;
-  padding: 15px 22px;
+  gap: 10px 16px;
+  padding: 12px 18px;
   border: 2px dashed var(--ink);
-  background: color-mix(in srgb, var(--pink) 55%, var(--paper-soft));
+  border-radius: 16px;
+  background: var(--paper);
 }
-.verification-lock-status > div { display: grid; text-align: left; }
-.verification-lock-status strong { font: 700 1.25rem 'Kalam', cursive; }
-.verification-lock-status span { color: var(--muted); }
-.verification-lock-dot {
-  width: 16px;
-  height: 16px;
+.verification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font: 700 1.02rem 'Kalam', cursive;
+  background: var(--yellow);
+}
+.verification-badge.is-unverified { background: var(--blue); }
+.verification-badge.is-rejected { background: var(--pink); }
+.verification-badge.is-suspended { background: var(--danger); }
+.verification-badge-dot {
+  width: 13px;
+  height: 13px;
   flex: none;
   border: 2px solid var(--ink);
   border-radius: 50%;
-  background: var(--yellow);
+  background: var(--paper);
+}
+.verification-status-meta { color: var(--muted); font-size: 1.02rem; }
+.verification-status-meta strong { color: var(--ink); }
+.verification-status-role { white-space: nowrap; }
+
+/* Body: main + aside. */
+.verification-body {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: clamp(16px, 2.4vw, 24px);
+  align-items: start;
+}
+.verification-main,
+.verification-aside { display: grid; gap: clamp(16px, 2.4vw, 24px); }
+
+.verification-panel {
+  display: grid;
+  gap: 12px;
+  padding: clamp(18px, 2.6vw, 26px);
+  border: 2px solid var(--ink);
+  border-radius: 20px 14px 22px 16px / 16px 22px 14px 20px;
+  background: var(--paper);
+  box-shadow: 5px 6px 0 var(--shadow);
+}
+.verification-panel h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.55rem);
+}
+.verification-panel p { margin: 0; line-height: 1.5; color: var(--ink); }
+.verification-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.verification-muted { color: var(--muted); font-size: 0.98rem; }
+
+.verification-callout,
+.verification-ok,
+.form-success {
+  padding: 10px 12px;
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+  background: var(--yellow-soft, #fff3c5);
+}
+.verification-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green);
+}
+.form-success { margin: 0; background: var(--green); }
+
+.verification-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.verification-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  font-weight: 700;
+}
+.verification-field small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.verification-field.is-wide { grid-column: 1 / -1; }
+.verification-field input,
+.verification-field textarea,
+.verification-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 11px 8px 12px 9px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.verification-field textarea { resize: vertical; }
+.verification-field :disabled { opacity: .7; cursor: not-allowed; }
+
+.verification-documents { display: grid; gap: 10px; }
+.verification-document {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  border: 2px dashed color-mix(in srgb, var(--ink), transparent 35%);
+  border-radius: 12px;
+  background: var(--paper-soft);
+}
+.verification-document > div:first-child { display: grid; gap: 3px; }
+.verification-document small { color: var(--muted); }
+.verification-document-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.verification-file-button { position: relative; overflow: hidden; cursor: pointer; }
+.verification-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.verification-timeline li > span { display: grid; gap: 2px; }
+.verification-timeline small { color: var(--muted); font-weight: 400; }
+.verification-submit-panel .btn { width: 100%; justify-content: center; }
+
+/* Disabled evidence button reads as "not available yet", never a fake upload. */
+.verification-panel .btn:disabled,
+.verification-panel .btn[aria-disabled='true'] {
+  justify-self: start;
 }
 
-.verification-lock-note {
-  max-width: 660px;
+/* Pending timeline. */
+.verification-timeline {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.verification-timeline li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 4px;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+.verification-timeline li .doodle-icon {
+  flex: none;
+  padding: 5px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper-soft);
+}
+.verification-timeline li.is-done { color: var(--ink); }
+.verification-timeline li.is-done .doodle-icon { background: var(--green); }
+.verification-timeline li.is-active { color: var(--ink); font-weight: 700; }
+.verification-timeline li.is-active .doodle-icon { background: var(--yellow); }
+
+/* Requirements checklist. */
+.verification-checklist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.verification-checklist li {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 15px 18px;
-  text-align: left;
-  border-left: 4px solid var(--ink);
-  background: color-mix(in srgb, var(--green) 55%, transparent);
+  gap: 11px;
 }
-.verification-lock-note p { margin: 0; color: var(--muted); font-size: 1.08rem; }
-.verification-lock-note .doodle-icon { color: #367044; }
+.verification-checklist li > span:last-child { display: grid; gap: 2px; }
+.verification-checklist li strong { font-weight: 700; }
+.verification-check-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper-soft);
+}
 
-.verification-lock .form-error { margin: 0; }
-.verification-lock-signout { min-width: 230px; margin-top: 4px; }
+/* Help panel. */
+.verification-help-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+.verification-help-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.verification-help-list .doodle-icon { flex: none; margin-top: 2px; color: #367044; }
+
+/* Footer actions. */
+.verification-actions { display: grid; gap: 12px; }
+.verification-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.verification-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+  justify-content: center;
+}
+.verification-actions .form-error { margin: 0; }
+.verification-guest-note { margin: 0; }
+
+@media (max-width: 900px) {
+  .verification-body { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 640px) {
-  .verification-lock {
-    min-height: calc(100vh - 150px);
-    padding: 34px 20px 40px;
-    border-radius: 26px 18px 30px 20px;
+  .verification {
+    border-radius: 24px 16px 26px 18px;
+    padding: 20px 16px 26px;
   }
-  .verification-lock-stamp { width: 118px; height: 118px; }
-  .verification-lock-stamp .doodle-icon { width: 58px; height: 58px; }
-  .verification-lock-status { min-width: 100%; }
-  .verification-lock-note { align-items: center; }
-  .verification-lock-signout { width: 100%; }
+  .verification-head { flex-direction: column; align-items: center; text-align: center; }
+  .verification-head-copy { justify-items: center; }
+  .verification-head-copy p { max-width: 100%; }
+  .verification-status { justify-content: center; text-align: center; }
+  .verification-actions .btn { width: 100%; min-width: 0; }
+  .verification-form-grid { grid-template-columns: 1fr; }
+  .verification-field.is-wide { grid-column: auto; }
+  .verification-document { align-items: flex-start; flex-direction: column; }
+  .verification-document-actions { justify-content: flex-start; }
+}
+
+/* No surprise motion: the stamp keeps its hand-drawn tilt but nothing animates. */
+@media (prefers-reduced-motion: reduce) {
+  .verification-stamp { transform: none; }
+  .verification * { transition: none !important; animation: none !important; }
 }

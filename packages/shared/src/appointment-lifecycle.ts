@@ -20,6 +20,18 @@ export type AppointmentLifecycleAction =
   | 'resolve_complete'
   | 'resolve_cancel'
 
+/**
+ * States that still reserve provider capacity. Keep database exclusion
+ * constraints and every availability/overlap query aligned to this contract.
+ */
+export const CAPACITY_BLOCKING_APPOINTMENT_STATUSES = [
+  'requested',
+  'confirmed',
+  'checked_in',
+  'in_progress',
+  'awaiting_confirmation',
+] as const satisfies readonly CanonicalAppointmentStatus[]
+
 const TRANSITIONS: Record<CanonicalAppointmentStatus, Partial<Record<AppointmentLifecycleAction, CanonicalAppointmentStatus>>> = {
   requested: { accept: 'confirmed', decline: 'declined', expire: 'expired', cancel: 'cancelled' },
   confirmed: { check_in: 'checked_in', cancel: 'cancelled', mark_customer_no_show: 'customer_no_show' },

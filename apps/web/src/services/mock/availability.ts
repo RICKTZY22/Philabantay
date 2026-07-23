@@ -1,5 +1,7 @@
 import {
+  CAPACITY_BLOCKING_APPOINTMENT_STATUSES,
   SLOT_STEP_MIN,
+  canonicalAppointmentStatus,
   type Appointment,
   type AvailabilityOverride,
   type AvailabilityRule,
@@ -57,8 +59,6 @@ export function effectiveBlocks(
   }, [])
 }
 
-const ACTIVE: Appointment['status'][] = ['pending', 'confirmed']
-
 /** Open bookable slots for a service on a date, excluding overlaps and past times. */
 export function computeOpenSlots(
   date: string,
@@ -73,7 +73,9 @@ export function computeOpenSlots(
   const stepMs = SLOT_STEP_MIN * 60_000
 
   const booked = appointments
-    .filter((a) => ACTIVE.includes(a.status))
+    .filter((appointment) => CAPACITY_BLOCKING_APPOINTMENT_STATUSES.some(
+      (status) => status === canonicalAppointmentStatus(appointment.status),
+    ))
     .map((a) => [new Date(a.starts_at).getTime(), new Date(a.ends_at).getTime()] as const)
 
   const slots: Slot[] = []

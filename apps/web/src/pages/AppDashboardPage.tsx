@@ -4,6 +4,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import { CustomerDashboard } from '../components/CustomerDashboard'
 import { Loading } from '../components/Loading'
 import { isOwnerDashboardSection } from '../config/navigation'
+import { isProfessionalLocked } from '../lib/access'
 
 const ShopOwnerDashboard = lazy(() => import('../components/ShopOwnerDashboard').then((module) => ({
   default: module.ShopOwnerDashboard,
@@ -13,12 +14,18 @@ const BarberDashboard = lazy(() => import('../components/BarberDashboard').then(
 })))
 
 export function AppDashboardPage() {
-  const { profile, isBarber, isShopOwner } = useAuth()
+  const { profile, isBarber, isShopOwner, isAdmin } = useAuth()
   const { ownerSection } = useParams<{ ownerSection: string }>()
   if (!profile) return null
 
+  // Defense in depth: a locked professional must never see a partially rendered
+  // dashboard. RequireAuth already redirects, but a direct mount reaches here too.
+  if (isProfessionalLocked(profile)) return <Navigate to="/verification" replace />
+
   const firstName = profile.full_name.trim().split(/\s+/)[0]
   const pending = profile.verification_status === 'pending'
+
+  if (isAdmin) return <Navigate to="/admin/verifications" replace />
 
   // Owner tools only render for the granted role. Pending owner requests are
   // intercepted by the global verification lock before this page can mount.

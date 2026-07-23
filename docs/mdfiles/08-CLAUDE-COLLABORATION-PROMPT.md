@@ -15,18 +15,18 @@ report.
 
 READ FIRST, IN THIS ORDER
 1. docs/README.md
-2. docs/01-SYSTEM-FLOWCHARTS.md
-3. docs/02-UML-AND-DOMAIN-MODEL.md
-4. docs/03-DATA-FLOW-DIAGRAMS.md
-5. docs/04-DETAILED-WORKFLOWS.md
-6. docs/05-DATABASE-DESIGN.md
-7. docs/06-SECURITY-DESIGN.md
-8. docs/07-DIGITAL-ROADMAP.md
-9. docs/ARCHITECTURE.md
-10. docs/CODE-PATTERNS.md
-11. docs/API.md
-12. docs/SUPABASE-SCHEMA.md
-13. docs/HANDSON.md
+2. docs/charts/01-SYSTEM-FLOWCHARTS.md
+3. docs/systemarch/02-UML-AND-DOMAIN-MODEL.md
+4. docs/charts/03-DATA-FLOW-DIAGRAMS.md
+5. docs/systemarch/04-DETAILED-WORKFLOWS.md
+6. docs/systemarch/05-DATABASE-DESIGN.md
+7. docs/security/06-SECURITY-DESIGN.md
+8. docs/roadmap/07-DIGITAL-ROADMAP.md
+9. docs/systemarch/ARCHITECTURE.md
+10. docs/systemarch/CODE-PATTERNS.md
+11. docs/systemarch/API.md
+12. docs/systemarch/SUPABASE-SCHEMA.md
+13. docs/mdfiles/HANDSON.md
 
 Then inspect git status, the current routes/components, shared DataBackend
 contract, and relevant Express routes. The working tree contains user, Claude,
@@ -181,7 +181,7 @@ Implement only this approved Philabantay frontend work package:
 
 [PASTE ONE APPROVED WORK PACKAGE HERE]
 
-Re-read docs/ARCHITECTURE.md, docs/CODE-PATTERNS.md, and the relevant numbered
+Re-read docs/systemarch/ARCHITECTURE.md, docs/systemarch/CODE-PATTERNS.md, and the relevant numbered
 workflow document. First inspect git status and the current files. Preserve all
 unrelated changes.
 

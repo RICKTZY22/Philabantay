@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CAPACITY_BLOCKING_APPOINTMENT_STATUSES,
   barberCanMarkCustomerNoShow,
   canTransitionAppointment,
   canonicalAppointmentStatus,
@@ -10,6 +11,16 @@ import {
 const START = Date.parse('2030-01-01T02:00:00.000Z')
 
 describe('appointment lifecycle', () => {
+  it('defines the canonical states that still reserve provider capacity', () => {
+    expect(CAPACITY_BLOCKING_APPOINTMENT_STATUSES).toEqual([
+      'requested',
+      'confirmed',
+      'checked_in',
+      'in_progress',
+      'awaiting_confirmation',
+    ])
+  })
+
   it('normalizes only the temporary legacy statuses', () => {
     expect(canonicalAppointmentStatus('pending')).toBe('requested')
     expect(canonicalAppointmentStatus('no_show')).toBe('customer_no_show')

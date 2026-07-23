@@ -186,7 +186,7 @@ export function ExamplePage() {
 - The browser mock is demo storage, not an authentication boundary.
 - Role and ownership checks in `RequireAuth` are UX only; a real backend must
   enforce them with authorization and RLS.
-- Follow `docs/SECURITY.md` and `docs/ROLE-AND-LOCATION-GUARDRAILS.md` for the
+- Follow `docs/security/SECURITY.md` and `docs/security/ROLE-AND-LOCATION-GUARDRAILS.md` for the
   production backend.
 
 ## Definition of done

@@ -15,7 +15,7 @@ A barbershop web app that tracks customers, shows barber availability, and has l
 - **Phase 2 (local setup complete):** Supabase migrations, the Express API, and
   `ApiBackend` are implemented and verified against local Supabase for customer,
   barber, and owner roles. Flip `VITE_DATA_BACKEND=api` and set
-  `VITE_API_BASE_URL`. See [local verification](docs/LOCAL-SUPABASE-VERIFICATION.md).
+  `VITE_API_BASE_URL`. See [local verification](docs/mdfiles/LOCAL-SUPABASE-VERIFICATION.md).
 
 ## Getting started
 
@@ -29,15 +29,15 @@ to the mock backend, so no env is required unless using the Express API.
 
 ## Project guides
 
-- [Authoritative V1 five-phase implementation plan](plans/README.md)
-- [Open product clarifications](plans/OPEN-QUESTIONS.md)
+- [Authoritative V1 five-phase implementation plan](docs/plans/README.md)
+- [Open product clarifications](docs/plans/OPEN-QUESTIONS.md)
 - [Interactive system visualization](docs/PROJECT-VISUALIZATION.html)
 - [Documentation hub and study order](docs/README.md)
-- [System flowcharts](docs/01-SYSTEM-FLOWCHARTS.md)
-- [Detailed workflows](docs/04-DETAILED-WORKFLOWS.md)
-- [Database design](docs/05-DATABASE-DESIGN.md)
-- [Historical digital roadmap](docs/07-DIGITAL-ROADMAP.md)
-- [Code patterns](docs/CODE-PATTERNS.md)
-- [Security contract](docs/SECURITY.md)
-- [Credential audit](docs/SECURITY-CREDENTIAL-AUDIT.md)
-- [Role and location guardrails](docs/ROLE-AND-LOCATION-GUARDRAILS.md)
+- [System flowcharts](docs/charts/01-SYSTEM-FLOWCHARTS.md)
+- [Detailed workflows](docs/systemarch/04-DETAILED-WORKFLOWS.md)
+- [Database design](docs/systemarch/05-DATABASE-DESIGN.md)
+- [Historical digital roadmap](docs/roadmap/07-DIGITAL-ROADMAP.md)
+- [Code patterns](docs/systemarch/CODE-PATTERNS.md)
+- [Security contract](docs/security/SECURITY.md)
+- [Credential audit](docs/security/SECURITY-CREDENTIAL-AUDIT.md)
+- [Role and location guardrails](docs/security/ROLE-AND-LOCATION-GUARDRAILS.md)

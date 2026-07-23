@@ -47,7 +47,10 @@ decision.
 public onboarding; MFA is required before any evidence view; evidence access and
 every decision are audited.
 
-## Blocking before Phase 2 implementation
+## Approved defaults for Phase 2 implementation
+
+**Decision (2026-07-22):** The product owner accepted all recommendations in
+Q4–Q7. They are binding V1 defaults unless a later dated decision replaces one.
 
 ### Q4 — shop publication review
 
@@ -86,7 +89,10 @@ notes as an automatic disciplinary or performance score.
 employment; barber may request them but cannot self-grant. Owner-provider
 qualifications are configured during Shop Setup and auditable.
 
-## Blocking before Phase 3 implementation
+## Approved defaults for Phase 3 implementation
+
+**Decision (2026-07-22):** The product owner accepted all recommendations in
+Q8 and Q10–Q12. Q9 was already accepted on 2026-07-19.
 
 ### Q8 — no-show strikes: platform or shop scope
 
@@ -138,7 +144,10 @@ is it labeled without V1 fees?
 notify the shop, and retain the policy snapshot. Do not automatically count it
 as a no-show or charge a fee.
 
-## Blocking before Phase 4 implementation
+## Approved defaults for Phase 4 implementation
+
+**Decision (2026-07-22):** The product owner accepted all recommendations in
+Q13–Q16.
 
 ### Q13 — dispute timing
 
@@ -171,7 +180,12 @@ in the moderation audit. After that, correction requires support/moderation.
 **Recommended:** PHP, `Asia/Manila`, and English plus Filipino/Taglish-ready
 strings. Persist shop timezone even while V1 launches in one market.
 
-## Operational decisions before Phase 5
+## Approved defaults and required operational gates for Phase 5
+
+**Decision (2026-07-22):** The product owner accepted the recommended defaults
+in Q17–Q19. Vendor procurement and legal/privacy approval remain Phase 5 release
+work; accepting the engineering default does not claim those external reviews
+have occurred.
 
 ### Q17 — email and OTP vendors
 
@@ -207,8 +221,7 @@ protection review signs off; support legal hold and configurable retention.
 | Q2 | Accepted: owner-as-provider via shop-scoped `service_provider` capability; no role switching; separate provider rating. | 2026-07-19 | Product owner | OPEN-QUESTIONS.md |
 | Q3 | Accepted: admins provisioned server-side only; MFA before evidence view; all access/decisions audited. | 2026-07-19 | Product owner | OPEN-QUESTIONS.md |
 | Q9 | Accepted: narrow `record_offline_payment` shop capability for an active barber; refunds/corrections stay with owner. | 2026-07-19 | Product owner | OPEN-QUESTIONS.md |
-| Q4–Q8, Q10–Q19 | Awaiting product owner response | — | — | — |
+| Q4–Q8, Q10–Q19 | Accepted all recommended defaults; Q17 procurement and Q19 legal/privacy approval remain Phase 5 release gates. | 2026-07-22 | Product owner | OPEN-QUESTIONS.md, phase plans, work breakdown |
 
-When answered, replace the relevant recommendation with the accepted decision,
-add a row here, and update the product contract/phase specifications in the same
-change.
+Future policy changes must add a dated decision row and update the product
+contract, relevant phase, contracts, tests, and UI copy together.

@@ -63,6 +63,8 @@ export interface Profile {
   /** Piniling account type; request lang ito hangga't hindi verified. */
   requested_role: OnboardingRole | null
   verification_status: VerificationStatus
+  /** Incremented whenever trusted professional access is suspended/restored/promoted. */
+  authorization_version: number
   onboarding_completed: boolean
   full_name: string
   /** Private sign-in/contact email. Never include this in PublicProfile. */
@@ -107,15 +109,33 @@ export interface Barber {
 }
 
 /** A barber joined with its profile — the shape the UI usually wants. */
-export interface BarberWithProfile extends Barber {
+export interface PublicBarber {
+  id: string
+  bio: string | null
+  rating: number
+  rating_count: number
+  shift_status: ShiftStatus
+  accepting_bookings: boolean
   profile: PublicProfile
 }
 
-export interface Service {
+/** Backwards-compatible UI name for the public barber card shape. */
+export interface BarberWithProfile extends PublicBarber {}
+
+export interface PublicService {
   id: string
+  /** Shop-scoped public catalogue relationship. */
+  shop_id: string
   name: string
   duration_min: number
   price_cents: number
+}
+
+/** Backwards-compatible UI name for an active public service. */
+export interface Service extends PublicService {}
+
+/** Stored/private service row used by backend implementations. */
+export interface StoredService extends PublicService {
   active: boolean
   created_at: string
 }
@@ -210,17 +230,16 @@ export interface AppointmentDetailed extends Appointment {
   service: Service
   barber: BarberWithProfile
   customer: PublicProfile
-  shop: Shop
+  /** Participant-safe shop summary; owner identity and timestamps stay private. */
+  shop: PublicShop
 }
 
 /** Live map-pin status. Derived, never stored: open = may bakanteng chair. */
 export type ShopStatus = 'open' | 'busy' | 'closed'
 
-/** A physical barbershop location. Mirrors the Phase 2 `shops` table. */
-export interface Shop {
+/** Explicit shop fields safe for anonymous discovery. */
+export interface PublicShop {
   id: string
-  /** Verified owner account responsible for roster and join-code controls. */
-  owner_id: string | null
   name: string
   /** Street-level address line shown on cards. */
   address: string
@@ -231,16 +250,55 @@ export interface Shop {
   /** Average rating 0–5 (one decimal) over `rating_count` reviews. */
   rating: number
   rating_count: number
+}
+
+/** A stored shop row. Owner identity is private and never part of discovery. */
+export interface Shop extends PublicShop {
+  /** Verified owner account responsible for roster and join-code controls. */
+  owner_id: string | null
   /** Barbers whose chairs live in this shop. */
   barber_ids: string[]
   created_at: string
 }
 
 /** Shop joined with live derived data — the shape the map/dashboard wants. */
-export interface ShopWithStatus extends Shop {
+export interface ShopWithStatus extends PublicShop {
+  /** Active, verified barbers publicly associated with this shop. */
+  barber_ids: string[]
   status: ShopStatus
   /** Barbers free to take a booking right now (subset of barber_ids). */
   available_barber_count: number
+}
+
+/** Publication lifecycle. Only `published` shops appear in public discovery. */
+export type ShopLifecycleStatus =
+  | 'draft'
+  | 'pending_review'
+  | 'published'
+  | 'suspended'
+  | 'archived'
+
+export type ShopBookingMode = 'manual' | 'instant'
+
+/**
+ * The owner's private, editable view of their own shop, including lifecycle and
+ * the optimistic-concurrency version. Never exposed through public discovery.
+ */
+export interface OwnerShop extends PublicShop {
+  owner_id: string
+  lifecycle_status: ShopLifecycleStatus
+  /** IANA timezone persisted per shop; local hours/closeout consume it. */
+  timezone: string
+  booking_mode: ShopBookingMode
+  chair_count: number
+  default_buffer_min: number
+  description: string | null
+  public_contact_phone: string | null
+  published_at: string | null
+  /** Optimistic concurrency token; every mutation echoes the next value. */
+  version: number
+  created_at: string
+  updated_at: string
 }
 
 export type EmploymentType = 'full_time' | 'part_time' | 'chair_rental'
@@ -271,6 +329,8 @@ export interface BarberApplication {
   updated_at: string
 }
 
+export type BarberEmploymentStatus = 'applied' | 'active' | 'resigned'
+
 /**
  * One stint at one shop. Attendance, absences, and shift change requests are
  * scoped to the ACTIVE employment record — leaving a shop closes the record
@@ -280,10 +340,15 @@ export interface BarberEmployment {
   id: string
   barber_id: string
   shop_id: string
+  status: BarberEmploymentStatus
   /** ISO date (YYYY-MM-DD) the barber joined the shop roster. */
   hired_at: string
   /** ISO date the stint ended (resigned / moved shop); null habang active. */
   ended_at: string | null
+  /** Trusted actor that ended the stint; null until it has been ended. */
+  ended_by: string | null
+  /** Auditable reason supplied when the stint ended. */
+  ended_reason: string | null
 }
 
 /** A day the barber missed a scheduled shift at their shop. */
@@ -357,8 +422,11 @@ export interface Conversation {
 
 export interface ConversationDetailed extends Conversation {
   customer: PublicProfile
-  shop: Shop
+  /** Participant-safe shop summary; owner identity and timestamps stay private. */
+  shop: PublicShop
   barber: BarberWithProfile
+  /** Safe thread classification; avoids exposing the shop owner's user id. */
+  is_staff_thread: boolean
   last_message: Message | null
   unread_count: number
 }

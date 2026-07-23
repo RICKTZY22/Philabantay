@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { AppointmentDetailed, ShopWithStatus } from '@barbershop/shared'
+import {
+  APPOINTMENT_STATUS_LABELS,
+  canonicalAppointmentStatus,
+  type AppointmentDetailed,
+  type ShopWithStatus,
+} from '@barbershop/shared'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { localDateKey, parseLocalDateKey } from '../lib/date'
 import { timeOfDay } from '../lib/format'
@@ -27,11 +32,7 @@ function monthDays(month: Date) {
 }
 
 function statusLabel(status: AppointmentDetailed['status']) {
-  if (status === 'pending') return 'Pending'
-  if (status === 'confirmed') return 'Confirmed'
-  if (status === 'completed') return 'Completed'
-  if (status === 'no_show') return 'No show'
-  return 'Cancelled'
+  return APPOINTMENT_STATUS_LABELS[canonicalAppointmentStatus(status)]
 }
 
 export function AppointmentCalendar({ appointments, shops = [], showViewAll = true, variant = 'compact', onSelectAppointment }: {
@@ -135,7 +136,7 @@ export function AppointmentCalendar({ appointments, shops = [], showViewAll = tr
                   {dayAppointments.slice(0, 1).map((appointment) => (
                     <button
                       type="button"
-                      className={`cut-calendar-event is-${appointment.status}`}
+                      className={`cut-calendar-event is-${canonicalAppointmentStatus(appointment.status)}`}
                       key={appointment.id}
                       onClick={() => {
                         setSelectedKey(key)
@@ -166,14 +167,13 @@ export function AppointmentCalendar({ appointments, shops = [], showViewAll = tr
           <p>Walang haircut appointment sa araw na ito.</p>
         ) : selectedAppointments.map((appointment) => {
           const shop = appointment.shop ?? shops.find((candidate) => candidate.barber_ids.includes(appointment.barber_id))
-          const destination = appointment.status === 'completed'
-            || appointment.status === 'cancelled'
-            || appointment.status === 'no_show'
+          const status = canonicalAppointmentStatus(appointment.status)
+          const destination = ['completed', 'cancelled', 'declined', 'expired', 'customer_no_show'].includes(status)
             ? '/appointments?view=history'
             : '/appointments?view=upcoming'
           return (
             <Link className="cut-calendar-booking" to={destination} key={appointment.id}>
-              <span className={`cut-calendar-time is-${appointment.status}`}>{timeOfDay(appointment.starts_at)}</span>
+              <span className={`cut-calendar-time is-${status}`}>{timeOfDay(appointment.starts_at)}</span>
               <span>
                 <strong>{appointment.service.name}</strong>
                 <small>{appointment.barber.profile.full_name}{shop ? ` · ${shop.name}` : ''}</small>

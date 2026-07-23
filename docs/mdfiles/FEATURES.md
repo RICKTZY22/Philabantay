@@ -4,9 +4,9 @@ A friendly map of what this app does, every major screen, where each one lives i
 the code, and how the important flows actually run start to finish.
 
 For the technical side (state, data flow, patterns), see
-[ARCHITECTURE.md](ARCHITECTURE.md). For conventions and the production security
-plan, see [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](SECURITY.md), and
-[ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md).
+[ARCHITECTURE.md](../systemarch/ARCHITECTURE.md). For conventions and the production security
+plan, see [CODE-PATTERNS.md](../systemarch/CODE-PATTERNS.md), [SECURITY.md](../security/SECURITY.md), and
+[ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md).
 
 ---
 
@@ -27,7 +27,7 @@ of people:
 The same UI can run against the in-browser **mock backend** or the implemented
 Express/Supabase backend. `VITE_DATA_BACKEND=api` selects `ApiBackend`; the
 current local frontend configuration uses that real API path. See
-[ARCHITECTURE.md](ARCHITECTURE.md#the-one-big-idea-the-databackend-contract).
+[ARCHITECTURE.md](../systemarch/ARCHITECTURE.md#the-one-big-idea-the-databackend-contract).
 Some screens are ahead of their durable backend contract, so the
 current-versus-planned notes below remain important.
 
@@ -44,7 +44,7 @@ first three (there is no admin UI; the admin demo was removed in a data
 migration).
 
 The important rule, enforced in the mock and documented for production in
-[ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md): **signing up
+[ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md): **signing up
 always makes you a customer.** Choosing "barber" or "shop owner" during
 onboarding only records a *request* (`requested_role`) and sets
 `verification_status: 'pending'`. The account stays customer-level until a
@@ -310,5 +310,5 @@ service contract yet:
 - **Social sign-in buttons** in the auth slider are stubs awaiting the Supabase
   OAuth wiring.
 
-See [ARCHITECTURE.md - Gotchas](ARCHITECTURE.md#gotchas-and-inconsistencies-to-know)
+See [ARCHITECTURE.md - Gotchas](../systemarch/ARCHITECTURE.md#gotchas-and-inconsistencies-to-know)
 for the full list, including a password-hint mismatch worth fixing.

@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { isOwnerVerificationLocked, type Role } from '@barbershop/shared'
+import type { Role } from '@barbershop/shared'
+import { isProfessionalLocked } from '../lib/access'
 import { useAuth } from '../features/auth/AuthContext'
 import { Loading } from './Loading'
 
@@ -34,9 +35,10 @@ export function RequireAuth({
     return <Navigate to={`/onboarding/role?from=${encodeURIComponent(from)}`} replace />
   }
 
-  // Owner verification is a full account lock, not a dashboard preview. Keep
-  // direct URLs such as /settings from rendering even for a single frame.
-  if (!allowVerificationLocked && isOwnerVerificationLocked(profile)) {
+  // Professional verification is a full account lock, not a dashboard preview.
+  // Keep direct URLs such as /settings from rendering even for a single frame,
+  // for pending/rejected/suspended barbers and owners alike.
+  if (!allowVerificationLocked && isProfessionalLocked(profile)) {
     return <Navigate to="/verification" replace />
   }
 

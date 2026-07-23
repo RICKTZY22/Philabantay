@@ -67,15 +67,41 @@ export function createAuthRouter(dependencies: ApiDependencies): Router {
       throw new ApiError(409, 'already_completed', 'Role onboarding is already complete.')
     }
 
-    const values = input.role === 'customer'
-      ? { requested_role: 'customer', role: 'customer', verification_status: 'not_required', onboarding_completed: true }
-      : { requested_role: input.role, role: 'customer', verification_status: 'pending', onboarding_completed: true }
+    if (input.role === 'customer') {
+      const { data, error } = await dependencies.database
+        .from('users')
+        .update({
+          requested_role: 'customer',
+          role: 'customer',
+          verification_status: 'not_required',
+          onboarding_completed: true,
+        })
+        .eq('id', request.auth.profile.id)
+        .select('*')
+        .single()
+      if (error) throw fromDatabaseError(error)
+      response.json({ data })
+      return
+    }
+
+    // Professional onboarding and creation of its initial draft must commit as
+    // one transaction. A profile can never become locked without a matching
+    // workspace, nor can a draft exist without the profile lock.
+    const { error: beginError } = await dependencies.database.rpc(
+      'api_begin_professional_verification',
+      {
+        p_actor_id: request.auth.profile.id,
+        p_requested_role: input.role,
+        p_command_id: crypto.randomUUID(),
+        p_request_id: null,
+      },
+    )
+    if (beginError) throw fromDatabaseError(beginError)
 
     const { data, error } = await dependencies.database
       .from('users')
-      .update(values)
-      .eq('id', request.auth.profile.id)
       .select('*')
+      .eq('id', request.auth.profile.id)
       .single()
     if (error) throw fromDatabaseError(error)
     response.json({ data })

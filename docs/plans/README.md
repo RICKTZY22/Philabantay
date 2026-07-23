@@ -2,7 +2,7 @@
 
 This folder is the **authoritative implementation plan** for Philabantay V1.
 It consolidates the product decisions, workflows, UI direction, backend work,
-security rules, and release gates discussed through 2026-07-18.
+security rules, and release gates discussed through 2026-07-22.
 
 The documents in `docs/` remain useful explanations and historical records.
 When an older roadmap conflicts with this folder, use this folder for intended
@@ -20,8 +20,12 @@ and versioned Supabase migrations.
 7. [UI/frontend master specification](UI-FRONTEND-MASTER-SPEC.md)
 8. [Backend, data, and security master specification](BACKEND-DATA-SECURITY-MASTER-SPEC.md)
 9. [QA and traceability matrix](QA-TRACEABILITY-MATRIX.md)
-10. [Agent handoff and collaboration rules](AGENT-HANDOFF.md)
-11. [Clarifications and decisions needed](OPEN-QUESTIONS.md)
+10. [Implementation work breakdown](06-IMPLEMENTATION-WORKBREAKDOWN.md)
+11. [Latest logic/loophole rescan](LOGIC-LOOPHOLE-RESCAN-2026-07-22.md)
+12. [Agent handoff and collaboration rules](AGENT-HANDOFF.md)
+13. [Clarifications and decision register](OPEN-QUESTIONS.md)
+14. [Current Phase 1 execution status](PHASE-1-STATUS-2026-07-22.md)
+15. [Frozen P1-02/P1-05 verification contract](P1-02-P1-05-VERIFICATION-CONTRACT.md)
 
 ## Five phases at a glance
 
@@ -97,3 +101,14 @@ backend command.
 The product owner reviews and accepts each phase before the next phase begins.
 A phase is accepted only when its exit gate and traceability rows are green;
 "the screen looks finished" is not enough.
+
+## Active frontend collaboration packets
+
+Run these in order; both are frontend-only and stop before Phase 2:
+
+1. [`CLAUDE-OPUS-4.8-P1-02-FOLLOWUP.md`](CLAUDE-OPUS-4.8-P1-02-FOLLOWUP.md)
+   fixes the session-restore content flash, honest verification copy, and lock
+   error/test coverage found by the live browser smoke test.
+2. [`CLAUDE-OPUS-4.8-P1-01-BOOKING-UI.md`](CLAUDE-OPUS-4.8-P1-01-BOOKING-UI.md)
+   moves owner/customer/barber booking surfaces to the canonical versioned
+   appointment commands and removes legacy operational status branches.

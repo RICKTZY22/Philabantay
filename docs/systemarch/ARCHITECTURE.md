@@ -4,9 +4,9 @@ A practical technical map: the stack, the folder layout, where state lives, how
 data flows, what talks to what, and the gotchas worth knowing before you change
 things.
 
-Pair this with [FEATURES.md](FEATURES.md) (what each screen does) and the
-existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](SECURITY.md), and
-[ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md).
+Pair this with [FEATURES.md](../mdfiles/FEATURES.md) (what each screen does) and the
+existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](../security/SECURITY.md), and
+[ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md).
 
 ---
 
@@ -30,7 +30,7 @@ existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](SECURITY.md), and
 credential-free local seed live under `supabase/`; the thin Express API lives in
 `apps/api`. The frontend HTTP adapter is wired and the Docker-backed local stack
 has passed direct RLS, Express API, and three-role browser verification. See
-[LOCAL-SUPABASE-VERIFICATION.md](LOCAL-SUPABASE-VERIFICATION.md).
+[LOCAL-SUPABASE-VERIFICATION.md](../mdfiles/LOCAL-SUPABASE-VERIFICATION.md).
 
 ---
 
@@ -255,7 +255,7 @@ subscription on unmount.
   the owner lock for normally-public routes, leaving Sign out as the only action.
 - Important: `RequireAuth` is **UX only**. It is explicitly documented as *not* a
   security boundary; production security is Supabase RLS
-  ([ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md)).
+  ([ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md)).
 - Navigation between routes usually goes through the barber-curtain transition
   (`useCurtain().go(to)`), which closes a curtain, navigates behind it, and
   reopens. Redirect targets from query/state are sanitized with
@@ -355,9 +355,17 @@ Review            appointment_id, customer_id, barber_id, shop_id, barber_rating
 HiringListing / BarberApplication / ShopJoinCodeDetails   (employment)
 ```
 
-Two enums drive most conditionals: `AppointmentStatus`
-(`pending | confirmed | cancelled | completed | no_show`) and `ShopStatus`
-(`open | busy | closed`, derived, never stored).
+`appointments.check_in_code_hash` is deliberately absent from shared DTOs,
+browser column grants, and Express response projections. Only the database
+lifecycle command may compare it; clients receive its expiry and the authorized
+issuer receives the one-time plaintext code from the command route.
+
+Two enums drive most conditionals. New appointment writes use the canonical
+`AppointmentStatus` lifecycle (`requested | confirmed | checked_in |
+in_progress | awaiting_confirmation | declined | expired | cancelled |
+completed | customer_no_show | disputed`). `pending` and `no_show` are temporary
+read-compatibility aliases only. `ShopStatus` (`open | busy | closed`) is
+derived, never stored.
 
 ---
 
@@ -411,7 +419,7 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
    queue/hours/gallery/latest-review/specialties remain hardcoded. The owner
    dashboard reservations, metrics, charts, staff, and performance panels now
    use backend data. See
-   [FEATURES.md](FEATURES.md#what-is-real-vs-placeholder-so-you-are-not-surprised).
+   [FEATURES.md](../mdfiles/FEATURES.md#what-is-real-vs-placeholder-so-you-are-not-surprised).
 6. **Notification prefs are device-local** (`localStorage: bsh_prefs`) and never
    reach the backend; the "Email updates" toggle has no downstream effect.
 7. **Shared settings helpers live in a panel.** `SettingsHeading` and
@@ -446,7 +454,7 @@ The implemented path is:
 3. Flip `VITE_DATA_BACKEND=api` and set `VITE_API_BASE_URL`.
 4. The Express API and Postgres/RLS enforce roles, ownership, status transitions,
    and slot validation because the browser is never the authority. Follow
-   [ROLE-AND-LOCATION-GUARDRAILS.md](ROLE-AND-LOCATION-GUARDRAILS.md) and
-   [SECURITY.md](SECURITY.md).
+   [ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md) and
+   [SECURITY.md](../security/SECURITY.md).
 
 Because pages only ever touched the interface, no screen should need to change.

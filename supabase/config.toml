@@ -40,3 +40,9 @@ additional_redirect_urls = ["http://localhost:5174"]
 jwt_expiry = 3600
 enable_signup = true
 enable_anonymous_sign_ins = false
+
+# Local verification-admin testing uses a real verified TOTP factor. Production
+# still requires its own MFA policy, recovery, monitoring, and operator runbook.
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true

@@ -1,7 +1,12 @@
 import {
+  CAPACITY_BLOCKING_APPOINTMENT_STATUSES,
+  appointmentRequestExpiresAt,
   canModifyAppointment,
+  canonicalAppointmentStatus,
   DataError,
+  nextAppointmentStatus,
   normalizePhone,
+  shopPublicationReadiness,
   validateEmail,
   validateFullName,
   validatePassword,
@@ -21,7 +26,10 @@ import {
   type DataBackend,
   type Message,
   type HiringShop,
+  type OwnerShop,
   type Profile,
+  type PublicService,
+  type PublicShop,
   type Review,
   type SendMessageInput,
   type Shop,
@@ -265,8 +273,11 @@ function migrateDB(stored: MockDB): MockDB {
           id: `emp-${barberId}`,
           barber_id: barberId,
           shop_id: shop.id,
+          status: 'active',
           hired_at: (barber?.created_at ?? nowISO()).slice(0, 10),
           ended_at: null,
+          ended_by: null,
+          ended_reason: null,
         })
       })
     })
@@ -402,6 +413,34 @@ function migrateDB(stored: MockDB): MockDB {
       !bundledIds.has(employment.barber_id) && retainedShopIds.has(employment.shop_id)
     ))
     stored.version = 19
+  }
+  if (stored.version < 20) {
+    // v20 adds explicit employment state and termination audit fields.
+    // Legacy history remains intact without inventing a missing actor/reason.
+    stored.employments = stored.employments.map((employmentRecord) => ({
+      ...employmentRecord,
+      status: employmentRecord.ended_at === null ? 'active' : 'resigned',
+      ended_by: null,
+      ended_reason: null,
+    }))
+    stored.version = 20
+  }
+  if (stored.version < 21) {
+    stored.profiles = stored.profiles.map((profile) => ({
+      ...profile,
+      authorization_version: 1,
+    }))
+    stored.version = 21
+  }
+  if (stored.version < 22) {
+    // Canonical lifecycle writes start at v22. Legacy values remain readable
+    // at the shared boundary, but persisted mock rows no longer branch on them.
+    stored.appointments = stored.appointments.map((appointment) => ({
+      ...appointment,
+      status: canonicalAppointmentStatus(appointment.status),
+      version: appointment.version ?? 1,
+    }))
+    stored.version = 22
   }
   return stored
 }
@@ -654,7 +693,8 @@ export function createMockBackend(): DataBackend {
   function barberWithProfile(b: Barber): BarberWithProfile {
     const profile = profileById(b.id)
     if (!profile) throw new DataError('not_found', 'Barber profile missing.')
-    return { ...clone(b), profile: publicProfile(profile) }
+    const { created_at: _privateCreatedAt, ...publicBarber } = b
+    return { ...clone(publicBarber), profile: publicProfile(profile) }
   }
   function appointmentDetailed(a: Appointment): AppointmentDetailed | null {
     const service = db.services.find((s) => s.id === a.service_id)
@@ -664,10 +704,10 @@ export function createMockBackend(): DataBackend {
     if (!service || !barber || !customer || !shop || !profileById(barber.id)) return null
     return {
       ...clone(a),
-      service: clone(service),
+      service: publicService(service),
       barber: barberWithProfile(barber),
       customer: publicProfile(customer),
-      shop: clone(shop),
+      shop: publicShop(shop),
     }
   }
   function conversationDetailed(c: Conversation, viewerId: string): ConversationDetailed | null {
@@ -683,11 +723,31 @@ export function createMockBackend(): DataBackend {
     return {
       ...clone(c),
       customer: publicProfile(customer),
-      shop: clone(shop),
+      shop: publicShop(shop),
       barber: barberWithProfile(barber),
+      is_staff_thread: shop.owner_id !== null && c.customer_id === shop.owner_id,
       last_message: last ? clone(last) : null,
       unread_count: unread,
     }
+  }
+
+  function publicShop(shop: Shop): PublicShop {
+    const {
+      owner_id: _privateOwnerId,
+      barber_ids: _privateBarberIds,
+      created_at: _privateCreatedAt,
+      ...safe
+    } = shop
+    return clone(safe)
+  }
+
+  function publicService(service: MockDB['services'][number]): PublicService {
+    const {
+      active: _privateActive,
+      created_at: _privateCreatedAt,
+      ...safe
+    } = service
+    return clone(safe)
   }
 
   // ================= AuthService =================
@@ -722,6 +782,7 @@ export function createMockBackend(): DataBackend {
           role: 'customer',
           requested_role: null,
           verification_status: 'unverified',
+          authorization_version: 1,
           onboarding_completed: false,
           full_name: input.full_name.trim(),
           email,
@@ -1003,8 +1064,9 @@ export function createMockBackend(): DataBackend {
     const staff = db.barbers.filter((b) => s.barber_ids.includes(b.id))
     const onChair = staff.filter((b) => isOnChair(b, when))
     const available = onChair.filter((b) => b.accepting_bookings)
+    const { owner_id: _privateOwnerId, created_at: _privateCreatedAt, ...publicShop } = s
     return {
-      ...clone(s),
+      ...clone(publicShop),
       status: available.length > 0 ? 'open' : onChair.length > 0 ? 'busy' : 'closed',
       available_barber_count: available.length,
     }
@@ -1022,6 +1084,133 @@ export function createMockBackend(): DataBackend {
       reloadFromStorage()
       const s = db.shops.find((x) => x.id === shopId)
       return s ? shopWithStatus(s) : null
+    },
+  }
+
+  // ================= OwnerShopService (P2-01) =================
+  // Mock parity for the shop publication lifecycle. Lifecycle/version fields are
+  // stored on the shop object (the JSON store round-trips extra keys), so the
+  // mock behaves like the Express + Postgres command path.
+  type MutableOwnerShop = Shop & Partial<Omit<OwnerShop, keyof Shop>>
+
+  function toOwnerShop(shop: Shop): OwnerShop {
+    const s = shop as MutableOwnerShop
+    return clone({
+      id: shop.id,
+      name: shop.name,
+      address: shop.address,
+      city: shop.city,
+      lat: shop.lat,
+      lng: shop.lng,
+      rating: shop.rating,
+      rating_count: shop.rating_count,
+      owner_id: shop.owner_id ?? '',
+      lifecycle_status: s.lifecycle_status ?? 'draft',
+      timezone: s.timezone ?? 'Asia/Manila',
+      booking_mode: s.booking_mode ?? 'manual',
+      chair_count: s.chair_count ?? 1,
+      default_buffer_min: s.default_buffer_min ?? 0,
+      description: s.description ?? null,
+      public_contact_phone: s.public_contact_phone ?? null,
+      published_at: s.published_at ?? null,
+      version: s.version ?? 1,
+      created_at: shop.created_at,
+      updated_at: s.updated_at ?? shop.created_at,
+    })
+  }
+
+  function assertShopVersion(shop: MutableOwnerShop, expected: number): void {
+    if ((shop.version ?? 1) !== expected) {
+      throw new DataError('conflict', 'Nabago na ang shop mula nang i-load mo. I-reload at subukan ulit.')
+    }
+  }
+
+  const ownerShop: DataBackend['ownerShop'] = {
+    async getMine() {
+      await delay()
+      reloadFromStorage()
+      const user = requireUser()
+      const shop = db.shops.find((candidate) => candidate.owner_id === user.id)
+      return shop ? toOwnerShop(shop) : null
+    },
+
+    async create(input) {
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        if (user.role !== 'shop_owner') {
+          throw new DataError('forbidden', 'Shop owners lang ang puwedeng gumawa ng shop.')
+        }
+        if (db.shops.some((candidate) => candidate.owner_id === user.id)) {
+          throw new DataError('conflict', 'May naka-register ka nang shop. Isa lang ang pinapayagan sa V1.')
+        }
+        const now = new Date().toISOString()
+        const shop: MutableOwnerShop = {
+          id: crypto.randomUUID(),
+          owner_id: user.id,
+          name: input.name,
+          address: input.address,
+          city: input.city,
+          lat: input.lat,
+          lng: input.lng,
+          rating: 0,
+          rating_count: 0,
+          barber_ids: [],
+          created_at: now,
+          lifecycle_status: 'draft',
+          timezone: input.timezone ?? 'Asia/Manila',
+          booking_mode: input.booking_mode ?? 'manual',
+          chair_count: input.chair_count ?? 1,
+          default_buffer_min: input.default_buffer_min ?? 0,
+          description: input.description ?? null,
+          public_contact_phone: input.public_contact_phone ?? null,
+          published_at: null,
+          version: 1,
+          updated_at: now,
+        }
+        db.shops.push(shop)
+        return toOwnerShop(shop)
+      })
+    },
+
+    async update(input) {
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop() as MutableOwnerShop
+        assertShopVersion(shop, input.expected_version)
+        const { expected_version: _expected, ...fields } = input
+        Object.assign(shop, fields)
+        shop.version = (shop.version ?? 1) + 1
+        shop.updated_at = new Date().toISOString()
+        return toOwnerShop(shop)
+      })
+    },
+
+    async publish(input) {
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop() as MutableOwnerShop
+        assertShopVersion(shop, input.expected_version)
+        const activeServices = db.services.filter((svc) => svc.shop_id === shop.id && svc.active).length
+        const readiness = shopPublicationReadiness(toOwnerShop(shop), activeServices)
+        if (!readiness.ready) {
+          throw new DataError('validation', `Hindi pa ready i-publish. Kulang: ${readiness.missing.join(', ')}.`)
+        }
+        shop.lifecycle_status = 'published'
+        shop.published_at = shop.published_at ?? new Date().toISOString()
+        shop.version = (shop.version ?? 1) + 1
+        shop.updated_at = new Date().toISOString()
+        return toOwnerShop(shop)
+      })
+    },
+
+    async unpublish(input) {
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop() as MutableOwnerShop
+        assertShopVersion(shop, input.expected_version)
+        shop.lifecycle_status = 'draft'
+        shop.published_at = null
+        shop.version = (shop.version ?? 1) + 1
+        shop.updated_at = new Date().toISOString()
+        return toOwnerShop(shop)
+      })
     },
   }
 
@@ -1118,9 +1307,34 @@ export function createMockBackend(): DataBackend {
       const userId = requireBarberCandidate().id
       const joinedShop = await withDatabaseWrite(() => {
         const user = requireBarberCandidate()
+        if (
+          user.role !== 'barber'
+          || user.requested_role !== 'barber'
+          || user.verification_status !== 'verified'
+          || !user.onboarding_completed
+        ) {
+          throw new DataError('forbidden', 'A verified and onboarded barber account is required.')
+        }
         const shopId = db.shopJoinCodes[code]
         const shop = db.shops.find((candidate) => candidate.id === shopId)
-        if (!shop) throw new DataError('validation', 'Mali o expired ang shop code.')
+        if (!shop) throw new DataError('invalid_code', 'Mali o expired ang shop code.')
+        if (db.employments.some((employmentRecord) => (
+          employmentRecord.barber_id === user.id
+          && employmentRecord.shop_id === shop.id
+          && employmentRecord.status === 'resigned'
+        ))) {
+          throw new DataError(
+            'rehire_requires_owner_approval',
+            'A former staff member must apply again and receive owner approval before rejoining this shop.',
+          )
+        }
+        if (db.employments.some((employmentRecord) => (
+          employmentRecord.barber_id === user.id
+          && employmentRecord.status === 'active'
+          && employmentRecord.ended_at === null
+        ))) {
+          throw new DataError('already_employed', 'End the current employment before joining another shop.')
+        }
         const currentShop = currentShopFor(user.id)
         if (currentShop && currentShop.id !== shop.id) {
           const replacementBarberId = currentShop.barber_ids.find((barberId) => barberId !== user.id)
@@ -1170,7 +1384,12 @@ export function createMockBackend(): DataBackend {
             employmentRecord.barber_id === user.id
             && employmentRecord.ended_at === null
             && employmentRecord.shop_id !== shop.id
-          ) employmentRecord.ended_at = today
+          ) {
+            employmentRecord.status = 'resigned'
+            employmentRecord.ended_at = today
+            employmentRecord.ended_by = user.id
+            employmentRecord.ended_reason = 'Joined another shop with a valid code.'
+          }
         })
         if (!db.employments.some((employmentRecord) => (
           employmentRecord.barber_id === user.id
@@ -1181,8 +1400,11 @@ export function createMockBackend(): DataBackend {
             id: uid('emp'),
             barber_id: user.id,
             shop_id: shop.id,
+            status: 'active',
             hired_at: today,
             ended_at: null,
+            ended_by: null,
+            ended_reason: null,
           })
         }
 
@@ -1261,6 +1483,50 @@ export function createMockBackend(): DataBackend {
         employmentRecord.barber_id === user.id && employmentRecord.ended_at === null
       ))
       return active ? clone(active) : null
+    },
+
+    async endEmployment(employmentId, reason) {
+      await delay()
+      const normalizedReason = reason.trim()
+      if (normalizedReason.length < 3 || normalizedReason.length > 1000) {
+        throw new DataError('validation', 'Employment end reason must contain 3 to 1000 characters.')
+      }
+      return withDatabaseWrite(() => {
+        const shop = requireOwnedShop()
+        const owner = requireUser()
+        const employmentRecord = db.employments.find((candidate) => candidate.id === employmentId)
+        if (!employmentRecord) throw new DataError('not_found', 'Employment record not found.')
+        if (employmentRecord.shop_id !== shop.id) {
+          throw new DataError('forbidden', 'You can only end employment at your own shop.')
+        }
+        if (employmentRecord.status !== 'active' || employmentRecord.ended_at !== null) {
+          throw new DataError('employment_not_active', 'Only an active employment can be ended.')
+        }
+        const hasActiveBooking = db.appointments.some((appointment) => (
+          appointment.shop_id === shop.id
+          && appointment.barber_id === employmentRecord.barber_id
+          && CAPACITY_BLOCKING_APPOINTMENT_STATUSES.some((status) => status === appointment.status)
+        ))
+        if (hasActiveBooking) {
+          throw new DataError('employment_has_active_bookings', 'Resolve every active appointment assigned to this barber before ending employment.')
+        }
+
+        const endedAt = localDateKey(new Date())
+        if (employmentRecord.hired_at > endedAt) {
+          throw new DataError('validation', 'Employment cannot end before its hire date.')
+        }
+        employmentRecord.status = 'resigned'
+        employmentRecord.ended_at = endedAt
+        employmentRecord.ended_by = owner.id
+        employmentRecord.ended_reason = normalizedReason
+        shop.barber_ids = shop.barber_ids.filter((barberId) => barberId !== employmentRecord.barber_id)
+        const barberRecord = db.barbers.find((barber) => barber.id === employmentRecord.barber_id)
+        if (barberRecord) {
+          barberRecord.shift_status = 'off'
+          barberRecord.accepting_bookings = false
+        }
+        return clone(employmentRecord)
+      })
     },
 
     async listMyAbsences() {
@@ -1563,6 +1829,40 @@ export function createMockBackend(): DataBackend {
     },
   }
 
+  // Verification deliberately remains API-only in the browser mock. Returning
+  // fabricated cases or a fabricated clean scan would make security UX lie.
+  async function verificationUnavailable(): Promise<never> {
+    await delay(40)
+    throw new DataError('server', 'Professional verification is unavailable in local mock mode.')
+  }
+
+  const verification: DataBackend['verification'] = {
+    getMine: verificationUnavailable,
+    createSubmission: verificationUnavailable,
+    updateSubmission: verificationUnavailable,
+    requestEvidenceUpload: verificationUnavailable,
+    completeEvidenceUpload: verificationUnavailable,
+    removeEvidence: verificationUnavailable,
+    getEvidenceView: verificationUnavailable,
+    submit: verificationUnavailable,
+    withdraw: verificationUnavailable,
+    startProfessionalPhoneVerification: verificationUnavailable,
+    confirmProfessionalPhoneVerification: verificationUnavailable,
+  }
+
+  const admin: DataBackend['admin'] = {
+    listVerifications: verificationUnavailable,
+    getVerification: verificationUnavailable,
+    assignVerification: verificationUnavailable,
+    getVerificationEvidenceView: verificationUnavailable,
+    requestVerificationInformation: verificationUnavailable,
+    approveVerification: verificationUnavailable,
+    rejectVerification: verificationUnavailable,
+    getProfessional: verificationUnavailable,
+    suspendProfessional: verificationUnavailable,
+    restoreProfessional: verificationUnavailable,
+  }
+
   // ================= SupportService =================
   const support: DataBackend['support'] = {
     async reportBug(input) {
@@ -1714,10 +2014,12 @@ export function createMockBackend(): DataBackend {
 
   // ================= ServiceCatalog =================
   const services: DataBackend['services'] = {
-    async list() {
+    async list(shopId) {
       await delay(50)
       reloadFromStorage()
-      return db.services.filter((s) => s.active).map(clone)
+      return db.services
+        .filter((service) => service.active && (!shopId || service.shop_id === shopId))
+        .map(({ active: _privateActive, created_at: _privateCreatedAt, ...service }) => clone(service))
     },
   }
 
@@ -1786,7 +2088,9 @@ export function createMockBackend(): DataBackend {
           service_id: input.service_id,
           starts_at: start.toISOString(),
           ends_at: end.toISOString(),
-          status: 'pending',
+          status: 'requested',
+          version: 1,
+          expires_at: appointmentRequestExpiresAt(nowISO()),
           notes,
           created_at: nowISO(),
           updated_at: nowISO(),
@@ -1805,7 +2109,8 @@ export function createMockBackend(): DataBackend {
         if (appointment.customer_id !== user.id) {
           throw new DataError('forbidden', 'Only the customer can reschedule this appointment.')
         }
-        if (appointment.status !== 'pending' && appointment.status !== 'confirmed') {
+        const currentStatus = canonicalAppointmentStatus(appointment.status)
+        if (currentStatus !== 'requested' && currentStatus !== 'confirmed') {
           throw new DataError('validation', 'Only an active appointment can be rescheduled.')
         }
         if (!canModifyAppointment(appointment)) {
@@ -1818,7 +2123,8 @@ export function createMockBackend(): DataBackend {
         appointment.starts_at = start.toISOString()
         appointment.ends_at = end.toISOString()
         appointment.notes = notes
-        appointment.status = 'pending'
+        appointment.status = currentStatus
+        appointment.version = (appointment.version ?? 1) + 1
         appointment.updated_at = nowISO()
         return clone(appointment)
       })
@@ -1833,13 +2139,15 @@ export function createMockBackend(): DataBackend {
         if (appt.customer_id !== user.id && appt.barber_id !== user.id) {
           throw new DataError('forbidden', 'Not your appointment.')
         }
-        if (appt.status !== 'pending' && appt.status !== 'confirmed') {
+        const currentStatus = canonicalAppointmentStatus(appt.status)
+        if (currentStatus !== 'requested' && currentStatus !== 'confirmed') {
           throw new DataError('validation', 'Only an active appointment can be cancelled.')
         }
         if (!canModifyAppointment(appt)) {
           throw new DataError('validation', 'A haircut that has already started cannot be cancelled.')
         }
         appt.status = 'cancelled'
+        appt.version = (appt.version ?? 1) + 1
         appt.updated_at = nowISO()
         return clone(appt)
       })
@@ -1867,69 +2175,43 @@ export function createMockBackend(): DataBackend {
         .filter((appointment): appointment is AppointmentDetailed => appointment !== null)
     },
 
-    async setStatus(appointmentId, status) {
+    async accept(appointmentId, input) {
       await delay()
       return withDatabaseWrite(() => {
         const user = requireUser()
-        const appt = db.appointments.find((a) => a.id === appointmentId)
-        if (!appt) throw new DataError('not_found', 'Appointment not found.')
-        const ownedShop = user.role === 'shop_owner'
-          ? db.shops.find((shop) => shop.id === appt.shop_id && shop.owner_id === user.id)
-          : null
-        if (appt.barber_id !== user.id && !ownedShop) {
-          throw new DataError('forbidden', 'Only the assigned barber or shop owner can change status.')
-        }
-        if (ownedShop && status !== 'confirmed' && status !== 'cancelled') {
-          throw new DataError('forbidden', 'Owners may only accept or decline reservations.')
-        }
-        if (status === appt.status) return clone(appt)
-        const allowed: Record<Appointment['status'], Appointment['status'][]> = {
-          pending: ['confirmed', 'cancelled'],
-          requested: ['confirmed', 'declined', 'expired', 'cancelled'],
-          confirmed: ['checked_in', 'cancelled', 'no_show', 'customer_no_show'],
-          checked_in: ['in_progress'],
-          in_progress: ['awaiting_confirmation'],
-          awaiting_confirmation: ['completed', 'disputed'],
-          disputed: ['completed', 'cancelled'],
-          declined: [],
-          expired: [],
-          completed: [],
-          cancelled: [],
-          customer_no_show: [],
-          no_show: [],
-        }
-        if (!allowed[appt.status].includes(status)) {
-          throw new DataError('validation', `Cannot change ${appt.status} to ${status}.`)
-        }
-        if (status === 'cancelled' && !canModifyAppointment(appt)) {
-          throw new DataError('validation', 'A haircut that has already started cannot be cancelled.')
-        }
-        if ((status === 'completed' || status === 'no_show') && Date.now() < new Date(appt.starts_at).getTime()) {
-          throw new DataError('validation', 'The appointment has not started yet.')
-        }
-        appt.status = status
-        appt.updated_at = nowISO()
-        return clone(appt)
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (!ownedShop) throw new DataError('forbidden', 'Only the shop owner may accept this reservation.')
+        if ((appointment.version ?? 1) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        const next = nextAppointmentStatus(appointment.status, 'accept')
+        if (!next) throw new DataError('validation', `Cannot accept a ${canonicalAppointmentStatus(appointment.status)} appointment.`)
+        appointment.status = next
+        appointment.version = (appointment.version ?? 1) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
       })
     },
 
-    async accept(appointmentId, input) {
-      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
-      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
-      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
-      const updated = await bookings.setStatus(appointmentId, 'confirmed')
-      appointment.version = (appointment.version ?? 0) + 1
-      return { ...updated, version: appointment.version }
-    },
-
     async decline(appointmentId, input) {
-      const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
-      if (!appointment) throw new DataError('not_found', 'Appointment not found.')
-      if ((appointment.version ?? 0) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
-      const updated = await bookings.setStatus(appointmentId, 'cancelled')
-      appointment.version = (appointment.version ?? 0) + 1
-      appointment.cancellation_reason = input.reason
-      return { ...updated, version: appointment.version, cancellation_reason: input.reason }
+      await delay()
+      return withDatabaseWrite(() => {
+        const user = requireUser()
+        const appointment = db.appointments.find((candidate) => candidate.id === appointmentId)
+        if (!appointment) throw new DataError('not_found', 'Appointment not found.')
+        const ownedShop = db.shops.some((shop) => shop.id === appointment.shop_id && shop.owner_id === user.id)
+        if (!ownedShop) throw new DataError('forbidden', 'Only the shop owner may decline this reservation.')
+        if ((appointment.version ?? 1) !== input.expected_version) throw new DataError('stale_appointment', 'Appointment changed; refresh before trying again.')
+        const next = nextAppointmentStatus(appointment.status, 'decline')
+        if (!next) throw new DataError('validation', `Cannot decline a ${canonicalAppointmentStatus(appointment.status)} appointment.`)
+        appointment.status = next
+        appointment.cancellation_reason = input.reason
+        appointment.cancelled_at = nowISO()
+        appointment.cancelled_by = user.id
+        appointment.version = (appointment.version ?? 1) + 1
+        appointment.updated_at = nowISO()
+        return clone(appointment)
+      })
     },
 
     async issueCheckInCode(appointmentId, input) {
@@ -2306,7 +2588,22 @@ export function createMockBackend(): DataBackend {
     },
   }
 
-  return { auth, barbers, availability, services, bookings, chat, shops, favorites, reviews, employment, support }
+  return {
+    auth,
+    verification,
+    admin,
+    barbers,
+    availability,
+    services,
+    bookings,
+    chat,
+    shops,
+    ownerShop,
+    favorites,
+    reviews,
+    employment,
+    support,
+  }
 }
 
 // Re-export so pages can compute "next open slot" previews without a round trip if desired.

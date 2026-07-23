@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   APPOINTMENT_STATUS_LABELS,
+  canonicalAppointmentStatus,
   DataError,
+  isUpcomingAppointment,
   WEEKDAY_LABELS,
   type AppointmentDetailed,
   type ShopJoinCodeDetails,
@@ -130,13 +132,19 @@ export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardPro
   }, [backend, loadAttempt])
 
   const refresh = () => setLoadAttempt((attempt) => attempt + 1)
-  const changeReservationStatus = async (
-    appointmentId: string,
-    status: AppointmentDetailed['status'],
+  const decideReservation = async (
+    appointment: AppointmentDetailed,
+    decision: 'accept' | 'decline',
   ) => {
-    const updated = await backend.bookings.setStatus(appointmentId, status)
+    const version = appointment.version ?? 1
+    const updated = decision === 'accept'
+      ? await backend.bookings.accept(appointment.id, { expected_version: version })
+      : await backend.bookings.decline(appointment.id, {
+          expected_version: version,
+          reason: 'Declined by the shop owner.',
+        })
     setAppointments((current) => current?.map((appointment) => (
-      appointment.id === appointmentId ? { ...appointment, ...updated } : appointment
+      appointment.id === updated.id ? { ...appointment, ...updated } : appointment
     )) ?? null)
   }
   const shopName = joinCode?.shop.name ?? appointments?.[0]?.shop.name ?? 'Your barbershop'
@@ -164,7 +172,7 @@ export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardPro
   const topServices = useMemo(() => {
     const counts = new Map<string, { name: string; count: number }>()
     ;(appointments ?? [])
-      .filter((appointment) => appointment.status !== 'cancelled')
+      .filter((appointment) => !['cancelled', 'declined', 'expired'].includes(canonicalAppointmentStatus(appointment.status)))
       .forEach((appointment) => {
         const entry = counts.get(appointment.service_id) ?? { name: appointment.service.name, count: 0 }
         entry.count += 1
@@ -173,10 +181,10 @@ export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardPro
     return [...counts.values()].sort((left, right) => right.count - left.count).slice(0, 5)
   }, [appointments])
 
-  const upcoming = useMemo(() => (appointments ?? []).filter((appointment) => (
-    (appointment.status === 'pending' || appointment.status === 'confirmed')
-    && Date.parse(appointment.starts_at) > nowEpochMs
-  )), [appointments, nowEpochMs])
+  const upcoming = useMemo(
+    () => (appointments ?? []).filter((appointment) => isUpcomingAppointment(appointment, nowEpochMs)),
+    [appointments, nowEpochMs],
+  )
 
   return (
     <DoodleBoard
@@ -223,7 +231,7 @@ export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardPro
               appointments={appointments ?? []}
               query={query}
               nowEpochMs={nowEpochMs}
-              onStatusChange={changeReservationStatus}
+              onDecision={decideReservation}
             />
           )}
 
@@ -282,18 +290,18 @@ function OwnerOverview({
     }
   }
 
-  const requestedCount = appointments.filter((appointment) => appointment.status === 'requested' || appointment.status === 'pending').length
+  const requestedCount = appointments.filter((appointment) => canonicalAppointmentStatus(appointment.status) === 'requested').length
   const disputedCount = appointments.filter((appointment) => appointment.status === 'disputed').length
   const checkedInCount = appointments.filter((appointment) => appointment.status === 'checked_in').length
   const inProgressCount = appointments.filter((appointment) => appointment.status === 'in_progress').length
   const awaitingCount = appointments.filter((appointment) => appointment.status === 'awaiting_confirmation').length
   const cancelledCount = appointments.filter((appointment) => appointment.status === 'cancelled' || appointment.status === 'declined').length
-  const noShowCount = appointments.filter((appointment) => appointment.status === 'customer_no_show' || appointment.status === 'no_show').length
+  const noShowCount = appointments.filter((appointment) => canonicalAppointmentStatus(appointment.status) === 'customer_no_show').length
   const cancellationRate = appointments.length ? Math.round((cancelledCount / appointments.length) * 100) : 0
   const noShowRate = appointments.length ? Math.round((noShowCount / appointments.length) * 100) : 0
   const needsAction = requestedCount + disputedCount
   const nextAppointments = appointments
-    .filter((appointment) => ['requested', 'pending', 'confirmed', 'checked_in'].includes(appointment.status) && Date.parse(appointment.starts_at) > Date.now())
+    .filter((appointment) => ['requested', 'confirmed', 'checked_in'].includes(canonicalAppointmentStatus(appointment.status)) && Date.parse(appointment.starts_at) > Date.now())
     .sort((left, right) => left.starts_at.localeCompare(right.starts_at))
     .slice(0, 4)
 
@@ -615,23 +623,23 @@ const RESERVATION_FILTERS: Array<{ key: ReservationFilter; label: string }> = [
 ]
 
 /** Buong booking ledger ng shop — walang kulang na detalye per row. */
-function OwnerReservations({ appointments, query, nowEpochMs, onStatusChange }: {
+function OwnerReservations({ appointments, query, nowEpochMs, onDecision }: {
   appointments: AppointmentDetailed[]
   query: string
   nowEpochMs: number
-  onStatusChange: (appointmentId: string, status: AppointmentDetailed['status']) => Promise<void>
+  onDecision: (appointment: AppointmentDetailed, decision: 'accept' | 'decline') => Promise<void>
 }) {
   const [filter, setFilter] = useState<ReservationFilter>('upcoming')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actionError, setActionError] = useState('')
   const needle = query.trim().toLowerCase()
 
-  async function decideReservation(appointmentId: string, status: 'confirmed' | 'cancelled') {
+  async function decideReservation(appointment: AppointmentDetailed, decision: 'accept' | 'decline') {
     if (busyId) return
-    setBusyId(appointmentId)
+    setBusyId(appointment.id)
     setActionError('')
     try {
-      await onStatusChange(appointmentId, status)
+      await onDecision(appointment, decision)
     } catch (error) {
       setActionError(error instanceof DataError ? error.message : 'Hindi ma-update ang reservation. Subukan ulit.')
     } finally {
@@ -641,12 +649,10 @@ function OwnerReservations({ appointments, query, nowEpochMs, onStatusChange }: 
 
   const rows = useMemo(() => {
     const filtered = appointments.filter((appointment) => {
-      if (filter === 'upcoming' && !(
-        (appointment.status === 'pending' || appointment.status === 'confirmed')
-        && Date.parse(appointment.starts_at) > nowEpochMs
-      )) return false
-      if (filter === 'completed' && appointment.status !== 'completed') return false
-      if (filter === 'cancelled' && appointment.status !== 'cancelled' && appointment.status !== 'no_show') return false
+      const status = canonicalAppointmentStatus(appointment.status)
+      if (filter === 'upcoming' && !isUpcomingAppointment(appointment, nowEpochMs)) return false
+      if (filter === 'completed' && status !== 'completed') return false
+      if (filter === 'cancelled' && !['cancelled', 'declined', 'expired', 'customer_no_show'].includes(status)) return false
       if (needle && ![
         appointment.customer.full_name,
         appointment.barber.profile.full_name,
@@ -714,17 +720,17 @@ function OwnerReservations({ appointments, query, nowEpochMs, onStatusChange }: 
                 </td>
                 <td>
                   <div className="owner-reservation-status-cell">
-                    <span className={`owner-status is-${appointment.status}`}>
-                      {APPOINTMENT_STATUS_LABELS[appointment.status]}
+                    <span className={`owner-status is-${canonicalAppointmentStatus(appointment.status)}`}>
+                      {APPOINTMENT_STATUS_LABELS[canonicalAppointmentStatus(appointment.status)]}
                     </span>
-                    {appointment.status === 'pending' && Date.parse(appointment.starts_at) > nowEpochMs && (
+                    {canonicalAppointmentStatus(appointment.status) === 'requested' && Date.parse(appointment.starts_at) > nowEpochMs && (
                       <div className="owner-reservation-actions">
                         <button
                           type="button"
                           className="btn btn-sm btn-green"
                           disabled={busyId !== null}
                           aria-label={`Accept reservation from ${appointment.customer.full_name}`}
-                          onClick={() => void decideReservation(appointment.id, 'confirmed')}
+                          onClick={() => void decideReservation(appointment, 'accept')}
                         >
                           <DoodleIcon name="check" size={16} />
                           {busyId === appointment.id ? 'Saving…' : 'Accept'}
@@ -734,7 +740,7 @@ function OwnerReservations({ appointments, query, nowEpochMs, onStatusChange }: 
                           className="btn btn-sm btn-pink"
                           disabled={busyId !== null}
                           aria-label={`Decline reservation from ${appointment.customer.full_name}`}
-                          onClick={() => void decideReservation(appointment.id, 'cancelled')}
+                          onClick={() => void decideReservation(appointment, 'decline')}
                         >Decline</button>
                       </div>
                     )}
@@ -764,17 +770,14 @@ function OwnerBarbersPerformance({ staff, appointments }: {
   const rows = staff.map((member) => {
     const barberAppointments = appointments.filter((appointment) => appointment.barber_id === member.barber.id)
     const completedCount = barberAppointments.filter((appointment) => appointment.status === 'completed').length
-    const noShows = barberAppointments.filter((appointment) => appointment.status === 'no_show').length
+    const noShows = barberAppointments.filter((appointment) => canonicalAppointmentStatus(appointment.status) === 'customer_no_show').length
     const decided = completedCount + noShows
     return {
       member,
       completedCount,
       noShows,
       noShowRate: decided > 0 ? Math.round((noShows / decided) * 100) : 0,
-      upcomingCount: barberAppointments.filter((appointment) => (
-        (appointment.status === 'pending' || appointment.status === 'confirmed')
-        && Date.parse(appointment.starts_at) > nowMs
-      )).length,
+      upcomingCount: barberAppointments.filter((appointment) => isUpcomingAppointment(appointment, nowMs)).length,
       revenue: barberAppointments
         .filter((appointment) => appointment.status === 'completed')
         .reduce((sum, appointment) => sum + appointment.service.price_cents, 0),

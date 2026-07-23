@@ -88,6 +88,11 @@ export interface JoinShopInput {
   code: string
 }
 
+/** Owner command to close an active employment after assigned work is resolved. */
+export interface EndEmploymentInput {
+  reason: string
+}
+
 /** Barber request to change one day's shift; the owner approves/denies. */
 export interface ShiftChangeRequestInput {
   /** ISO date (YYYY-MM-DD) ng shift na gustong baguhin. */
@@ -188,6 +193,31 @@ export interface CreateShopInput {
 
 export type UpdateShopInput = Partial<CreateShopInput>
 
+/** P2-01 owner shop lifecycle. One shop per owner; created as a draft. */
+export interface CreateOwnerShopInput {
+  name: string
+  address: string
+  city: string
+  lat: number
+  lng: number
+  timezone?: string
+  description?: string | null
+  public_contact_phone?: string | null
+  booking_mode?: 'manual' | 'instant'
+  chair_count?: number
+  default_buffer_min?: number
+}
+
+/** Editable fields plus the version the client believes it is changing. */
+export type UpdateOwnerShopInput = Partial<CreateOwnerShopInput> & {
+  expected_version: number
+}
+
+/** Version-guarded body for publish/unpublish lifecycle commands. */
+export interface ShopVersionInput {
+  expected_version: number
+}
+
 export interface CreateAttendanceRecordInput {
   employment_id: string
   barber_id: string
@@ -219,6 +249,20 @@ export type DataErrorCode =
   | 'not_found'
   | 'slot_taken'
   | 'stale_appointment'
+  | 'employment_has_active_bookings'
+  | 'employment_not_active'
+  | 'rehire_requires_owner_approval'
+  | 'already_employed'
+  | 'invalid_code'
+  | 'verification_locked'
+  | 'stale_verification'
+  | 'idempotency_conflict'
+  | 'conflict'
+  | 'mfa_required'
+  | 'capability_required'
+  | 'evidence_processing'
+  | 'evidence_rejected'
+  | 'cooldown_active'
   | 'validation'
   | 'network'
   | 'server'

@@ -12,7 +12,7 @@ import type {
   Message,
   Profile,
   Review,
-  Service,
+  StoredService,
   ShiftChangeRequest,
   Shop,
   StaffNote,
@@ -27,7 +27,7 @@ export interface MockDB {
   emailToId: Record<string, string>
   profiles: Profile[]
   barbers: Barber[]
-  services: Service[]
+  services: StoredService[]
   rules: AvailabilityRule[]
   overrides: AvailabilityOverride[]
   appointments: Appointment[]
@@ -55,7 +55,7 @@ export interface MockDB {
 /** A credential-free mock database. Accounts are created only through signup. */
 export function buildSeed(): MockDB {
   return {
-    version: 19,
+    version: 22,
     passwords: {},
     emailToId: {},
     profiles: [],

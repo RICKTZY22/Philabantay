@@ -113,5 +113,5 @@ rejection before Auth calls, and the consistent invalid-JSON error shape.
 `test/local-supabase.integration.test.ts` adds live direct-RLS, Express API
 isolation, and appointment lifecycle coverage. It is skipped during the normal fast suite and enabled with
 `RUN_LOCAL_SUPABASE_TESTS=1` after starting local Supabase. See
-[LOCAL-SUPABASE-VERIFICATION.md](LOCAL-SUPABASE-VERIFICATION.md) for the exact
+[LOCAL-SUPABASE-VERIFICATION.md](../mdfiles/LOCAL-SUPABASE-VERIFICATION.md) for the exact
 workflow and verified role matrix.

@@ -23,8 +23,51 @@ import type {
   SignUpInput,
   StaffNoteInput,
   UpdateProfileInput,
+  CreateOwnerShopInput,
+  UpdateOwnerShopInput,
+  ShopVersionInput,
 } from './dto'
 import { DataError } from './dto'
+import {
+  adminVerificationDetailSchema,
+  adminVerificationQueueItemSchema,
+  cursorPageSchema,
+  professionalAccessSummarySchema,
+  professionalPhoneVerificationChallengeSchema,
+  publicBarberSchema,
+  publicServiceSchema,
+  publicShopWithStatusSchema,
+  publicSlotSchema,
+  shortLivedEvidenceViewSchema,
+  verificationEvidenceUploadGrantSchema,
+  verificationWorkspaceSchema,
+} from './schemas'
+import type {
+  AdminVerificationDetail,
+  AdminVerificationQueueItem,
+  ApproveVerificationInput,
+  AssignVerificationReviewerInput,
+  CompleteVerificationEvidenceUploadInput,
+  ConfirmProfessionalPhoneVerificationInput,
+  CreateVerificationSubmissionInput,
+  CursorPage,
+  ListAdminVerificationsQuery,
+  ProfessionalAccessSummary,
+  ProfessionalPhoneVerificationChallenge,
+  RejectVerificationInput,
+  RemoveVerificationEvidenceInput,
+  RequestVerificationEvidenceUploadInput,
+  RequestVerificationInformationInput,
+  RestoreProfessionalInput,
+  ShortLivedEvidenceView,
+  StartProfessionalPhoneVerificationInput,
+  SubmitVerificationInput,
+  SuspendProfessionalInput,
+  UpdateVerificationSubmissionInput,
+  VerificationEvidenceUploadGrant,
+  VerificationWorkspace,
+  WithdrawVerificationInput,
+} from './verification'
 import type {
   Appointment,
   AppointmentCheckInCode,
@@ -47,6 +90,7 @@ import type {
   ShiftChangeRequestStatus,
   ShopStaffMember,
   ShopWithStatus,
+  OwnerShop,
   HiringShop,
   HiringListing,
   BarberApplication,
@@ -82,6 +126,68 @@ export interface SupportService {
   reportBug(input: CreateBugReportInput): Promise<BugReport>
 }
 
+export interface VerificationService {
+  getMine(): Promise<VerificationWorkspace>
+  createSubmission(input: CreateVerificationSubmissionInput): Promise<VerificationWorkspace>
+  updateSubmission(id: string, input: UpdateVerificationSubmissionInput): Promise<VerificationWorkspace>
+  requestEvidenceUpload(
+    id: string,
+    input: RequestVerificationEvidenceUploadInput,
+  ): Promise<VerificationEvidenceUploadGrant>
+  completeEvidenceUpload(
+    id: string,
+    documentId: string,
+    input: CompleteVerificationEvidenceUploadInput,
+  ): Promise<VerificationWorkspace>
+  removeEvidence(
+    id: string,
+    documentId: string,
+    input: RemoveVerificationEvidenceInput,
+  ): Promise<VerificationWorkspace>
+  getEvidenceView(id: string, documentId: string): Promise<ShortLivedEvidenceView>
+  submit(id: string, input: SubmitVerificationInput): Promise<VerificationWorkspace>
+  withdraw(id: string, input: WithdrawVerificationInput): Promise<VerificationWorkspace>
+  startProfessionalPhoneVerification(
+    input: StartProfessionalPhoneVerificationInput,
+  ): Promise<ProfessionalPhoneVerificationChallenge>
+  confirmProfessionalPhoneVerification(
+    input: ConfirmProfessionalPhoneVerificationInput,
+  ): Promise<VerificationWorkspace>
+}
+
+export interface AdminService {
+  listVerifications(
+    query: ListAdminVerificationsQuery,
+  ): Promise<CursorPage<AdminVerificationQueueItem>>
+  getVerification(id: string): Promise<AdminVerificationDetail>
+  assignVerification(
+    id: string,
+    input: AssignVerificationReviewerInput,
+  ): Promise<AdminVerificationDetail>
+  getVerificationEvidenceView(id: string, documentId: string): Promise<ShortLivedEvidenceView>
+  requestVerificationInformation(
+    id: string,
+    input: RequestVerificationInformationInput,
+  ): Promise<AdminVerificationDetail>
+  approveVerification(
+    id: string,
+    input: ApproveVerificationInput,
+  ): Promise<AdminVerificationDetail>
+  rejectVerification(
+    id: string,
+    input: RejectVerificationInput,
+  ): Promise<AdminVerificationDetail>
+  getProfessional(userId: string): Promise<ProfessionalAccessSummary>
+  suspendProfessional(
+    userId: string,
+    input: SuspendProfessionalInput,
+  ): Promise<ProfessionalAccessSummary>
+  restoreProfessional(
+    userId: string,
+    input: RestoreProfessionalInput,
+  ): Promise<ProfessionalAccessSummary>
+}
+
 export interface BarberService {
   list(): Promise<BarberWithProfile[]>
   get(barberId: string): Promise<BarberWithProfile | null>
@@ -107,7 +213,7 @@ export interface AvailabilityService {
 }
 
 export interface ServiceCatalog {
-  list(): Promise<Service[]>
+  list(shopId?: string): Promise<Service[]>
 }
 
 export interface BookingService {
@@ -119,8 +225,6 @@ export interface BookingService {
   listMine(): Promise<AppointmentDetailed[]>
   /** Owner-only: every booking made at the signed-in owner's shop. */
   listForMyShop(): Promise<AppointmentDetailed[]>
-  /** Barber manages assigned work; the shop owner may confirm/decline pending reservations. */
-  setStatus(appointmentId: string, status: Appointment['status']): Promise<Appointment>
   /** Versioned lifecycle commands used by the API-backed UI. */
   accept(appointmentId: string, input: AppointmentVersionInput): Promise<Appointment>
   decline(appointmentId: string, input: AppointmentReasonInput): Promise<Appointment>
@@ -145,8 +249,8 @@ export interface ChatService {
   openConversation(shopId: string): Promise<ConversationDetailed>
   /**
    * Owner-only: find or create an internal owner-to-barber thread sa sariling
-   * shop. Ang "customer" participant ng thread ay ang owner (detectable via
-   * conversation.customer_id === shop.owner_id).
+   * shop. Consumers distinguish it through `is_staff_thread`; the owner's
+   * private user id is not added to the public shop summary.
    */
   openStaffConversation(barberId: string): Promise<ConversationDetailed>
   getMessages(conversationId: string, limit?: number): Promise<Message[]>
@@ -160,6 +264,20 @@ export interface ShopService {
   /** All shops with live status — the customer map's data source. */
   list(): Promise<ShopWithStatus[]>
   get(shopId: string): Promise<ShopWithStatus | null>
+}
+
+/** P2-01: the owner's private, version-checked shop lifecycle commands. */
+export interface OwnerShopService {
+  /** The signed-in owner's shop in any lifecycle status, or null before setup. */
+  getMine(): Promise<OwnerShop | null>
+  /** Create the owner's single shop as an unpublished draft. */
+  create(input: CreateOwnerShopInput): Promise<OwnerShop>
+  /** Version-checked edit of shop fields; returns the next version. */
+  update(input: UpdateOwnerShopInput): Promise<OwnerShop>
+  /** Publish once the readiness checklist passes; version-checked. */
+  publish(input: ShopVersionInput): Promise<OwnerShop>
+  /** Return a published shop to an unlisted draft; version-checked. */
+  unpublish(input: ShopVersionInput): Promise<OwnerShop>
 }
 
 export interface FavoriteService {
@@ -194,6 +312,8 @@ export interface BarberEmploymentService {
   rotateMyShopJoinCode(): Promise<ShopJoinCodeDetails>
   /** Active employment record ng signed-in barber (hire date, shop stint). */
   getMyEmployment(): Promise<BarberEmployment | null>
+  /** Owner-only atomic command; active assigned bookings must be resolved first. */
+  endEmployment(employmentId: string, reason: string): Promise<BarberEmployment>
   /** Absences scoped sa ACTIVE employment lang — fresh start per shop. */
   listMyAbsences(): Promise<BarberAbsence[]>
   /** Shift change requests scoped sa active employment, newest first. */
@@ -213,12 +333,15 @@ export interface BarberEmploymentService {
 /** The full data layer handed to the UI through a React provider. */
 export interface DataBackend {
   auth: AuthService
+  verification: VerificationService
+  admin: AdminService
   barbers: BarberService
   availability: AvailabilityService
   services: ServiceCatalog
   bookings: BookingService
   chat: ChatService
   shops: ShopService
+  ownerShop: OwnerShopService
   favorites: FavoriteService
   reviews: ReviewService
   employment: BarberEmploymentService
@@ -275,6 +398,20 @@ const API_ERROR_CODES = new Set([
   'not_found',
   'slot_taken',
   'stale_appointment',
+  'employment_has_active_bookings',
+  'employment_not_active',
+  'rehire_requires_owner_approval',
+  'already_employed',
+  'invalid_code',
+  'verification_locked',
+  'stale_verification',
+  'idempotency_conflict',
+  'conflict',
+  'mfa_required',
+  'capability_required',
+  'evidence_processing',
+  'evidence_rejected',
+  'cooldown_active',
   'validation',
 ] as const)
 
@@ -435,33 +572,30 @@ export class ApiBackend implements DataBackend {
   }
 
   private async ownedShop(): Promise<ShopWithStatus> {
-    const profile = this.currentProfile ?? await this.auth.getCurrentProfile()
-    if (!profile) throw new DataError('not_authenticated', 'Please sign in to continue.')
-    const shop = (await this.shops.list()).find((candidate) => candidate.owner_id === profile.id)
+    const shop = publicShopWithStatusSchema.nullable().parse(
+      await this.request<unknown>('/owner/shop'),
+    )
     if (!shop) throw new DataError('not_found', 'No shop is assigned to this owner account.')
     return shop
   }
 
   private async hydrateAppointments(rows: AppointmentDetailed[]): Promise<AppointmentDetailed[]> {
-    const shops = new Map((await this.shops.list()).map((shop) => [shop.id, shop]))
-    return rows.map((row) => ({ ...row, shop: shops.get(row.shop_id) ?? row.shop }))
+    return rows
   }
 
   private async hydrateConversation(row: ConversationDetailed): Promise<ConversationDetailed> {
-    const shop = await this.shops.get(row.shop_id)
     return {
       ...row,
-      shop: shop ?? row.shop,
+      is_staff_thread: row.is_staff_thread === true,
       last_message: row.last_message ?? null,
       unread_count: Number(row.unread_count ?? 0),
     }
   }
 
   private async hydrateConversations(rows: ConversationDetailed[]): Promise<ConversationDetailed[]> {
-    const shops = new Map((await this.shops.list()).map((shop) => [shop.id, shop]))
     return rows.map((row) => ({
       ...row,
-      shop: shops.get(row.shop_id) ?? row.shop,
+      is_staff_thread: row.is_staff_thread === true,
       last_message: row.last_message ?? null,
       unread_count: Number(row.unread_count ?? 0),
     }))
@@ -542,14 +676,140 @@ export class ApiBackend implements DataBackend {
     },
   }
 
+  readonly verification: VerificationService = {
+    getMine: async () => verificationWorkspaceSchema.parse(
+      await this.request<unknown>('/verification/me'),
+    ),
+    createSubmission: async (input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>('/verification/submissions', { method: 'POST', body: input }),
+    ),
+    updateSubmission: async (id, input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>(`/verification/submissions/${encoded(id)}`, {
+        method: 'PATCH',
+        body: input,
+      }),
+    ),
+    requestEvidenceUpload: async (id, input) => verificationEvidenceUploadGrantSchema.parse(
+      await this.request<unknown>(`/verification/submissions/${encoded(id)}/documents/request-upload`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    completeEvidenceUpload: async (id, documentId, input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>(
+        `/verification/submissions/${encoded(id)}/documents/${encoded(documentId)}/complete`,
+        { method: 'POST', body: input },
+      ),
+    ),
+    removeEvidence: async (id, documentId, input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>(
+        `/verification/submissions/${encoded(id)}/documents/${encoded(documentId)}/remove`,
+        { method: 'POST', body: input },
+      ),
+    ),
+    getEvidenceView: async (id, documentId) => shortLivedEvidenceViewSchema.parse(
+      await this.request<unknown>(
+        `/verification/submissions/${encoded(id)}/documents/${encoded(documentId)}/view`,
+        { method: 'POST' },
+      ),
+    ),
+    submit: async (id, input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>(`/verification/submissions/${encoded(id)}/submit`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    withdraw: async (id, input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>(`/verification/submissions/${encoded(id)}/withdraw`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    startProfessionalPhoneVerification: async (input) => professionalPhoneVerificationChallengeSchema.parse(
+      await this.request<unknown>('/verification/phone/challenge', {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    confirmProfessionalPhoneVerification: async (input) => verificationWorkspaceSchema.parse(
+      await this.request<unknown>('/verification/phone/confirm', {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+  }
+
+  readonly admin: AdminService = {
+    listVerifications: async (query) => {
+      const parameters = new URLSearchParams()
+      if (query.role !== undefined) parameters.set('role', query.role)
+      if (query.status !== undefined) parameters.set('status', query.status)
+      if (query.assigned !== undefined) parameters.set('assigned', query.assigned)
+      if (query.cursor !== undefined) parameters.set('cursor', query.cursor)
+      if (query.limit !== undefined) parameters.set('limit', String(query.limit))
+      const suffix = parameters.size > 0 ? `?${parameters}` : ''
+      return cursorPageSchema(adminVerificationQueueItemSchema).parse(
+        await this.request<unknown>(`/admin/verifications${suffix}`),
+      )
+    },
+    getVerification: async (id) => adminVerificationDetailSchema.parse(
+      await this.request<unknown>(`/admin/verifications/${encoded(id)}`),
+    ),
+    assignVerification: async (id, input) => adminVerificationDetailSchema.parse(
+      await this.request<unknown>(`/admin/verifications/${encoded(id)}/assign`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    getVerificationEvidenceView: async (id, documentId) => shortLivedEvidenceViewSchema.parse(
+      await this.request<unknown>(
+        `/admin/verifications/${encoded(id)}/documents/${encoded(documentId)}/view`,
+        { method: 'POST' },
+      ),
+    ),
+    requestVerificationInformation: async (id, input) => adminVerificationDetailSchema.parse(
+      await this.request<unknown>(`/admin/verifications/${encoded(id)}/request-information`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    approveVerification: async (id, input) => adminVerificationDetailSchema.parse(
+      await this.request<unknown>(`/admin/verifications/${encoded(id)}/approve`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    rejectVerification: async (id, input) => adminVerificationDetailSchema.parse(
+      await this.request<unknown>(`/admin/verifications/${encoded(id)}/reject`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    getProfessional: async (userId) => professionalAccessSummarySchema.parse(
+      await this.request<unknown>(`/admin/users/${encoded(userId)}`),
+    ),
+    suspendProfessional: async (userId, input) => professionalAccessSummarySchema.parse(
+      await this.request<unknown>(`/admin/users/${encoded(userId)}/suspend`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+    restoreProfessional: async (userId, input) => professionalAccessSummarySchema.parse(
+      await this.request<unknown>(`/admin/users/${encoded(userId)}/restore`, {
+        method: 'POST',
+        body: input,
+      }),
+    ),
+  }
+
   readonly support: SupportService = {
     reportBug: (input) => this.request<BugReport>('/support/bug-reports', { method: 'POST', body: input }),
   }
 
   readonly barbers: BarberService = {
-    list: () => this.request<BarberWithProfile[]>('/barbers'),
-    get: (barberId) => this.request<BarberWithProfile | null>(`/barbers/${encoded(barberId)}`),
-    availableNow: () => this.request<BarberWithProfile[]>('/barbers/available'),
+    list: async () => publicBarberSchema.array().parse(await this.request<unknown>('/catalog/barbers', { authenticated: false })),
+    get: async (barberId) => publicBarberSchema.nullable().parse(await this.request<unknown>(`/catalog/barbers/${encoded(barberId)}`, { authenticated: false })),
+    availableNow: async () => publicBarberSchema.array().parse(await this.request<unknown>('/catalog/barbers/available', { authenticated: false })),
     setShiftStatus: (on) => this.request<Barber>('/barbers/me/shift-status', { method: 'PATCH', body: { on } }),
     setAcceptingBookings: (accepting) => this.request<Barber>('/barbers/me/accepting-bookings', { method: 'PATCH', body: { accepting } }),
   }
@@ -561,14 +821,17 @@ export class ApiBackend implements DataBackend {
     setRules: async (rules) => (await this.request<AvailabilityRule[]>('/shifts/patterns', { method: 'PUT', body: rules })).map(normalizeRule),
     addOverride: async (input) => normalizeOverride(await this.request<AvailabilityOverride>('/shifts/exceptions', { method: 'POST', body: input })),
     removeOverride: (overrideId) => this.request<void>(`/shifts/exceptions/${encoded(overrideId)}`, { method: 'DELETE' }),
-    getOpenSlots: (barberId, serviceId, date) => {
+    getOpenSlots: async (barberId, serviceId, date) => {
       const query = new URLSearchParams({ barberId, serviceId, date })
-      return this.request<Slot[]>(`/availability/slots?${query}`)
+      return publicSlotSchema.array().parse(await this.request<unknown>(`/catalog/availability/slots?${query}`, { authenticated: false }))
     },
   }
 
   readonly services: ServiceCatalog = {
-    list: () => this.request<Service[]>('/services'),
+    list: async (shopId) => {
+      const query = shopId ? `?${new URLSearchParams({ shopId })}` : ''
+      return publicServiceSchema.array().parse(await this.request<unknown>(`/catalog/services${query}`, { authenticated: false }))
+    },
   }
 
   readonly bookings: BookingService = {
@@ -580,7 +843,6 @@ export class ApiBackend implements DataBackend {
       const shop = await this.ownedShop()
       return this.hydrateAppointments(await this.request<AppointmentDetailed[]>(`/shops/${encoded(shop.id)}/bookings`))
     },
-    setStatus: (appointmentId, status) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/status`, { method: 'PATCH', body: { status } }),
     accept: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/accept`, { method: 'POST', body: input }),
     decline: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/decline`, { method: 'POST', body: input }),
     issueCheckInCode: (appointmentId, input) => this.request<AppointmentCheckInCode>(`/bookings/${encoded(appointmentId)}/check-in-code`, { method: 'POST', body: input }),
@@ -639,8 +901,16 @@ export class ApiBackend implements DataBackend {
   }
 
   readonly shops: ShopService = {
-    list: () => this.request<ShopWithStatus[]>('/shops'),
-    get: (shopId) => this.request<ShopWithStatus | null>(`/shops/${encoded(shopId)}`),
+    list: async () => publicShopWithStatusSchema.array().parse(await this.request<unknown>('/catalog/shops', { authenticated: false })),
+    get: async (shopId) => publicShopWithStatusSchema.nullable().parse(await this.request<unknown>(`/catalog/shops/${encoded(shopId)}`, { authenticated: false })),
+  }
+
+  readonly ownerShop: OwnerShopService = {
+    getMine: () => this.request<OwnerShop | null>('/owner/shop'),
+    create: (input) => this.request<OwnerShop>('/owner/shop', { method: 'POST', body: input }),
+    update: (input) => this.request<OwnerShop>('/owner/shop', { method: 'PATCH', body: input }),
+    publish: (input) => this.request<OwnerShop>('/owner/shop/publish', { method: 'POST', body: input }),
+    unpublish: (input) => this.request<OwnerShop>('/owner/shop/unpublish', { method: 'POST', body: input }),
   }
 
   readonly favorites: FavoriteService = {
@@ -687,6 +957,10 @@ export class ApiBackend implements DataBackend {
       return { shop, code: row.code }
     },
     getMyEmployment: () => this.request<BarberEmployment | null>('/employment/me'),
+    endEmployment: (employmentId, reason) => this.request<BarberEmployment>(`/employment/${encoded(employmentId)}/end`, {
+      method: 'POST',
+      body: { reason },
+    }),
     listMyAbsences: () => this.request<BarberAbsence[]>('/employment/absences'),
     listMyShiftChangeRequests: () => this.request<ShiftChangeRequest[]>('/shift-change-requests'),
     requestShiftChange: (input) => this.request<ShiftChangeRequest>('/shift-change-requests', { method: 'POST', body: input }),

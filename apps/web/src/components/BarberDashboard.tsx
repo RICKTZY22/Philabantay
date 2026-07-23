@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEve
 import { Link } from 'react-router-dom'
 import {
   DataError,
+  isUpcomingAppointment,
   type AppointmentDetailed,
   type AvailabilityOverride,
   type AvailabilityRule,
@@ -341,7 +342,7 @@ function EmployedBarberHome({ barberName, shop, appointments, conversations, rul
   loadError: string
 }) {
   const upcoming = useMemo(() => appointments
-    .filter((appointment) => appointment.status === 'pending' || appointment.status === 'confirmed')
+    .filter((appointment) => isUpcomingAppointment(appointment))
     .sort((left, right) => left.starts_at.localeCompare(right.starts_at))
     .slice(0, 5), [appointments])
   const nextShifts = useMemo(() => [...rules]

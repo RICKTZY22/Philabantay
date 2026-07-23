@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
-import { isOwnerVerificationLocked, SHOP_NAME } from '@barbershop/shared'
+import { SHOP_NAME } from '@barbershop/shared'
+import { isProfessionalLocked } from '../lib/access'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
@@ -9,11 +10,11 @@ import { Loading } from './Loading'
 import { RouteErrorBoundary } from './RouteErrorBoundary'
 
 export function Layout() {
-  const { profile } = useAuth()
+  const { profile, loading } = useAuth()
   const location = useLocation()
   const [headerVisible, setHeaderVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
-  const verificationLocked = Boolean(profile && isOwnerVerificationLocked(profile))
+  const verificationLocked = Boolean(profile && isProfessionalLocked(profile))
 
   // Route changes should open at the top instead of inheriting the scroll
   // position of a long dashboard/map page.
@@ -35,7 +36,8 @@ export function Layout() {
     location.pathname === '/schedule' ||
     location.pathname === '/appointments' ||
     location.pathname.startsWith('/chat') ||
-    location.pathname.startsWith('/barbers')
+    location.pathname.startsWith('/barbers') ||
+    location.pathname.startsWith('/admin/')
   // Ang "home" ng naka-sign-in na user ay ang dashboard, hindi ang landing
   // billboard (may login form iyon). Kaya iiwas tayong ihatid sila pabalik sa
   // login page kapag pinindot ang brand title.
@@ -89,8 +91,26 @@ export function Layout() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [location.pathname, menuOpen, stickyHeader])
 
-  // Public discovery routes are normally reachable while signed in, but an
-  // owner awaiting verification is intentionally restricted to one screen.
+  // Do not render the public landing page (or any protected workspace) while
+  // Supabase is restoring a persisted session. A pending professional must
+  // never see a flash of sign-in/customer content before the verification
+  // lock is known.
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <div className="bg-pattern" aria-hidden="true" />
+        <DoodleDefs />
+        <main className="page">
+          <div className="container">
+            <Loading label="Sandali, tinitingnan ang session..." />
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Public discovery routes are normally reachable while signed in, but a
+  // professional awaiting verification is intentionally restricted to one screen.
   if (verificationLocked && location.pathname !== '/verification') {
     return <Navigate to="/verification" replace />
   }

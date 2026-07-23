@@ -414,7 +414,7 @@ function MessageComposer({ conversationId, disabled }: { conversationId: string;
  * ay nakikilala kapag ang "customer" participant ay ang may-ari ng shop.
  */
 function conversationDisplay(conversation: ConversationDetailed, viewerId: string | undefined) {
-  const staffThread = conversation.customer_id === conversation.shop.owner_id
+  const staffThread = conversation.is_staff_thread
   if (staffThread) {
     const viewerIsOwner = viewerId === conversation.customer_id
     return {

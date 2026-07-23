@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import type {
+  PublicBarber,
+  PublicProfile,
+  PublicService,
+  PublicShop,
+  ShopWithStatus,
+  Slot,
+} from './types'
+import type {
   AvailabilityOverrideInput,
   AvailabilityRuleInput,
   AppointmentReasonInput,
@@ -12,6 +20,7 @@ import type {
   CreateBugReportInput,
   CreateServiceInput,
   CreateShopInput,
+  EndEmploymentInput,
   JoinShopInput,
   NotificationPreferencesInput,
   OpenConversationInput,
@@ -35,6 +44,9 @@ import type {
   UpdateProfileInput,
   UpdateServiceInput,
   UpdateShopInput,
+  CreateOwnerShopInput,
+  UpdateOwnerShopInput,
+  ShopVersionInput,
 } from './dto'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
@@ -46,6 +58,61 @@ export const uuidSchema = z.string().uuid()
 export const dateKeySchema = z.string().regex(DATE_KEY, 'Expected YYYY-MM-DD.')
 export const wallClockSchema = z.string().regex(WALL_CLOCK, 'Expected HH:MM.')
 export const isoTimestampSchema = z.string().datetime({ offset: true })
+
+/** Strict response contracts for data that may cross the anonymous boundary. */
+export const publicProfileSchema: z.ZodType<PublicProfile> = z.strictObject({
+  id: uuidSchema,
+  full_name: z.string().trim().min(1).max(80),
+  avatar_url: z.string().trim().max(2048).nullable(),
+})
+
+export const publicBarberSchema: z.ZodType<PublicBarber> = z.strictObject({
+  id: uuidSchema,
+  bio: z.string().max(1000).nullable(),
+  rating: z.number().min(0).max(5),
+  rating_count: z.number().int().nonnegative(),
+  shift_status: z.enum(['off', 'on']),
+  accepting_bookings: z.boolean(),
+  profile: publicProfileSchema,
+})
+
+export const publicServiceSchema: z.ZodType<PublicService> = z.strictObject({
+  id: uuidSchema,
+  shop_id: uuidSchema,
+  name: z.string().trim().min(1).max(120),
+  duration_min: z.number().int().min(5).max(480),
+  price_cents: z.number().int().nonnegative(),
+})
+
+export const publicShopSchema: z.ZodType<PublicShop> = z.strictObject({
+  id: uuidSchema,
+  name: z.string().trim().min(1).max(120),
+  address: z.string().trim().min(1).max(240),
+  city: z.string().trim().min(1).max(120),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  rating: z.number().min(0).max(5),
+  rating_count: z.number().int().nonnegative(),
+})
+
+export const publicShopWithStatusSchema: z.ZodType<ShopWithStatus> = z.strictObject({
+  id: uuidSchema,
+  name: z.string().trim().min(1).max(120),
+  address: z.string().trim().min(1).max(240),
+  city: z.string().trim().min(1).max(120),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  rating: z.number().min(0).max(5),
+  rating_count: z.number().int().nonnegative(),
+  barber_ids: z.array(uuidSchema),
+  status: z.enum(['open', 'busy', 'closed']),
+  available_barber_count: z.number().int().nonnegative(),
+})
+
+export const publicSlotSchema: z.ZodType<Slot> = z.strictObject({
+  starts_at: isoTimestampSchema,
+  ends_at: isoTimestampSchema,
+})
 
 const roleSchema = z.enum(['customer', 'barber', 'shop_owner'])
 export const canonicalAppointmentStatusSchema = z.enum([
@@ -164,6 +231,10 @@ export const joinShopInputSchema: z.ZodType<JoinShopInput> = z.strictObject({
   code: z.string().trim().min(6).max(32),
 })
 
+export const endEmploymentInputSchema: z.ZodType<EndEmploymentInput> = z.strictObject({
+  reason: z.string().trim().min(3).max(1000),
+})
+
 export const shiftChangeRequestInputSchema: z.ZodType<ShiftChangeRequestInput> = z.strictObject({
   date: dateKeySchema,
   message: z.string().trim().min(1).max(1000),
@@ -246,6 +317,34 @@ export const createShopInputSchema: z.ZodType<CreateShopInput> = createShopObjec
 export const updateShopInputSchema: z.ZodType<UpdateShopInput> = createShopObjectSchema.partial()
   .refine((body) => Object.keys(body).length > 0, 'At least one field is required.')
 
+const ownerShopWritableSchema = z.strictObject({
+  name: z.string().trim().min(1).max(120),
+  address: z.string().trim().min(1).max(240),
+  city: z.string().trim().min(1).max(120),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  timezone: z.string().trim().min(1).max(64).optional(),
+  description: z.string().trim().max(2000).nullable().optional(),
+  public_contact_phone: z.string().trim().min(5).max(40).nullable().optional(),
+  booking_mode: z.enum(['manual', 'instant']).optional(),
+  chair_count: z.number().int().min(1).max(200).optional(),
+  default_buffer_min: z.number().int().min(0).max(120).optional(),
+})
+
+export const createOwnerShopInputSchema: z.ZodType<CreateOwnerShopInput> = ownerShopWritableSchema
+
+export const updateOwnerShopInputSchema: z.ZodType<UpdateOwnerShopInput> = ownerShopWritableSchema
+  .partial()
+  .extend({ expected_version: z.number().int().min(1) })
+  .refine(
+    (body) => Object.keys(body).some((key) => key !== 'expected_version'),
+    'At least one field to update is required.',
+  )
+
+export const shopVersionInputSchema: z.ZodType<ShopVersionInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+})
+
 export const createAttendanceRecordInputSchema: z.ZodType<CreateAttendanceRecordInput> = z.strictObject({
   employment_id: uuidSchema,
   barber_id: uuidSchema,
@@ -266,3 +365,52 @@ export const dateQuerySchema = z.strictObject({ date: dateKeySchema })
 export const messagesQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(200).default(100),
 })
+
+export {
+  accountCapabilityGrantSchema,
+  accountCapabilityNameSchema,
+  adminVerificationAllowedActionSchema,
+  adminVerificationDetailSchema,
+  adminVerificationQueueItemSchema,
+  approveVerificationInputSchema,
+  assignVerificationReviewerInputSchema,
+  barberVerificationDraftFormDataV1Schema,
+  barberVerificationFormDataV1Schema,
+  completeVerificationEvidenceUploadInputSchema,
+  confirmProfessionalPhoneVerificationInputSchema,
+  createVerificationSubmissionInputSchema,
+  cursorPageSchema,
+  listAdminVerificationsQuerySchema,
+  ownerVerificationDraftFormDataV1Schema,
+  ownerVerificationFormDataV1Schema,
+  professionalAccessSummarySchema,
+  professionalPhoneVerificationChallengeSchema,
+  professionalVerificationRoleSchema,
+  rejectVerificationInputSchema,
+  removeVerificationEvidenceInputSchema,
+  requestVerificationEvidenceUploadInputSchema,
+  requestVerificationInformationInputSchema,
+  restoreProfessionalInputSchema,
+  shortLivedEvidenceViewSchema,
+  startProfessionalPhoneVerificationInputSchema,
+  submitVerificationInputSchema,
+  suspendProfessionalInputSchema,
+  updateVerificationSubmissionInputSchema,
+  verificationApplicantReasonCodeSchema,
+  verificationApplicantTimelineEventSchema,
+  verificationAllowedActionSchema,
+  verificationContentStatusSchema,
+  verificationDocumentMetadataSchema,
+  verificationDocumentRequirementsSchema,
+  verificationDocumentStatusSchema,
+  verificationDocumentTypeSchema,
+  verificationDraftFormDataSchema,
+  verificationEvidenceUploadGrantSchema,
+  verificationFormDataSchema,
+  verificationInformationItemSchema,
+  verificationMalwareStatusSchema,
+  verificationSubmissionSchema,
+  verificationSubmissionStatusSchema,
+  verificationWorkspaceSchema,
+  withdrawVerificationInputSchema,
+} from './verification'

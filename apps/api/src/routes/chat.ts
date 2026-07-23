@@ -7,15 +7,16 @@ import {
   sendMessageInputSchema,
 } from '@barbershop/shared/schemas'
 import type { ApiDependencies } from '../lib/supabase'
-import { requireConversationAccess, requireOwnedShop, requireRole } from '../http/authorization'
+import { requireActiveEmployment, requireConversationAccess, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams, parseQuery } from '../http/validation'
+import { PUBLIC_BARBER_COLUMNS, PUBLIC_SHOP_COLUMNS } from './public-catalog'
 
 const conversationSelect = `
   *,
   customer:users!conversations_customer_id_fkey(id,full_name,avatar_url),
-  shop:shops!conversations_shop_id_fkey(*),
-  barber:barbers!conversations_barber_id_fkey(id,bio,rating,rating_count,shift_status,accepting_bookings,created_at,profile:users!barbers_id_fkey(id,full_name,avatar_url))
+  shop:shops!conversations_shop_id_fkey(${PUBLIC_SHOP_COLUMNS}),
+  barber:barbers!conversations_barber_id_fkey(${PUBLIC_BARBER_COLUMNS},profile:users!barbers_id_fkey(id,full_name,avatar_url))
 `
 
 async function withMessageSummary(
@@ -36,6 +37,7 @@ async function withMessageSummary(
     const rows = (messages ?? []).filter((message) => message.conversation_id === conversation.id)
     return {
       ...conversation,
+      is_staff_thread: conversation.kind === 'staff',
       last_message: rows.at(-1) ?? null,
       unread_count: rows.filter((message) => message.sender_id !== viewerId && message.read_at === null).length,
     }
@@ -48,9 +50,12 @@ export function createChatRouter(dependencies: ApiDependencies): Router {
   router.get('/conversations', async (request, response) => {
     let query = dependencies.database.from('conversations').select(conversationSelect)
     const userId = request.auth.profile.id
-    if (request.auth.profile.role === 'customer') query = query.eq('customer_id', userId)
-    else if (request.auth.profile.role === 'barber') query = query.eq('barber_id', userId)
-    else if (request.auth.profile.role === 'shop_owner' || request.auth.profile.role === 'admin') {
+    if (request.auth.profile.role === 'customer') query = query.eq('kind', 'customer_shop').eq('customer_id', userId)
+    else if (request.auth.profile.role === 'barber') {
+      const employment = await requireActiveEmployment(dependencies, request)
+      query = query.eq('barber_id', userId).eq('shop_id', employment.shop_id as string)
+    }
+    else if (request.auth.profile.role === 'shop_owner') {
       const shop = await requireOwnedShop(dependencies, request)
       query = query.eq('shop_id', shop.id as string)
     } else throw new ApiError(403, 'forbidden', 'This account cannot access conversations.')
@@ -76,17 +81,29 @@ export function createChatRouter(dependencies: ApiDependencies): Router {
       return response.json({ data: detailed })
     }
 
-    const { data: employment, error: employmentError } = await dependencies.database
+    const { data: employments, error: employmentError } = await dependencies.database
       .from('barber_employment')
       .select('barber_id')
       .eq('shop_id', shopId)
       .eq('status', 'active')
       .is('ended_at', null)
       .order('hired_at')
-      .limit(1)
-      .maybeSingle()
     if (employmentError) throw fromDatabaseError(employmentError)
-    if (!employment) throw new ApiError(409, 'shop_unavailable', 'This shop has no active barber to receive messages.')
+    const barberIds = (employments ?? []).map((employment) => employment.barber_id as string)
+    const { data: profiles, error: profileError } = barberIds.length > 0
+      ? await dependencies.database
+          .from('users')
+          .select('id')
+          .in('id', barberIds)
+          .eq('role', 'barber')
+          .eq('requested_role', 'barber')
+          .eq('verification_status', 'verified')
+          .eq('onboarding_completed', true)
+      : { data: [], error: null }
+    if (profileError) throw fromDatabaseError(profileError)
+    const verifiedIds = new Set((profiles ?? []).map((profile) => profile.id as string))
+    const employment = (employments ?? []).find((candidate) => verifiedIds.has(candidate.barber_id as string))
+    if (!employment) throw new ApiError(409, 'shop_unavailable', 'This shop has no active verified barber to receive messages.')
 
     const { data, error } = await dependencies.database
       .from('conversations')
@@ -99,7 +116,7 @@ export function createChatRouter(dependencies: ApiDependencies): Router {
   })
 
   router.post('/conversations/staff', async (request, response) => {
-    requireRole(request, 'shop_owner', 'admin')
+    requireRole(request, 'shop_owner')
     const { barber_id: barberId } = parseBody(request, openStaffConversationInputSchema)
     const shop = await requireOwnedShop(dependencies, request)
     const shopId = shop.id as string
@@ -155,11 +172,11 @@ export function createChatRouter(dependencies: ApiDependencies): Router {
   router.post('/messages', async (request, response) => {
     const input = parseBody(request, sendMessageInputSchema)
     await requireConversationAccess(dependencies, request, input.conversation_id)
-    const { data, error } = await dependencies.database
-      .from('messages')
-      .insert({ conversation_id: input.conversation_id, sender_id: request.auth.profile.id, body: input.body })
-      .select('*')
-      .single()
+    const { data, error } = await dependencies.database.rpc('api_send_message', {
+      p_conversation_id: input.conversation_id,
+      p_sender_id: request.auth.profile.id,
+      p_body: input.body,
+    })
     if (error) throw fromDatabaseError(error)
     response.status(201).json({ data })
   })
@@ -167,12 +184,11 @@ export function createChatRouter(dependencies: ApiDependencies): Router {
   router.post('/conversations/:id/read', async (request, response) => {
     const { id } = parseParams(request, idParamsSchema)
     await requireConversationAccess(dependencies, request, id)
-    const { error } = await dependencies.database
-      .from('messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('conversation_id', id)
-      .neq('sender_id', request.auth.profile.id)
-      .is('read_at', null)
+    const { error } = await dependencies.database.rpc('api_mark_conversation_read', {
+      p_conversation_id: id,
+      p_reader_id: request.auth.profile.id,
+      p_read_at: new Date().toISOString(),
+    })
     if (error) throw fromDatabaseError(error)
     response.status(204).end()
   })

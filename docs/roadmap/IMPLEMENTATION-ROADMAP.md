@@ -488,9 +488,9 @@ Start with **Milestone 0**, then **Work package 1A**.
 The first implementation prompt should be limited to:
 
 ```text
-Read docs/README.md, docs/ARCHITECTURE.md, docs/CODE-PATTERNS.md,
-docs/PRODUCT-LOGIC-AUDIT-AND-ROADMAP.md,
-docs/07-DIGITAL-ROADMAP.md, and docs/HANDSON.md.
+Read docs/README.md, docs/systemarch/ARCHITECTURE.md, docs/systemarch/CODE-PATTERNS.md,
+docs/roadmap/PRODUCT-LOGIC-AUDIT-AND-ROADMAP.md,
+docs/roadmap/07-DIGITAL-ROADMAP.md, and docs/mdfiles/HANDSON.md.
 
 First establish and report the current repository/test baseline without fixing
 unrelated failures. Then implement only Work package 1A: the shared verification

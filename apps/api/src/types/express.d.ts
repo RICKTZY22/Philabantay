@@ -8,6 +8,8 @@ declare global {
         token: string
         user: User
         profile: Profile
+        /** Authenticator Assurance Level from the cryptographically verified JWT. */
+        aal: 'aal1' | 'aal2'
       }
     }
   }

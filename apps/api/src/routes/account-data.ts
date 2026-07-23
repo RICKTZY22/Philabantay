@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import {
-  createBugReportInputSchema,
   idParamsSchema,
   notificationPreferencesInputSchema,
   rateAppointmentInputSchema,
@@ -120,17 +119,6 @@ export function createAccountDataRouter(dependencies: ApiDependencies): Router {
     response.json({ data })
   })
 
-  router.post('/support/bug-reports', async (request, response) => {
-    const input = parseBody(request, createBugReportInputSchema)
-    const { data, error } = await dependencies.database
-      .from('bug_reports')
-      .insert({ ...input, page_url: input.page_url ?? null, user_id: request.auth.profile.id })
-      .select('*')
-      .single()
-    if (error) throw fromDatabaseError(error)
-    response.status(201).json({ data })
-  })
-
   router.get('/shops/:id/barbers/performance', async (request, response) => {
     const { id: shopId } = parseParams(request, idParamsSchema)
     await requireOwnedShop(dependencies, request, shopId)
@@ -153,12 +141,15 @@ export function createAccountDataRouter(dependencies: ApiDependencies): Router {
       data: (barbers ?? []).map((barber) => {
         const rows = (appointments ?? []).filter((appointment) => appointment.barber_id === barber.id)
         const completed = rows.filter((appointment) => appointment.status === 'completed').length
-        const noShows = rows.filter((appointment) => appointment.status === 'no_show').length
+        const customerNoShows = rows.filter((appointment) => appointment.status === 'customer_no_show').length
+        const decidedVisitCount = completed + customerNoShows
         return {
           ...barber,
           completed_cuts: completed,
-          no_show_count: noShows,
-          no_show_rate: completed + noShows === 0 ? 0 : noShows / (completed + noShows),
+          // Customer absence is an operational signal, not a barber-fault
+          // metric. Keep that attribution explicit in the response contract.
+          customer_no_show_count: customerNoShows,
+          customer_no_show_rate: decidedVisitCount === 0 ? 0 : customerNoShows / decidedVisitCount,
         }
       }),
     })

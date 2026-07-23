@@ -53,7 +53,13 @@ const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]
 
+const ADMIN_MENU_ITEMS: MenuItem[] = [
+  { to: '/admin/verifications', icon: 'search', label: 'Verification queue', end: true },
+  { to: '/settings/security', icon: 'gear', label: 'Security' },
+]
+
 export function getMainMenuItems(profile: Profile): MenuItem[] {
+  if (profile.role === 'admin') return ADMIN_MENU_ITEMS
   if (profile.role === 'shop_owner') return SHOP_OWNER_MENU_ITEMS
   if (profile.role === 'barber') return BARBER_MENU_ITEMS
   if (profile.requested_role === 'barber') return BARBER_SEEKER_MENU_ITEMS
@@ -66,6 +72,16 @@ export function getMenuContext(
   isBarberSeeker = false,
   isShopOwner = false,
 ): MenuContext {
+  if (pathname.startsWith('/admin/')) {
+    return {
+      eyebrow: 'TRUST & SAFETY',
+      title: 'Admin verification',
+      description: 'Review professional evidence through the audited AAL2 boundary.',
+      actionLabel: 'Open review queue',
+      actionTo: '/admin/verifications',
+      icon: 'search',
+    }
+  }
   if (isShopOwner && pathname.startsWith('/dashboard/owner')) {
     return {
       eyebrow: 'SHOP WORKSPACE',

@@ -4,7 +4,7 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import type { ApiDependencies } from './lib/supabase'
 import { authenticate } from './http/auth'
-import { requireOperationalAccess } from './http/authorization'
+import { requireAal2, requireOperationalAccess } from './http/authorization'
 import { errorHandler, notFoundHandler } from './http/errors'
 import { createAccountDataRouter } from './routes/account-data'
 import { createAuthRouter } from './routes/auth'
@@ -13,6 +13,10 @@ import { createBookingsRouter } from './routes/bookings'
 import { createCatalogRouter } from './routes/catalog'
 import { createChatRouter } from './routes/chat'
 import { createEmploymentRouter } from './routes/employment'
+import { createPublicCatalogRouter } from './routes/public-catalog'
+import { createVerificationRouter } from './routes/verification'
+import { createAdminVerificationRouter } from './routes/admin-verification'
+import { createSupportRouter } from './routes/support'
 
 export interface CreateAppOptions {
   webOrigin: string | string[]
@@ -46,6 +50,20 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
     skipSuccessfulRequests: true,
     message: rateLimitMessage('Too many attempts. Please wait a few minutes and try again.'),
   })
+  const catalogueLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 90,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: rateLimitMessage('Too many catalogue requests. Please slow down and try again shortly.'),
+  })
+  const slotLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 60,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: rateLimitMessage('Too many availability requests. Please slow down and try again shortly.'),
+  })
 
   app.get('/health', (_request, response) => {
     response.json({ data: { status: 'ok' } })
@@ -56,8 +74,17 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use('/auth/signin', credentialLimiter)
   api.use('/auth/signup', credentialLimiter)
   api.use('/auth', createAuthRouter(dependencies))
+  // Anonymous discovery is a deliberately narrow, response-validated surface.
+  // All mutations and private reads remain below both authentication guards.
+  api.use('/catalog/availability/slots', slotLimiter)
+  api.use('/catalog', catalogueLimiter, createPublicCatalogRouter(dependencies))
   api.use(authenticate(dependencies))
+  // Locked professionals need the verification workspace and a narrow Help
+  // path. Everything else remains behind the global operational lock.
+  api.use('/verification', createVerificationRouter(dependencies))
+  api.use('/support', createSupportRouter(dependencies))
   api.use(requireOperationalAccess)
+  api.use('/admin', requireAal2, createAdminVerificationRouter(dependencies))
   api.use(createCatalogRouter(dependencies))
   api.use(createAvailabilityRouter(dependencies))
   api.use(createBookingsRouter(dependencies))

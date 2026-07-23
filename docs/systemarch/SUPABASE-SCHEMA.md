@@ -129,4 +129,4 @@ the server-side Auth Admin API and must never be stored in a migration or seed.
    mandatory authorization layer.
 5. Docker-backed `supabase db reset`, direct RLS tests, Express authorization
    tests, and three-role browser checks pass locally. See
-   [LOCAL-SUPABASE-VERIFICATION.md](LOCAL-SUPABASE-VERIFICATION.md).
+   [LOCAL-SUPABASE-VERIFICATION.md](../mdfiles/LOCAL-SUPABASE-VERIFICATION.md).

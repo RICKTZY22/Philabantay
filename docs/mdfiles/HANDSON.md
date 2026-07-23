@@ -198,3 +198,35 @@ v17 merges the owner-tools seed data.
 No credentials or join codes are bundled. Create local accounts through signup;
 integration tests generate isolated users at runtime and read Supabase keys from
 environment variables.
+
+## 2026-07-22 — P1-01/P1-04 backend integrity pass
+
+Current work in the shared tree:
+
+- canonical capacity-blocking appointment states are shared by availability
+  and booking overlap queries;
+- barber performance uses `customer_no_show` and labels it as customer absence;
+- Express booking creation calls `api_create_appointment` instead of inserting
+  the table directly;
+- forward migration `20260722000100_secure_appointment_commands.sql` revokes
+  raw appointment creation, adds the interim transactional create command and
+  customer/provider capacity guards, hides the check-in hash from participant
+  reads, and protects appointment events from forged insertion,
+  mutation, or cascade deletion; and
+- local integration coverage now includes direct JWT/service-role denial,
+  privileged RPC denial, snapshot/event creation, schedule/overlap failures,
+  check-in-secret denial, and concurrent provider/customer claims.
+
+Verified on 2026-07-22 after a clean Docker-backed local Supabase reset:
+
+- every migration through
+  `20260722000200_lock_unverified_professional_accounts.sql` applied;
+- API tests passed 26/26, including 10 local Supabase Express/RLS/concurrency
+  tests;
+- shared tests passed 24/24 and web tests passed 19/19;
+- full workspace typecheck, production build, and `git diff --check` passed.
+
+P1-04 is now green. The backend professional lock also covers pending,
+rejected, and suspended barber and owner requests. Phase 1 is not complete:
+real verification submission/admin review, former-staff revocation, the public
+catalogue boundary, and the full release matrix are still open.
