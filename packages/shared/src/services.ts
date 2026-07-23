@@ -1,6 +1,6 @@
 // The data-access contract. The UI depends ONLY on these interfaces.
-// Phase 1 = MockBackend; Phase 2 = Express-backed ApiBackend. Swapping either
-// requires zero component changes.
+// The sole implementation is the Express + Supabase ApiBackend; pages never
+// touch a concrete backend, so the seam stays swappable.
 
 import type {
   AvailabilityOverrideInput,

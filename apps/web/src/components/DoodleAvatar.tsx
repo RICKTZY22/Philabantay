@@ -70,9 +70,9 @@ export const CUSTOM_AVATAR_CHOICES = {
 
 /**
  * Rewards catalogue ng customer gear: unlockAt = completed cuts na kailangan.
- * NOTE: dinuduplicate ito ng MockBackend enforcement (same precedent as
- * DOODLE_AVATAR_PATTERN) dahil hindi puwedeng mag-import ang services layer
- * mula sa components. Kapag nag-Supabase na, isang server-side table na ito.
+ * NOTE: presentation copy lang ito para sa UI; ang server (Express + Supabase)
+ * ang authoritative sa kung anong gear ang na-unlock na. Kapag naging server-side
+ * table na, dito pa rin galing ang label at unlock threshold sa kliyente.
  */
 export const CUSTOMER_GEAR_CATALOG: Array<{ id: CustomerGear; label: string; unlockAt: number }> = [
   { id: 'none', label: 'Walang gear', unlockAt: 0 },

@@ -3,9 +3,9 @@ import type { AvailabilityRule, BarberAbsence, BarberEmployment } from './types'
 /**
  * Pure attendance math shared by UI and backend adapters. "Present" is
  * derived: a scheduled day (may weekly rule sa weekday na iyon) without an
- * absence record counts as present. The mock has no clock-in mechanism, so
- * derivation is the single source of truth; Phase 2 can replace this with
- * real check-in rows behind the same summary shape.
+ * absence record counts as present. Derivation is the single source of truth
+ * today; a later pass can replace it with real check-in rows behind the same
+ * summary shape.
  */
 
 export interface AttendanceSummary {

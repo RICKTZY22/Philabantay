@@ -1,30 +1,22 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { ApiBackend, type DataBackend } from '@barbershop/shared'
-import { createMockBackend } from './mock/MockBackend'
 
 const BackendContext = createContext<DataBackend | null>(null)
 
 /**
- * Switchboard ng data layer. `VITE_DATA_BACKEND` selects the local mock or the
- * Express-backed adapter without changing individual pages.
- *
- * IMPORTANT - HUWAG MAG-IMPORT NG MOCK DIRETSO SA MGA PAGE:
- * `DataBackend` contract ang dapat kausap ng UI para plug-and-play ang Supabase.
+ * Data layer for the whole app. The only backend is the Express + Supabase
+ * ApiBackend; the old localStorage mock has been retired. Pages must talk to the
+ * `DataBackend` contract, never to a concrete backend, so the seam stays clean.
  */
 function createBackend(): DataBackend {
-  const kind = import.meta.env.VITE_DATA_BACKEND ?? 'mock'
-  switch (kind) {
-    case 'api':
-    case 'supabase':
-      if (!import.meta.env.VITE_API_BASE_URL) {
-        throw new Error('VITE_API_BASE_URL is required when VITE_DATA_BACKEND uses the Express API.')
-      }
-      return new ApiBackend({ baseUrl: import.meta.env.VITE_API_BASE_URL })
-    case 'mock':
-      return createMockBackend()
-    default:
-      throw new Error(`Unsupported data backend: ${kind}`)
+  const kind = import.meta.env.VITE_DATA_BACKEND ?? 'api'
+  if (kind !== 'api' && kind !== 'supabase') {
+    throw new Error(`Unsupported data backend: ${kind}. Only the Express API backend is supported.`)
   }
+  if (!import.meta.env.VITE_API_BASE_URL) {
+    throw new Error('VITE_API_BASE_URL is required to reach the Express API.')
+  }
+  return new ApiBackend({ baseUrl: import.meta.env.VITE_API_BASE_URL })
 }
 
 export function BackendProvider({ children }: { children: ReactNode }) {

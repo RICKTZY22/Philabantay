@@ -108,7 +108,7 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
   const focusLat = scope === 'nearby' ? userLocation?.lat : undefined
   const focusLng = scope === 'nearby' ? userLocation?.lng : undefined
 
-  // Create the map once. OSM public tiles are fine for the mock/demo phase;
+  // Create the map once. OSM public tiles are fine for now;
   // production dapat lumipat sa keyed provider (MapTiler/Stadia).
   useEffect(() => {
     const el = containerRef.current

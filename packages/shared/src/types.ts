@@ -1,5 +1,5 @@
-// Domain types — these mirror the Supabase Postgres schema (Phase 2).
-// The mock data layer (Phase 1) produces these exact shapes so the swap is transparent.
+// Domain types. These mirror the Supabase Postgres schema and are the exact
+// shapes the Express ApiBackend returns across the DataBackend contract.
 
 /** Role na totoong may permission na. Hindi ito dapat diretso galing sa form. */
 export type Role = 'customer' | 'barber' | 'shop_owner' | 'admin'
@@ -24,7 +24,7 @@ export type CanonicalAppointmentStatus =
   | 'disputed'
 
 /**
- * `pending` and `no_show` remain temporarily readable for the mock/frontend
+ * `pending` and `no_show` remain temporarily readable for the frontend
  * migration. New API writes use only CanonicalAppointmentStatus.
  */
 export type AppointmentStatus =

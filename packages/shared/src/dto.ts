@@ -1,5 +1,5 @@
-// Request/response shapes for the data-access layer. Both the mock (Phase 1)
-// and the Supabase/Express implementation (Phase 2) speak these.
+// Request/response shapes for the data-access layer, spoken by the Express +
+// Supabase ApiBackend and consumed through the DataBackend contract.
 
 import type { AppointmentStatus, BugCategory, OnboardingRole, Weekday } from './types'
 
