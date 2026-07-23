@@ -4,6 +4,10 @@ This matrix prevents a feature from being declared complete because one screen
 exists. Each requirement must trace through shared contract, database/security,
 API/adapter, frontend, and verification evidence.
 
+The human-readable, per-test breakdown lives in
+[`../testing/`](../testing/README.md): one file per phase listing every
+automated test and the findings behind it.
+
 ## 1. Requirement map
 
 | ID | Requirement | Phase | Primary evidence |
@@ -155,8 +159,8 @@ git diff --check
 
 | Phase | Product review | Security/data review | Frontend/accessibility review | Automated gate | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Pending | RLS/API matrix green 2026-07-23; independent re-scan pending | Pending (browser/a11y smoke) | Passed 52/52 2026-07-23 (typecheck, 81 unit, build) | Automated gate green; human reviews pending |
-| 2 | Pending | P2-01 matrix green; P2-02 hours pending Docker | Pending | P2-01 passed 2026-07-23; P2-02 slice 1 static-green | In progress (P2-01 done) |
+| 1 | Pending | RLS/API matrix green; independent re-scan pending | Pending (browser/a11y smoke) | Passed 2026-07-24 (typecheck, 86 unit, build, matrix 54/54 incl. integration) | Automated gate green; human reviews pending |
+| 2 | Pending | P2-01 + P2-02 hours/closures matrix green (54/54) 2026-07-24 | Pending | P2-01 done; P2-02 slices 1-2 verified and committed (`2df2312`) | In progress (P2-01 done, P2-02 slices 1-2 done) |
 | 3 | Pending | Pending | Pending | Pending | Not started |
 | 4 | Pending | Pending | Pending | Pending | Not started |
 | 5 | Pending | Pending | Pending | Pending | Not started |

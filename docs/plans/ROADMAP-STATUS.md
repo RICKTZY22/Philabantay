@@ -1,15 +1,16 @@
-# V1 roadmap status — 2026-07-23
+# V1 roadmap status - 2026-07-24
 
 Single source of truth for packet-by-packet progress across all five phases.
 Records **verified evidence**, not visual completion. When a claim is only
-partially verified, it says so.
+partially verified, it says so. Per-test detail lives in
+[`../testing/`](../testing/README.md).
 
 Legend: ✅ done and verified · 🔨 in progress · ⬜ not started · 🧹 needs polish.
 
 ## Progress at a glance
 
 - **Phase 1 (foundation + identity): ✅ complete** — 7/7 packets, automated gate green.
-- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 done; P2-02 started.
+- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 done; P2-02 slices 1-2 (hours + closures) done.
 - Phases 3–5: ⬜ not started.
 - **Overall: about 8 of ~39 packets.**
 
@@ -32,7 +33,7 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 | Packet | Status | Detail |
 | --- | --- | --- |
 | P2-01 Shop lifecycle | ✅ | Draft → published → suspended lifecycle, `/owner/shop` version-checked commands, catalogue gated on `published`, Shop Setup UI + no-shop redirect. Matrix 52/52 + browser verified. Committed (`5cc05f3`, `f402624`). |
-| P2-02 Shop facts | 🔨 | **Slices 1–2 (operating hours + date closures): implemented full-stack; typecheck + unit + build green; migration reset and integration matrix PENDING (Docker down); not committed.** Remaining slices: media (storage upload), services editor UI, map-pin picker. |
+| P2-02 Shop facts | 🔨 | Slices 1–2 (operating hours + date closures): full-stack, verified on a clean local-Supabase reset (matrix 54/54, incl. new hours + closures RLS tests), committed (`2df2312`). Remaining slices: media (storage upload), services editor UI, map-pin picker. |
 | P2-03 Hiring state | ⬜ | off / open / full with optional counts. |
 | P2-04 Employment convergence | ⬜ | application / invitation / join-code converge on one owner-approved request. |
 | P2-05 Provider capabilities | ⬜ | owner-as-provider, service qualifications. |
@@ -48,7 +49,7 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 
 ## Needs polishing / open items
 
-1. **P2-02 slice 1 verification is pending Docker** — clean-reset the migration and run the full matrix (incl. the new hours RLS test), then commit.
+1. **P2-02 remaining slices** — media upload, services editor UI, and the map-pin picker are still open; a shop cannot publish until the services editor creates an active service. (Slices 1–2 verified and committed.)
 2. **Phase 1 final browser/accessibility smoke** — re-confirm the session-restore no-flash fix (LR-033) and run the accessibility pass; this was the closeout step Codex did not finish.
 3. **Independent adversarial re-scan (P1-07)** — Codex wrote both the code and its tests; a fresh adversarial pass raises confidence before Phase 1 is formally locked.
 4. **Hours `PUT` is delete-then-insert (non-atomic)** — low risk for an owner editing their own shop; consider a single transactional RPC in a later pass.
@@ -71,21 +72,23 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   marketing references. Touches routing, `AuthSlider`, redirect/`from` logic,
   and the GSAP scroll, so it is its own slice.
 
-## Latest automated gate (2026-07-23)
+## Latest automated gate (2026-07-24)
 
-Run by Claude Opus this session:
+Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 42, api 25, web 19 (81 total)
+Unit:      shared 42, api 25, web 19 (86 total)
 Build:     web production build passed
-Matrix:    52/52 on a clean local-Supabase reset (migrations through
-           20260722001800; P2-01 lifecycle + all Phase 1 RLS/security probes)
+Matrix:    54/54 on a clean local-Supabase reset (migrations through
+           20260722002000; P2-01 lifecycle + P2-02 hours/closures RLS +
+           all Phase 1 RLS/security probes)
 ```
 
 The P2-02 migrations (`20260722001900_shop_operating_hours.sql`,
-`20260722002000_shop_closures.sql`) and their hours/closures RLS tests are **not**
-in that matrix run yet (Docker Desktop was stopped afterward).
+`20260722002000_shop_closures.sql`) and their hours/closures RLS tests are now
+part of the matrix (54/54). The per-test breakdown lives in
+[`../testing/`](../testing/README.md).
 
 ## Next up
 

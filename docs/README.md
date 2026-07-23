@@ -64,6 +64,7 @@ Every new design document uses these labels:
 | [Security contract](security/SECURITY.md) | Existing coding and deployment security rules. |
 | [Credential audit](security/SECURITY-CREDENTIAL-AUDIT.md) | Removal of bundled accounts and secrets. |
 | [Local Supabase verification](mdfiles/LOCAL-SUPABASE-VERIFICATION.md) | Local RLS/API verification evidence. |
+| [Test catalog](testing/README.md) | Every automated test, grouped by phase and packet, plus findings. |
 | [Code audit](security/CODE_AUDIT.md) | Earlier security, correctness, and performance findings. |
 | [Hands-on change log](mdfiles/HANDSON.md) | Recent implementation history for the next developer or AI session. |
 
