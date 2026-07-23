@@ -18,6 +18,7 @@ const BarberDetailPage = lazy(() => import('./pages/BarberDetailPage').then((m) 
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) => ({ default: m.AppDashboardPage })))
+const ShopSetupPage = lazy(() => import('./pages/ShopSetupPage').then((m) => ({ default: m.ShopSetupPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
 const VerificationLockPage = lazy(() => import('./pages/VerificationLockPage').then((m) => ({ default: m.VerificationLockPage })))
@@ -116,6 +117,16 @@ export function App() {
           element={
             <RequireAuth>
               <AppDashboardPage />
+            </RequireAuth>
+          }
+        />
+        {/* Shop Setup is its own owner workspace, distinct from the dashboard
+            sections. Declared before the :ownerSection param route. */}
+        <Route
+          path="dashboard/owner/shop"
+          element={
+            <RequireAuth role="shop_owner">
+              <ShopSetupPage />
             </RequireAuth>
           }
         />

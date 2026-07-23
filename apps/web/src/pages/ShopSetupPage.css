@@ -1,0 +1,123 @@
+.shop-setup {
+  width: min(1080px, 100%);
+  margin: 6px auto 48px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.6vw, 24px);
+}
+
+.shop-setup-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.shop-setup-head h1 { margin: 4px 0 2px; font-size: clamp(1.7rem, 3.4vw, 2.6rem); line-height: 1.05; }
+.shop-setup-head p { margin: 0; max-width: 60ch; color: var(--muted); line-height: 1.5; }
+
+.shop-setup-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.shop-setup-status > div { display: grid; }
+.shop-setup-status strong { font: 700 1rem 'Kalam', cursive; }
+.shop-setup-status span { color: var(--muted); font-size: 0.9rem; }
+.shop-setup-status-dot { width: 14px; height: 14px; flex: none; border: 2px solid var(--ink); border-radius: 50%; background: var(--yellow); }
+.shop-setup-status.is-published .shop-setup-status-dot { background: var(--green); }
+.shop-setup-status.is-suspended .shop-setup-status-dot { background: var(--danger); }
+.shop-setup-status.is-draft .shop-setup-status-dot { background: var(--blue); }
+
+.shop-setup-ok,
+.shop-setup-error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 2px dashed var(--ink);
+  border-radius: 12px;
+}
+.shop-setup-ok { background: var(--green); }
+.shop-setup-error { background: color-mix(in srgb, var(--danger) 60%, var(--paper-soft)); }
+
+.shop-setup-body {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: clamp(16px, 2.4vw, 24px);
+  align-items: start;
+}
+
+.shop-setup-form,
+.shop-setup-panel {
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 2px solid var(--ink);
+  border-radius: 20px 14px 22px 16px / 16px 22px 14px 20px;
+  background: var(--paper);
+  box-shadow: 5px 6px 0 var(--shadow);
+}
+.shop-setup-form { display: grid; gap: 14px; }
+
+.shop-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.shop-field { display: grid; align-content: start; gap: 6px; font-weight: 700; }
+.shop-field.is-wide { grid-column: 1 / -1; }
+.shop-field small { color: var(--muted); font-weight: 400; }
+.shop-field input,
+.shop-field textarea,
+.shop-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 11px 8px 12px 9px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.shop-field textarea { resize: vertical; }
+.shop-field-note { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+.shop-setup-aside { display: grid; gap: clamp(16px, 2.4vw, 24px); }
+.shop-setup-panel { display: grid; gap: 12px; }
+.shop-setup-panel h2 { margin: 0; font-size: clamp(1.2rem, 2vw, 1.45rem); }
+.shop-setup-muted { margin: 0; color: var(--muted); line-height: 1.5; }
+
+.shop-readiness { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.shop-readiness-item { display: flex; align-items: flex-start; gap: 10px; }
+.shop-readiness-item > span:last-child { display: grid; gap: 1px; }
+.shop-readiness-item small { color: var(--muted); font-weight: 400; }
+.shop-readiness-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper-soft);
+}
+.shop-readiness-item.is-done .shop-readiness-icon { background: var(--green); }
+.shop-readiness-item.is-todo .shop-readiness-icon { background: color-mix(in srgb, var(--danger) 55%, var(--paper-soft)); }
+.shop-readiness-item.is-pending .shop-readiness-icon { background: var(--yellow); }
+
+.shop-setup-form .btn,
+.shop-setup-panel .btn { justify-self: start; }
+
+@media (max-width: 860px) {
+  .shop-setup-body { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .shop-setup-grid { grid-template-columns: 1fr; }
+  .shop-setup-form .btn,
+  .shop-setup-panel .btn { justify-self: stretch; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-setup * { transition: none !important; animation: none !important; }
+}
