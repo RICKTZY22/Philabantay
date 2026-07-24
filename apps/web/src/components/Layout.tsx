@@ -36,7 +36,6 @@ export function Layout() {
     location.pathname === '/schedule' ||
     location.pathname === '/appointments' ||
     location.pathname.startsWith('/chat') ||
-    location.pathname.startsWith('/barbers') ||
     location.pathname.startsWith('/admin/')
   // Ang "home" ng naka-sign-in na user ay ang dashboard, hindi ang landing
   // billboard (may login form iyon). Kaya iiwas tayong ihatid sila pabalik sa
@@ -146,7 +145,6 @@ export function Layout() {
             ) : (
               !profile && !onLanding && (
                 <>
-                  <NavLink to="/barbers" className="nav-link">Barbers</NavLink>
                   <NavLink to="/login" className="nav-link">Log in</NavLink>
                   <Link to="/signup" className="btn btn-sm btn-primary">Sign up</Link>
                 </>

@@ -28,7 +28,6 @@ const CUSTOMER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard', icon: 'home', label: 'Home', end: true },
   { to: '/chat', icon: 'chat', label: 'Chats' },
   { to: '/appointments', icon: 'calendar', label: 'Bookings' },
-  { to: '/barbers', icon: 'scissors', label: 'Barbers' },
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]
 
@@ -115,9 +114,9 @@ export function getMenuContext(
       : {
           eyebrow: 'YOUR SCHEDULE',
           title: 'Booking calendar',
-          description: 'Ready ka na ba para sa susunod mong gupit?',
-          actionLabel: 'Book another cut',
-          actionTo: '/barbers',
+          description: 'Balikan ang lahat ng iyong upcoming at past cuts.',
+          actionLabel: 'Back to home',
+          actionTo: '/dashboard',
           icon: 'calendar',
         }
   }
@@ -146,16 +145,6 @@ export function getMenuContext(
       actionLabel: 'View bookings',
       actionTo: '/appointments',
       icon: 'chat',
-    }
-  }
-  if (pathname.startsWith('/barbers') || pathname.startsWith('/shops')) {
-    return {
-      eyebrow: 'DISCOVER',
-      title: 'Find your next cut',
-      description: 'Tingnan ang cuts na na-book mo na bago pumili ulit.',
-      actionLabel: 'View bookings',
-      actionTo: '/appointments',
-      icon: 'scissors',
     }
   }
   if (pathname.startsWith('/settings')) {
@@ -188,10 +177,10 @@ export function getMenuContext(
       icon: 'chair' as const,
     } : {
       eyebrow: 'QUICK ACTION',
-      title: 'Explore nearby shops',
-      description: 'Hanapin ang barbershop at service na bagay sa iyo.',
-      actionLabel: 'Find a barbershop',
-      actionTo: '/barbers',
+      title: 'Your bookings',
+      description: 'Tingnan ang upcoming at past cuts mo sa isang board.',
+      actionLabel: 'View bookings',
+      actionTo: '/appointments',
       icon: 'home' as const,
     }),
   }

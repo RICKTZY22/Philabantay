@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   APPOINTMENT_STATUS_LABELS,
   canModifyAppointment,
@@ -16,8 +15,6 @@ import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { ModalPortal } from '../components/ModalPortal'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { money, timeOfDay, dayLabel } from '../lib/format'
-import { todayLocalDateKey } from '../lib/date'
-import { routeSegment } from '../lib/security'
 import './AppointmentsPage.css'
 
 const STATUS_CLASS: Record<string, string> = {
@@ -38,7 +35,6 @@ export function AppointmentsPage() {
   const [drafts, setDrafts] = useState<Record<string, { barber_rating: number; shop_rating: number }>>({})
   const [savingReview, setSavingReview] = useState<string | null>(null)
   const [reviewMessage, setReviewMessage] = useState<Record<string, string>>({})
-  const [plannedDate, setPlannedDate] = useState(todayLocalDateKey)
   const [cancelError, setCancelError] = useState('')
   const [cancelling, setCancelling] = useState(false)
 
@@ -137,18 +133,10 @@ export function AppointmentsPage() {
           <h1>Booking calendar</h1>
           <p>Lahat ng upcoming at past cuts mo, nasa iisang calendar na.</p>
         </div>
-        {!isBarber && <Link to="/barbers" className="btn btn-primary"><DoodleIcon name="calendar" size={19} /> Book another cut</Link>}
       </header>
 
       <div className="appointments-workspace">
         <aside className="appointments-sidebar" aria-label="Booking overview">
-          {!isBarber && <section className="appointments-plan">
-            <span className="eyebrow">PLAN YOUR NEXT CUT</span>
-            <h2>Pick a date</h2>
-            <label><span>Preferred haircut date</span><input type="date" min={todayLocalDateKey()} value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
-            <Link className="btn btn-primary" to={`/barbers?date=${encodeURIComponent(plannedDate)}`}>Find a chair</Link>
-          </section>}
-
           <ScheduleList title="Upcoming cuts" tone="upcoming" appointments={upcoming} empty="Wala pang next cut." onSelect={openSelected} />
           <ScheduleList title="Past history" tone="history" appointments={history} empty="Wala pang past cut." onSelect={openSelected} />
         </aside>
@@ -192,14 +180,8 @@ export function AppointmentsPage() {
             </div>
 
             <div className="booking-notebook-actions">
-              {canModifyAppointment(selected, nowEpochMs) && !isBarber && (
-                <Link className="btn" to={barberBookingPath(selected.barber_id, selected.service_id, selected.id)}>Reschedule</Link>
-              )}
               {canModifyAppointment(selected, nowEpochMs) && (
                 <button type="button" className="btn btn-danger" disabled={cancelling} onClick={() => void cancel(selected.id)}>{cancelling ? 'Cancelling...' : 'Cancel booking'}</button>
-              )}
-              {!canModifyAppointment(selected, nowEpochMs) && !isBarber && (
-                <Link className="btn btn-primary" to={barberBookingPath(selected.barber_id, selected.service_id)}>Book again</Link>
               )}
             </div>
             {cancelError && <p className="form-error" role="alert">{cancelError}</p>}
@@ -253,8 +235,3 @@ function ScheduleList({ title, tone, appointments, empty, onSelect }: {
   )
 }
 
-function barberBookingPath(barberId: string, serviceId: string, rescheduleId?: string) {
-  const params = new URLSearchParams({ service: serviceId })
-  if (rescheduleId) params.set('reschedule', rescheduleId)
-  return `/barbers/${routeSegment(barberId)}?${params.toString()}`
-}

@@ -625,9 +625,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
                     >
                       Open driving route
                     </a>
-                    <Link className="cd-see-all" to={`/shops/${routeSegment(selectedShop.id)}`}>
-                      Full details <DoodleIcon name="arrow" size={15} />
-                    </Link>
                     <button
                       type="button"
                       className="btn btn-sm btn-blue"
@@ -670,9 +667,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
                         <div className="cd-staff-info">
                           <strong>{barber.profile.full_name}</strong>
                           <span className={BARBER_STATUS_PILL[status]}>{BARBER_STATUS_LABEL[status]}</span>
-                        </div>
-                        <div className="cd-staff-actions">
-                          <Link className="btn btn-sm btn-green" to={`/barbers/${routeSegment(barber.id)}`}>Book</Link>
                         </div>
                       </div>
                     )
@@ -808,7 +802,6 @@ function ShopList({
                     ? `~${meta.waitMinutes} min wait`
                     : 'Contact shop for wait time'}
               </span>
-              <Link className="btn btn-sm btn-primary" to={`/shops/${routeSegment(shop.id)}`}>View shop</Link>
             </div>
           </article>
         )

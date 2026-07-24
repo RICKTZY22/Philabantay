@@ -286,8 +286,7 @@ const Thread = memo(function Thread({
     if (body) body.scrollTop = body.scrollHeight
   }, [messages])
 
-  const { name: displayName, context, staffThread } = conversationDisplay(conversation, profile?.id)
-  const showShopLink = !staffThread && profile?.id === conversation.customer_id
+  const { name: displayName, context } = conversationDisplay(conversation, profile?.id)
 
   if (!ready) return <Loading label="Opening chat…" />
 
@@ -300,9 +299,6 @@ const Thread = memo(function Thread({
           <strong>{displayName}</strong>
           <span>{context}</span>
         </div>
-        {showShopLink && (
-          <Link className="btn btn-sm thread-shop-link" to={`/shops/${routeSegment(conversation.shop.id)}`}>Shop details</Link>
-        )}
       </header>
 
       {loadError
