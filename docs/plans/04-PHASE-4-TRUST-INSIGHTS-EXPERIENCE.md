@@ -31,6 +31,12 @@ Do not put private case evidence in public appointment timelines.
 Routes:
 
 ```text
+/admin/overview
+/admin/verifications
+/admin/verifications/:submissionId
+/admin/users
+/admin/users/:userId
+/admin/bugs
 /admin/disputes
 /admin/disputes/:caseId
 /admin/moderation
@@ -239,6 +245,34 @@ Add explicit correction commands/events for attendance, employment, payment,
 service amendments, no-show appeal, dispute, and moderation. Derived aggregates
 must be reproducible by replaying finalized facts. Cache/materialized views may
 accelerate queries but are never the only truth.
+
+## 11. Staff admin console (back-office)
+
+A single private console for the owner and trusted staff only. Access uses the
+existing `admin` role + AAL2 MFA + capability grants, provisioned by script and
+never reachable through public signup (the Phase 1 admin boundary). It brings the
+scattered admin surfaces into one place and adds the operator tools the platform
+needs at PH scale.
+
+Surfaces:
+
+- **Verifications:** the review queue (approve / reject / request-info). For the
+  MVP, professionals verify by email + SMS OTP and are approved here by a human;
+  document evidence is turned off (dormant, re-enabled during trust hardening).
+- **Moderation / bans:** suspend and restore professionals (exists), plus ban or
+  disable any account (extend the suspend command beyond professionals). Every
+  action is version-checked, reasoned, and audited.
+- **Bug reports:** list, read, and update the status of reports the support
+  system already collects.
+- **Users + metrics:** a user directory and platform totals (users, counts by
+  role, growth over time), read-only and reproducible.
+- **Audit:** sensitive-access views built on the existing verification audit.
+
+Verification MVP note: the document + malware-scan + IDV automation described in
+the Phase 1 verification stays in the codebase but dormant. Re-enabling required
+documents and adding automated ID / face-liveness / certificate + business-doc
+checks (with PH registry cross-checks: TESDA, DTI, SEC, BIR) is deferred to a
+trust-hardening pass and stays human-in-the-loop.
 
 ## Required tests and phase demo
 

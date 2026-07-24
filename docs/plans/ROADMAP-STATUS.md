@@ -44,8 +44,25 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 ## Phases 3–5 ⬜
 
 - Phase 3 (booking + live operations): P3-01…P3-09.
-- Phase 4 (trust, insights, settings, workspaces): P4-01…P4-09.
+- Phase 4 (trust, insights, settings, workspaces): P4-01…P4-09, now including the
+  **staff admin console** (see below).
 - Phase 5 (production hardening + rollout): P5-01…P5-06.
+
+### Staff admin console (Phase 4)
+
+A private, staff-only back-office. Access reuses the existing `admin` role + AAL2
+MFA + capability grants, provisioned by script and never reachable through public
+signup (the Phase 1 admin boundary). It consolidates the scattered admin surfaces
+and adds the operator tools needed at PH scale:
+
+- Verification review queue (exists): approve / reject / request-info.
+- Account moderation: suspend / restore professionals (exists) plus ban or
+  disable any account (new; extend suspend beyond professionals).
+- Bug report triage: list, read, update status (new; reports are already
+  collected by the support system, just not surfaced).
+- User directory + platform metrics: total users, counts by role, growth (new).
+- Audit views for sensitive access (build on the existing verification audit).
+- Swap the dev SMS path for a real PH provider (Semaphore / Twilio).
 
 ## Needs polishing / open items
 
@@ -56,6 +73,27 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 5. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
 6. **Integration test hygiene** — the `beforeAll` fixture does not delete its shops, so the exact-set catalogue assertion needs a clean reset before each matrix run (works via reset; could harden with `afterAll` cleanup or non-exact assertions).
 7. **Docs** — keep traceability rows and this status current per packet.
+
+## Verification approach (decided 2026-07-24)
+
+Professional verification is simplified for the MVP so onboarding works without
+building document IDV first:
+
+- **Now (near-term, unblocks Phase 3 testing):** barbers and shop owners verify by
+  **email + SMS OTP**, then a **human approves** through the existing
+  `/admin/verifications` queue. Document requirements are set to none; the whole
+  evidence + malware-scan pipeline stays in the code, dormant. SMS starts on a
+  free dev/test path (prints the code) so the flow runs at zero cost; a real PH
+  provider is wired later.
+- **Deferred until scale ("when famous"):** re-enable required documents
+  (government ID + selfie, owner proof-of-control) and add automated
+  ID + face/liveness + certificate/business-doc verification (buy an IDV provider,
+  keep human-in-the-loop). Owner business docs cross-check PH registries
+  (TESDA / DTI / SEC / BIR) where APIs allow. This is the trust-hardening pass.
+
+Rationale: spend backend + security effort where it pays off now; the human
+review queue already gives a fraud gate at MVP volume. Fully reversible by
+flipping the document requirements back on.
 
 ## Deferred to the UX-polish pass
 
