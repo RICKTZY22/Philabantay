@@ -163,6 +163,17 @@ describe('verification schemas', () => {
     expect(isCompleteVerificationFormForRole('shop_owner', barberForm)).toBe(false)
   })
 
+  it('rejects impossible or implausible dates of birth', () => {
+    // Well-formed YYYY-MM-DD but not a real calendar date.
+    expect(verificationFormDataSchema.safeParse({ ...barberForm, date_of_birth: '2024-13-40' }).success).toBe(false)
+    expect(verificationFormDataSchema.safeParse({ ...barberForm, date_of_birth: '2024-02-30' }).success).toBe(false)
+    // Real dates but implausible age (too young / too old).
+    expect(verificationFormDataSchema.safeParse({ ...barberForm, date_of_birth: '2020-01-01' }).success).toBe(false)
+    expect(verificationFormDataSchema.safeParse({ ...barberForm, date_of_birth: '1850-01-01' }).success).toBe(false)
+    // A real, plausible date of birth still passes.
+    expect(verificationFormDataSchema.safeParse(barberForm).success).toBe(true)
+  })
+
   it('accepts only fixed needs-information field names and strict item bodies', () => {
     expect(verificationInformationItemSchema.safeParse({
       target: 'field',

@@ -477,7 +477,31 @@ export const verificationApplicantReasonCodeSchema = z.enum([
   'unable_to_verify',
 ])
 
-const dateOfBirthSchema = z.string().regex(DATE_KEY, 'Expected YYYY-MM-DD.')
+function isPlausibleDateOfBirth(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  // Reject non-calendar dates like 2024-13-40 or 2024-02-30 with a round-trip.
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) return false
+  // Plausible professional age band: 16 to 100 years old.
+  const now = new Date()
+  let age = now.getUTCFullYear() - year
+  const hadBirthday = now.getUTCMonth() > month - 1
+    || (now.getUTCMonth() === month - 1 && now.getUTCDate() >= day)
+  if (!hadBirthday) age -= 1
+  return age >= 16 && age <= 100
+}
+
+const dateOfBirthSchema = z.string()
+  .regex(DATE_KEY, 'Expected YYYY-MM-DD.')
+  .refine(isPlausibleDateOfBirth, 'Enter a real date of birth (ages 16 to 100).')
 const specialtiesSchema = z.array(z.string().trim().min(1).max(80)).min(1).max(20)
   .refine((values) => new Set(values.map((value) => value.toLocaleLowerCase())).size === values.length, {
     message: 'Specialties must be unique.',
