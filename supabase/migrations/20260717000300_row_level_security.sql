@@ -53,7 +53,8 @@ revoke all on all functions in schema private from public, anon, authenticated;
 grant execute on function private.current_user_role() to authenticated;
 grant execute on function private.owns_shop(uuid, uuid) to authenticated;
 grant execute on function private.is_active_barber_for_shop(uuid, uuid) to authenticated;
-grant execute on function private.is_shop_member(uuid, uuid) to authenticated;
+revoke all on function private.is_shop_member(uuid, uuid)
+  from public, anon, authenticated;
 grant execute on function private.is_conversation_participant(uuid, uuid) to authenticated;
 grant execute on function private.rating_matches_completed_appointment(uuid, uuid, uuid, uuid) to authenticated;
 

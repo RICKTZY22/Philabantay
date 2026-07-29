@@ -76,6 +76,11 @@ as $$
     or private.is_active_barber_for_shop(p_shop_id, p_user_id);
 $$;
 
+-- This helper is retained for server-owned composition only. No RLS policy
+-- calls it, so browser roles do not need direct execution.
+revoke all on function private.is_shop_member(uuid, uuid)
+  from public, anon, authenticated;
+
 create or replace function private.is_conversation_participant(
   p_conversation_id uuid,
   p_user_id uuid default null
