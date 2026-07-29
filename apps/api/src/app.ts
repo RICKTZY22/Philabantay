@@ -17,6 +17,7 @@ import { createPublicCatalogRouter } from './routes/public-catalog'
 import { createVerificationRouter } from './routes/verification'
 import { createAdminVerificationRouter } from './routes/admin-verification'
 import { createSupportRouter } from './routes/support'
+import { createQualificationsRouter } from './routes/qualifications'
 
 export interface CreateAppOptions {
   webOrigin: string | string[]
@@ -35,7 +36,9 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   const rateLimitMessage = (message: string) => ({ error: { code: 'rate_limited', message } })
   const generalLimiter = rateLimit({
     windowMs: 60_000,
-    limit: 120,
+    // The Docker-backed role matrix intentionally drives many authenticated
+    // actors through one loopback IP. Production keeps the real abuse ceiling.
+    limit: process.env.NODE_ENV === 'test' ? 1_000 : 120,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: rateLimitMessage('Too many requests. Please slow down and try again shortly.'),
@@ -90,6 +93,7 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use(createBookingsRouter(dependencies))
   api.use(createChatRouter(dependencies))
   api.use(createEmploymentRouter(dependencies))
+  api.use(createQualificationsRouter(dependencies))
   api.use(createAccountDataRouter(dependencies))
 
   app.use('/api/v1', api)

@@ -4,6 +4,10 @@ import type {
   PublicProfile,
   PublicService,
   PublicShop,
+  PublicShopClosure,
+  PublicShopDetail,
+  PublicShopHoursBlock,
+  PublicShopMedia,
   ShopWithStatus,
   Slot,
 } from './types'
@@ -18,11 +22,13 @@ import type {
   CreateAppointmentInput,
   CreateAttendanceRecordInput,
   CreateBugReportInput,
+  CreateEmploymentRequestInput,
+  CreateJoinCodeRequestInput,
   CreateServiceInput,
   CreateShopInput,
   EndEmploymentInput,
-  JoinShopInput,
   NotificationPreferencesInput,
+  OwnerServiceInput,
   OpenConversationInput,
   OpenStaffConversationInput,
   RateAppointmentInput,
@@ -30,25 +36,37 @@ import type {
   RescheduleAppointmentInput,
   RefreshSessionInput,
   ResolveAppointmentDisputeInput,
-  ResolveBarberApplicationInput,
+  ResolveEmploymentRequestInput,
+  RevokeShopJoinCodeInput,
+  RotateShopJoinCodeInput,
   ResolveShiftChangeRequestInput,
   SendMessageInput,
   SetAcceptingBookingsInput,
   SetAppointmentStatusInput,
   SetShiftStatusInput,
   ShiftChangeRequestInput,
+  ReplaceStaffShiftsInput,
+  UpsertStaffShiftExceptionInput,
+  RemoveStaffShiftExceptionInput,
   SignInInput,
   SignUpInput,
   StaffNoteInput,
   UpdateAttendanceRecordInput,
   UpdateProfileInput,
+  UpdateBarberJobProfileInput,
   UpdateServiceInput,
   UpdateShopInput,
   CreateOwnerShopInput,
   UpdateOwnerShopInput,
   ShopVersionInput,
+  UpdateShopHiringInput,
   SetShopHoursInput,
   CreateShopClosureInput,
+  RequestShopMediaUploadInput,
+  UpdateOwnerProviderCapabilityInput,
+  SetProviderQualificationsInput,
+  CreateServiceQualificationRequestInput,
+  ResolveServiceQualificationRequestInput,
 } from './dto'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
@@ -60,6 +78,10 @@ export const uuidSchema = z.string().uuid()
 export const dateKeySchema = z.string().regex(DATE_KEY, 'Expected YYYY-MM-DD.')
 export const wallClockSchema = z.string().regex(WALL_CLOCK, 'Expected HH:MM.')
 export const isoTimestampSchema = z.string().datetime({ offset: true })
+const weekdaySchema = z.union([
+  z.literal(0), z.literal(1), z.literal(2), z.literal(3),
+  z.literal(4), z.literal(5), z.literal(6),
+])
 
 /** Strict response contracts for data that may cross the anonymous boundary. */
 export const publicProfileSchema: z.ZodType<PublicProfile> = z.strictObject({
@@ -111,6 +133,53 @@ export const publicShopWithStatusSchema: z.ZodType<ShopWithStatus> = z.strictObj
   available_barber_count: z.number().int().nonnegative(),
 })
 
+export const publicShopHoursBlockSchema: z.ZodType<PublicShopHoursBlock> = z.strictObject({
+  weekday: weekdaySchema,
+  open_time: wallClockSchema.nullable(),
+  close_time: wallClockSchema.nullable(),
+  closed: z.boolean(),
+  block_order: z.number().int().nonnegative(),
+})
+
+export const publicShopClosureSchema: z.ZodType<PublicShopClosure> = z.strictObject({
+  local_date: dateKeySchema,
+  closed: z.boolean(),
+  replacement_open_time: wallClockSchema.nullable(),
+  replacement_close_time: wallClockSchema.nullable(),
+})
+
+export const publicShopMediaSchema: z.ZodType<PublicShopMedia> = z.strictObject({
+  id: uuidSchema,
+  role: z.enum(['storefront', 'interior', 'team', 'gallery']),
+  sort_order: z.number().int().nonnegative(),
+  alt_text: z.string().trim().min(1).max(240),
+  url: z.string().url().max(4096),
+})
+
+export const publicShopDetailSchema: z.ZodType<PublicShopDetail> = z.strictObject({
+  id: uuidSchema,
+  name: z.string().trim().min(1).max(120),
+  address: z.string().trim().min(1).max(240),
+  city: z.string().trim().min(1).max(120),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  rating: z.number().min(0).max(5),
+  rating_count: z.number().int().nonnegative(),
+  barber_ids: z.array(uuidSchema),
+  status: z.enum(['open', 'busy', 'closed']),
+  available_barber_count: z.number().int().nonnegative(),
+  description: z.string().trim().max(2000).nullable(),
+  public_contact_phone: z.string().trim().max(32).nullable(),
+  timezone: z.string().trim().min(1).max(100),
+  booking_mode: z.enum(['manual', 'instant']),
+  chair_count: z.number().int().min(1).max(200),
+  default_buffer_min: z.number().int().min(0).max(120),
+  operating_hours: z.array(publicShopHoursBlockSchema).max(64),
+  closures: z.array(publicShopClosureSchema).max(366),
+  services: z.array(publicServiceSchema),
+  media: z.array(publicShopMediaSchema).max(100),
+})
+
 export const publicSlotSchema: z.ZodType<Slot> = z.strictObject({
   starts_at: isoTimestampSchema,
   ends_at: isoTimestampSchema,
@@ -134,11 +203,6 @@ const appointmentStatusSchema = z.union([
   canonicalAppointmentStatusSchema,
   z.enum(['pending', 'no_show']),
 ])
-const weekdaySchema = z.union([
-  z.literal(0), z.literal(1), z.literal(2), z.literal(3),
-  z.literal(4), z.literal(5), z.literal(6),
-])
-
 export const signUpInputSchema: z.ZodType<SignUpInput> = z.strictObject({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(6).max(128).regex(SPECIAL_CHAR, 'Password needs a special character.'),
@@ -229,8 +293,91 @@ export const sendMessageInputSchema: z.ZodType<SendMessageInput> = z.strictObjec
   body: z.string().trim().min(1).max(4000),
 })
 
-export const joinShopInputSchema: z.ZodType<JoinShopInput> = z.strictObject({
-  code: z.string().trim().min(6).max(32),
+const employmentRequestMessageSchema = z.string().trim().min(1).max(1000).nullable().optional()
+
+export const createEmploymentRequestInputSchema: z.ZodType<CreateEmploymentRequestInput> =
+  z.discriminatedUnion('direction', [
+    z.strictObject({
+      direction: z.literal('barber_application'),
+      shop_id: uuidSchema,
+      message: employmentRequestMessageSchema,
+      idempotency_key: uuidSchema,
+    }),
+    z.strictObject({
+      direction: z.literal('owner_invitation'),
+      barber_id: uuidSchema,
+      message: employmentRequestMessageSchema,
+      idempotency_key: uuidSchema,
+    }),
+  ])
+
+export const createJoinCodeRequestInputSchema: z.ZodType<CreateJoinCodeRequestInput> = z.strictObject({
+  code: z.string().trim().min(8).max(64),
+  message: employmentRequestMessageSchema,
+  idempotency_key: uuidSchema,
+})
+
+export const updateOwnerProviderCapabilityInputSchema: z.ZodType<UpdateOwnerProviderCapabilityInput> =
+  z.strictObject({
+    expected_version: z.number().int().min(0),
+    active: z.boolean(),
+    accepting_bookings: z.boolean(),
+    reason: z.string().trim().min(3).max(500),
+    command_id: uuidSchema,
+  }).refine((value) => value.active || !value.accepting_bookings, {
+    message: 'A disabled owner provider cannot accept bookings.',
+    path: ['accepting_bookings'],
+  })
+
+export const setProviderQualificationsInputSchema: z.ZodType<SetProviderQualificationsInput> =
+  z.strictObject({
+    provider_user_id: uuidSchema,
+    expected_version: z.number().int().min(1),
+    service_ids: z.array(uuidSchema).max(100).refine(
+      (ids) => new Set(ids).size === ids.length,
+      'Service ids must be unique.',
+    ),
+    reason: z.string().trim().min(3).max(500),
+    command_id: uuidSchema,
+  })
+
+export const createServiceQualificationRequestInputSchema:
+  z.ZodType<CreateServiceQualificationRequestInput> = z.strictObject({
+    service_id: uuidSchema,
+    message: z.string().trim().min(1).max(500).nullable().optional(),
+    idempotency_key: uuidSchema,
+  })
+
+export const resolveServiceQualificationRequestInputSchema:
+  z.ZodType<ResolveServiceQualificationRequestInput> = z.strictObject({
+    expected_version: z.number().int().min(1),
+    reason: z.string().trim().min(3).max(500).nullable().optional(),
+  })
+
+export const resolveEmploymentRequestInputSchema: z.ZodType<ResolveEmploymentRequestInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  reason: z.string().trim().min(1).max(500).nullable().optional(),
+})
+
+export const updateBarberJobProfileInputSchema: z.ZodType<UpdateBarberJobProfileInput> = z.strictObject({
+  visible: z.boolean(),
+  bio: z.string().trim().min(1).max(1000).nullable().optional(),
+  experience_years: z.number().int().min(0).max(80).nullable().optional(),
+  specialties: z.array(z.string().trim().min(1).max(80)).max(20),
+  portfolio_media: z.array(z.url().max(500)).max(8),
+  coarse_work_area: z.string().trim().min(1).max(120).nullable().optional(),
+  schedule_preference: z.string().trim().min(1).max(240).nullable().optional(),
+})
+
+export const rotateShopJoinCodeInputSchema: z.ZodType<RotateShopJoinCodeInput> = z.strictObject({
+  command_id: uuidSchema,
+  expires_in_days: z.number().int().min(1).max(30),
+  usage_limit: z.number().int().min(1).max(100),
+})
+
+export const revokeShopJoinCodeInputSchema: z.ZodType<RevokeShopJoinCodeInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  reason: z.string().trim().min(1).max(500),
 })
 
 export const endEmploymentInputSchema: z.ZodType<EndEmploymentInput> = z.strictObject({
@@ -240,6 +387,46 @@ export const endEmploymentInputSchema: z.ZodType<EndEmploymentInput> = z.strictO
 export const shiftChangeRequestInputSchema: z.ZodType<ShiftChangeRequestInput> = z.strictObject({
   date: dateKeySchema,
   message: z.string().trim().min(1).max(1000),
+  kind: z.enum(['time_off', 'different_hours']),
+  start_time: wallClockSchema.nullable().optional(),
+  end_time: wallClockSchema.nullable().optional(),
+  idempotency_key: uuidSchema,
+}).superRefine((value, context) => {
+  // `different_hours` is meaningless without a range, and `time_off` must not
+  // smuggle one in: the database constraint enforces the same pairing.
+  if (value.kind === 'different_hours') {
+    if (!value.start_time || !value.end_time || value.start_time >= value.end_time) {
+      context.addIssue({ code: 'custom', message: 'A different-hours request needs a valid time range.' })
+    }
+  } else if (value.start_time || value.end_time) {
+    context.addIssue({ code: 'custom', message: 'A time-off request must not carry a time range.' })
+  }
+})
+
+export const replaceStaffShiftsInputSchema: z.ZodType<ReplaceStaffShiftsInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  blocks: z.array(availabilityRuleInputSchema).max(28),
+})
+
+export const upsertStaffShiftExceptionInputSchema: z.ZodType<UpsertStaffShiftExceptionInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  date: dateKeySchema,
+  is_available: z.boolean(),
+  start_time: wallClockSchema.nullable().optional(),
+  end_time: wallClockSchema.nullable().optional(),
+  reason: z.string().trim().max(500).nullable().optional(),
+}).superRefine((value, context) => {
+  if (value.is_available) {
+    if (!value.start_time || !value.end_time || value.start_time >= value.end_time) {
+      context.addIssue({ code: 'custom', message: 'An available exception needs a valid time range.' })
+    }
+  } else if (value.start_time || value.end_time) {
+    context.addIssue({ code: 'custom', message: 'An unavailable exception must not carry times.' })
+  }
+})
+
+export const removeStaffShiftExceptionInputSchema: z.ZodType<RemoveStaffShiftExceptionInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
 })
 
 export const staffNoteInputSchema: z.ZodType<StaffNoteInput> = z.strictObject({
@@ -279,8 +466,20 @@ export const resolveAppointmentDisputeInputSchema: z.ZodType<ResolveAppointmentD
   reason: z.string().trim().min(3).max(1000),
   resolution: z.enum(['completed', 'cancelled']),
 })
-export const resolveShiftChangeRequestInputSchema: z.ZodType<ResolveShiftChangeRequestInput> = z.strictObject({ status: z.enum(['approved', 'declined']) })
-export const resolveBarberApplicationInputSchema: z.ZodType<ResolveBarberApplicationInput> = z.strictObject({ status: z.enum(['accepted', 'declined']) })
+export const resolveShiftChangeRequestInputSchema: z.ZodType<ResolveShiftChangeRequestInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  decision: z.enum(['approve', 'decline']),
+  note: z.string().trim().min(3).max(500).nullable().optional(),
+})
+
+/**
+ * Wire body for `/owner/shift-change-requests/:id/approve|decline`. The decision
+ * lives in the path, so it must not also be required in the body.
+ */
+export const resolveShiftChangeRequestBodySchema = z.strictObject({
+  expected_version: z.number().int().min(1),
+  note: z.string().trim().min(3).max(500).nullable().optional(),
+})
 export const openConversationInputSchema: z.ZodType<OpenConversationInput> = z.strictObject({ shop_id: uuidSchema })
 export const openStaffConversationInputSchema: z.ZodType<OpenStaffConversationInput> = z.strictObject({ barber_id: uuidSchema })
 
@@ -305,6 +504,13 @@ export const updateServiceInputSchema: z.ZodType<UpdateServiceInput> = z.strictO
   price_cents: z.number().int().nonnegative().optional(),
   active: z.boolean().optional(),
 }).refine((body) => Object.keys(body).length > 0, 'At least one field is required.')
+
+export const ownerServiceInputSchema: z.ZodType<OwnerServiceInput> = z.strictObject({
+  name: z.string().trim().min(1).max(120),
+  duration_min: z.number().int().min(5).max(480),
+  price_cents: z.number().int().nonnegative(),
+  active: z.boolean().optional(),
+})
 
 const createShopObjectSchema = z.strictObject({
   name: z.string().trim().min(1).max(120),
@@ -347,7 +553,23 @@ export const shopVersionInputSchema: z.ZodType<ShopVersionInput> = z.strictObjec
   expected_version: z.number().int().min(1),
 })
 
+export const updateShopHiringInputSchema: z.ZodType<UpdateShopHiringInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
+  status: z.enum(['off', 'open', 'full']),
+  open_positions: z.number().int().min(0).max(1000).nullable().optional(),
+  note: z.string().trim().max(1000).nullable().optional(),
+}).superRefine((input, context) => {
+  if (input.status === 'open' && input.open_positions === 0) {
+    context.addIssue({
+      code: 'custom',
+      path: ['open_positions'],
+      message: 'An open hiring state needs a positive count or no exact count.',
+    })
+  }
+})
+
 export const setShopHoursInputSchema: z.ZodType<SetShopHoursInput> = z.strictObject({
+  expected_version: z.number().int().min(1),
   blocks: z.array(z.strictObject({
     weekday: weekdaySchema,
     open_time: wallClockSchema.nullable().optional(),
@@ -355,6 +577,15 @@ export const setShopHoursInputSchema: z.ZodType<SetShopHoursInput> = z.strictObj
     closed: z.boolean().optional(),
     block_order: z.number().int().min(0).max(20).optional(),
   })).max(28),
+})
+
+export const requestShopMediaUploadInputSchema: z.ZodType<RequestShopMediaUploadInput> = z.strictObject({
+  filename: z.string().trim().min(1).max(180),
+  declared_mime: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  declared_size_bytes: z.number().int().min(1).max(8 * 1024 * 1024),
+  role: z.enum(['storefront', 'interior', 'team', 'gallery']),
+  alt_text: z.string().trim().min(1).max(240),
+  sort_order: z.number().int().min(0).max(1000).optional(),
 })
 
 export const createShopClosureInputSchema: z.ZodType<CreateShopClosureInput> = z.strictObject({

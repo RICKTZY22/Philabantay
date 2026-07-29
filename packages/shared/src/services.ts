@@ -3,8 +3,6 @@
 // touch a concrete backend, so the seam stays swappable.
 
 import type {
-  AvailabilityOverrideInput,
-  AvailabilityRuleInput,
   AppointmentReasonInput,
   AppointmentVersionInput,
   CheckInAppointmentInput,
@@ -12,8 +10,9 @@ import type {
   CompleteRoleOnboardingInput,
   ChangePasswordInput,
   CreateBugReportInput,
+  CreateEmploymentRequestInput,
+  CreateJoinCodeRequestInput,
   SendMessageInput,
-  JoinShopInput,
   RateAppointmentInput,
   ReassignAppointmentInput,
   RescheduleAppointmentInput,
@@ -23,11 +22,31 @@ import type {
   SignUpInput,
   StaffNoteInput,
   UpdateProfileInput,
+  UpdateBarberJobProfileInput,
   CreateOwnerShopInput,
   UpdateOwnerShopInput,
   ShopVersionInput,
   SetShopHoursInput,
+  SetShopHoursResult,
   CreateShopClosureInput,
+  OwnerServiceInput,
+  RequestShopMediaUploadInput,
+  ShopMediaUploadGrant,
+  UpdateServiceInput,
+  UpdateShopHiringInput,
+  ResolveEmploymentRequestInput,
+  ResolveShiftChangeRequestInput,
+  ResolveShiftChangeRequestResult,
+  RemoveStaffShiftExceptionInput,
+  ReplaceStaffShiftsInput,
+  StaffScheduleWriteResult,
+  UpsertStaffShiftExceptionInput,
+  RotateShopJoinCodeInput,
+  RevokeShopJoinCodeInput,
+  UpdateOwnerProviderCapabilityInput,
+  SetProviderQualificationsInput,
+  CreateServiceQualificationRequestInput,
+  ResolveServiceQualificationRequestInput,
 } from './dto'
 import { DataError } from './dto'
 import {
@@ -38,6 +57,7 @@ import {
   professionalPhoneVerificationChallengeSchema,
   publicBarberSchema,
   publicServiceSchema,
+  publicShopDetailSchema,
   publicShopWithStatusSchema,
   publicSlotSchema,
   shortLivedEvidenceViewSchema,
@@ -88,20 +108,34 @@ import type {
   Profile,
   Review,
   Service,
+  StoredService,
   ShiftChangeRequest,
-  ShiftChangeRequestStatus,
   ShopStaffMember,
+  StaffSchedule,
+  PublicShopDetail,
   ShopWithStatus,
   OwnerShop,
   ShopOperatingHours,
   ShopClosure,
+  ShopMedia,
+  OwnerShopHiring,
   HiringShop,
   HiringListing,
-  BarberApplication,
+  BarberJobProfile,
+  JobSeekerProfile,
+  EmploymentRequest,
+  EmploymentRequestDecision,
+  EmploymentRequestDetail,
   ShopJoinCodeDetails,
+  OwnerProviderCapability,
+  OwnerQualificationWorkspace,
+  ServiceProviderQualification,
+  BarberQualificationView,
+  ServiceQualificationRequest,
   Slot,
   StaffNote,
 } from './types'
+import { canonicalAppointmentStatus } from './appointment-lifecycle'
 
 /** Unsubscribe handle returned by realtime subscriptions. */
 export type Unsubscribe = () => void
@@ -208,10 +242,6 @@ export interface AvailabilityService {
   getOverrides(barberId: string): Promise<PublicAvailabilityOverride[]>
   /** Barber-only view of their own exceptions, including private notes. */
   getMyOverrides(): Promise<AvailabilityOverride[]>
-  /** Barber-only: replace the signed-in barber's weekly rules. */
-  setRules(rules: AvailabilityRuleInput[]): Promise<AvailabilityRule[]>
-  addOverride(input: AvailabilityOverrideInput): Promise<AvailabilityOverride>
-  removeOverride(overrideId: string): Promise<void>
   /** Open bookable slots for a barber + service on a given ISO date (YYYY-MM-DD). */
   getOpenSlots(barberId: string, serviceId: string, date: string): Promise<Slot[]>
 }
@@ -267,7 +297,8 @@ export interface ChatService {
 export interface ShopService {
   /** All shops with live status — the customer map's data source. */
   list(): Promise<ShopWithStatus[]>
-  get(shopId: string): Promise<ShopWithStatus | null>
+  /** One published shop with allowlisted facts and approved public media. */
+  get(shopId: string): Promise<PublicShopDetail | null>
 }
 
 /** P2-01: the owner's private, version-checked shop lifecycle commands. */
@@ -285,13 +316,30 @@ export interface OwnerShopService {
   /** The owner's weekly operating hours (empty array until set). */
   getHours(): Promise<ShopOperatingHours[]>
   /** Replace-all update of the owner's weekly operating hours. */
-  setHours(input: SetShopHoursInput): Promise<ShopOperatingHours[]>
+  setHours(input: SetShopHoursInput): Promise<SetShopHoursResult>
   /** Date-specific closures / replacement-hours days for the owner's shop. */
   getClosures(): Promise<ShopClosure[]>
   /** Create or update (upsert by date) one closure. */
   saveClosure(input: CreateShopClosureInput): Promise<ShopClosure>
   /** Remove one closure by id. */
   removeClosure(closureId: string): Promise<void>
+  /** Every service on the owner's shop, active and retired (the editor view). */
+  listServices(): Promise<StoredService[]>
+  /** Add a service to the owner's shop. */
+  createService(input: OwnerServiceInput): Promise<StoredService>
+  /** Edit a service; toggle `active` to retire or restore it. */
+  updateService(serviceId: string, input: UpdateServiceInput): Promise<StoredService>
+  /** Deactivate a service without deleting appointment history. */
+  removeService(serviceId: string): Promise<StoredService>
+  /** Private shop photos with short-lived owner preview URLs. */
+  listMedia(): Promise<ShopMedia[]>
+  /** Signed upload + server-side content validation, kept behind this adapter. */
+  uploadMedia(input: RequestShopMediaUploadInput, file: Blob): Promise<ShopMedia>
+  removeMedia(mediaId: string): Promise<void>
+  /** Owner-only canonical off/open/full hiring state. */
+  getHiring(): Promise<OwnerShopHiring | null>
+  /** Version-checked hiring update; stale sessions receive `conflict`. */
+  updateHiring(input: UpdateShopHiringInput): Promise<OwnerShopHiring>
 }
 
 export interface FavoriteService {
@@ -317,13 +365,21 @@ export interface BarberEmploymentService {
   listHiringShops(): Promise<HiringShop[]>
   /** Current shop derived from its registered barber membership. */
   getMyShop(): Promise<ShopWithStatus | null>
-  listMyApplications(): Promise<BarberApplication[]>
-  apply(shopId: string): Promise<BarberApplication>
-  /** Validated shop-issued code; never expose the stored code through reads. */
-  joinWithCode(input: JoinShopInput): Promise<ShopWithStatus>
+  getJobProfile(): Promise<BarberJobProfile>
+  updateJobProfile(input: UpdateBarberJobProfileInput): Promise<BarberJobProfile>
+  /** Owner-only visible job seekers; private home coordinates are never returned. */
+  listJobSeekers(): Promise<JobSeekerProfile[]>
+  listRequests(): Promise<EmploymentRequest[]>
+  getRequest(requestId: string): Promise<EmploymentRequestDetail>
+  createRequest(input: CreateEmploymentRequestInput): Promise<EmploymentRequest>
+  createJoinCodeRequest(input: CreateJoinCodeRequestInput): Promise<EmploymentRequest>
+  acceptRequest(requestId: string, input: ResolveEmploymentRequestInput): Promise<EmploymentRequestDecision>
+  declineRequest(requestId: string, input: ResolveEmploymentRequestInput): Promise<EmploymentRequest>
+  withdrawRequest(requestId: string, input: ResolveEmploymentRequestInput): Promise<EmploymentRequest>
   /** Shop-owner-only roster code controls. */
   getMyShopJoinCode(): Promise<ShopJoinCodeDetails | null>
-  rotateMyShopJoinCode(): Promise<ShopJoinCodeDetails>
+  rotateMyShopJoinCode(input: RotateShopJoinCodeInput): Promise<ShopJoinCodeDetails>
+  revokeMyShopJoinCode(input: RevokeShopJoinCodeInput): Promise<ShopJoinCodeDetails>
   /** Active employment record ng signed-in barber (hire date, shop stint). */
   getMyEmployment(): Promise<BarberEmployment | null>
   /** Owner-only atomic command; active assigned bookings must be resolved first. */
@@ -336,12 +392,43 @@ export interface BarberEmploymentService {
   requestShiftChange(input: ShiftChangeRequestInput): Promise<ShiftChangeRequest>
   /** Owner-only: bawat roster member with shifts, absences, requests, notes. */
   listMyShopStaff(): Promise<ShopStaffMember[]>
-  /** Owner-only: direktang i-edit ang weekly shifts ng isang roster member. */
-  setBarberRules(barberId: string, rules: AvailabilityRuleInput[]): Promise<AvailabilityRule[]>
+  /** Owner-only authoritative roster plus the optimistic-concurrency token. */
+  getStaffSchedule(barberId: string): Promise<StaffSchedule>
+  replaceStaffShifts(barberId: string, input: ReplaceStaffShiftsInput): Promise<StaffScheduleWriteResult>
+  upsertStaffShiftException(
+    barberId: string,
+    input: UpsertStaffShiftExceptionInput,
+  ): Promise<StaffScheduleWriteResult>
+  removeStaffShiftException(
+    exceptionId: string,
+    input: RemoveStaffShiftExceptionInput,
+  ): Promise<StaffScheduleWriteResult>
   /** Owner-only: approve or decline a barber's shift change request. */
-  resolveShiftChangeRequest(requestId: string, status: Exclude<ShiftChangeRequestStatus, 'pending'>): Promise<ShiftChangeRequest>
+  /**
+   * Owner decision. Approving applies the resulting shift exception in the same
+   * database transaction, so the returned `exception_id` is proof the schedule
+   * actually changed.
+   */
+  resolveShiftChangeRequest(
+    requestId: string,
+    input: ResolveShiftChangeRequestInput,
+  ): Promise<ResolveShiftChangeRequestResult>
   /** Owner-only: attach a note to one staff member. */
   addStaffNote(input: StaffNoteInput): Promise<StaffNote>
+}
+
+/** P2-05: one API boundary for owner capability and per-service grants. */
+export interface QualificationService {
+  getOwnerWorkspace(): Promise<OwnerQualificationWorkspace>
+  updateOwnerCapability(input: UpdateOwnerProviderCapabilityInput): Promise<OwnerProviderCapability>
+  setProviderQualifications(input: SetProviderQualificationsInput): Promise<ServiceProviderQualification>
+  getMine(): Promise<BarberQualificationView>
+  request(input: CreateServiceQualificationRequestInput): Promise<ServiceQualificationRequest>
+  resolveRequest(
+    requestId: string,
+    decision: 'approve' | 'decline',
+    input: ResolveServiceQualificationRequestInput,
+  ): Promise<ServiceQualificationRequest>
 }
 
 /** The full data layer handed to the UI through a React provider. */
@@ -359,6 +446,7 @@ export interface DataBackend {
   favorites: FavoriteService
   reviews: ReviewService
   employment: BarberEmploymentService
+  qualifications: QualificationService
   support: SupportService
 }
 
@@ -416,7 +504,11 @@ const API_ERROR_CODES = new Set([
   'employment_not_active',
   'rehire_requires_owner_approval',
   'already_employed',
+  'already_requested',
+  'request_already_resolved',
+  'hiring_full',
   'invalid_code',
+  'join_code_rate_limited',
   'verification_locked',
   'stale_verification',
   'idempotency_conflict',
@@ -425,6 +517,10 @@ const API_ERROR_CODES = new Set([
   'capability_required',
   'evidence_processing',
   'evidence_rejected',
+  'media_processing',
+  'media_rejected',
+  'media_limit',
+  'schedule_has_active_bookings',
   'cooldown_active',
   'validation',
 ] as const)
@@ -585,16 +681,27 @@ export class ApiBackend implements DataBackend {
     return this.refreshPromise
   }
 
-  private async ownedShop(): Promise<ShopWithStatus> {
-    const shop = publicShopWithStatusSchema.nullable().parse(
-      await this.request<unknown>('/owner/shop'),
-    )
+  private async ownedShop(): Promise<OwnerShop> {
+    const shop = await this.request<OwnerShop | null>('/owner/shop')
     if (!shop) throw new DataError('not_found', 'No shop is assigned to this owner account.')
     return shop
   }
 
   private async hydrateAppointments(rows: AppointmentDetailed[]): Promise<AppointmentDetailed[]> {
-    return rows
+    return rows.map((row) => ({
+      ...row,
+      status: canonicalAppointmentStatus(row.status),
+    }))
+  }
+
+  /**
+   * Single normalization point for command responses. Reads go through
+   * `hydrateAppointments`; without this, mutation results would still carry the
+   * legacy `pending`/`no_show` aliases the wire schema still accepts.
+   */
+  private async appointmentRequest(path: string, options: ApiRequestOptions = {}): Promise<Appointment> {
+    const row = await this.request<Appointment>(path, options)
+    return { ...row, status: canonicalAppointmentStatus(row.status) }
   }
 
   private async hydrateConversation(row: ConversationDetailed): Promise<ConversationDetailed> {
@@ -832,9 +939,6 @@ export class ApiBackend implements DataBackend {
     getRules: async (barberId) => (await this.request<AvailabilityRule[]>(`/barbers/${encoded(barberId)}/shifts/patterns`)).map(normalizeRule),
     getOverrides: async (barberId) => (await this.request<PublicAvailabilityOverride[]>(`/barbers/${encoded(barberId)}/shifts/exceptions`)).map(normalizeOverride),
     getMyOverrides: async () => (await this.request<AvailabilityOverride[]>('/shifts/exceptions/me')).map(normalizeOverride),
-    setRules: async (rules) => (await this.request<AvailabilityRule[]>('/shifts/patterns', { method: 'PUT', body: rules })).map(normalizeRule),
-    addOverride: async (input) => normalizeOverride(await this.request<AvailabilityOverride>('/shifts/exceptions', { method: 'POST', body: input })),
-    removeOverride: (overrideId) => this.request<void>(`/shifts/exceptions/${encoded(overrideId)}`, { method: 'DELETE' }),
     getOpenSlots: async (barberId, serviceId, date) => {
       const query = new URLSearchParams({ barberId, serviceId, date })
       return publicSlotSchema.array().parse(await this.request<unknown>(`/catalog/availability/slots?${query}`, { authenticated: false }))
@@ -849,27 +953,27 @@ export class ApiBackend implements DataBackend {
   }
 
   readonly bookings: BookingService = {
-    create: (input) => this.request<Appointment>('/bookings', { method: 'POST', body: input }),
-    reschedule: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
-    cancel: (appointmentId) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/cancel`, { method: 'POST' }),
+    create: (input) => this.appointmentRequest('/bookings', { method: 'POST', body: input }),
+    reschedule: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
+    cancel: (appointmentId) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/cancel`, { method: 'POST' }),
     listMine: async () => this.hydrateAppointments(await this.request<AppointmentDetailed[]>('/bookings')),
     listForMyShop: async () => {
       const shop = await this.ownedShop()
       return this.hydrateAppointments(await this.request<AppointmentDetailed[]>(`/shops/${encoded(shop.id)}/bookings`))
     },
-    accept: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/accept`, { method: 'POST', body: input }),
-    decline: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/decline`, { method: 'POST', body: input }),
+    accept: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/accept`, { method: 'POST', body: input }),
+    decline: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/decline`, { method: 'POST', body: input }),
     issueCheckInCode: (appointmentId, input) => this.request<AppointmentCheckInCode>(`/bookings/${encoded(appointmentId)}/check-in-code`, { method: 'POST', body: input }),
-    checkIn: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/check-in`, { method: 'POST', body: input }),
-    start: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/start`, { method: 'POST', body: input }),
-    finish: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/finish`, { method: 'POST', body: input }),
-    confirmCompletion: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/confirm-completion`, { method: 'POST', body: input }),
-    dispute: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/dispute`, { method: 'POST', body: input }),
-    cancelWithReason: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/cancel`, { method: 'POST', body: input }),
-    markCustomerNoShow: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/no-show`, { method: 'POST', body: input }),
-    resolveDispute: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/resolve-dispute`, { method: 'POST', body: input }),
-    reassign: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}/reassign`, { method: 'POST', body: input }),
-    rescheduleWithVersion: (appointmentId, input) => this.request<Appointment>(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
+    checkIn: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/check-in`, { method: 'POST', body: input }),
+    start: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/start`, { method: 'POST', body: input }),
+    finish: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/finish`, { method: 'POST', body: input }),
+    confirmCompletion: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/confirm-completion`, { method: 'POST', body: input }),
+    dispute: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/dispute`, { method: 'POST', body: input }),
+    cancelWithReason: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/cancel`, { method: 'POST', body: input }),
+    markCustomerNoShow: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/no-show`, { method: 'POST', body: input }),
+    resolveDispute: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/resolve-dispute`, { method: 'POST', body: input }),
+    reassign: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/reassign`, { method: 'POST', body: input }),
+    rescheduleWithVersion: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
     timeline: (appointmentId) => this.request<AppointmentEvent[]>(`/bookings/${encoded(appointmentId)}/timeline`),
   }
 
@@ -916,7 +1020,7 @@ export class ApiBackend implements DataBackend {
 
   readonly shops: ShopService = {
     list: async () => publicShopWithStatusSchema.array().parse(await this.request<unknown>('/catalog/shops', { authenticated: false })),
-    get: async (shopId) => publicShopWithStatusSchema.nullable().parse(await this.request<unknown>(`/catalog/shops/${encoded(shopId)}`, { authenticated: false })),
+    get: async (shopId) => publicShopDetailSchema.nullable().parse(await this.request<unknown>(`/catalog/shops/${encoded(shopId)}`, { authenticated: false })),
   }
 
   readonly ownerShop: OwnerShopService = {
@@ -926,10 +1030,50 @@ export class ApiBackend implements DataBackend {
     publish: (input) => this.request<OwnerShop>('/owner/shop/publish', { method: 'POST', body: input }),
     unpublish: (input) => this.request<OwnerShop>('/owner/shop/unpublish', { method: 'POST', body: input }),
     getHours: () => this.request<ShopOperatingHours[]>('/owner/shop/hours'),
-    setHours: (input) => this.request<ShopOperatingHours[]>('/owner/shop/hours', { method: 'PUT', body: input }),
+    setHours: (input) => this.request<SetShopHoursResult>('/owner/shop/hours', { method: 'PUT', body: input }),
     getClosures: () => this.request<ShopClosure[]>('/owner/shop/closures'),
     saveClosure: (input) => this.request<ShopClosure>('/owner/shop/closures', { method: 'POST', body: input }),
     removeClosure: (closureId) => this.request<void>(`/owner/shop/closures/${encoded(closureId)}`, { method: 'DELETE' }),
+    listServices: () => this.request<StoredService[]>('/owner/shop/services'),
+    createService: (input) => this.request<StoredService>('/owner/shop/services', { method: 'POST', body: input }),
+    updateService: (serviceId, input) => this.request<StoredService>(
+      `/owner/shop/services/${encoded(serviceId)}`,
+      { method: 'PATCH', body: input },
+    ),
+    removeService: (serviceId) => this.request<StoredService>(
+      `/owner/shop/services/${encoded(serviceId)}`,
+      { method: 'DELETE' },
+    ),
+    listMedia: () => this.request<ShopMedia[]>('/owner/shop/media'),
+    uploadMedia: async (input, file) => {
+      const grant = await this.request<ShopMediaUploadGrant>('/owner/shop/media/request-upload', {
+        method: 'POST',
+        body: input,
+      })
+      let uploadResponse: Response
+      try {
+        uploadResponse = await this.fetchImpl(grant.upload_url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': input.declared_mime,
+            ...grant.headers,
+          },
+          body: file,
+        })
+      } catch {
+        throw new DataError('network', 'The shop photo upload could not reach storage.')
+      }
+      if (!uploadResponse.ok) {
+        throw new DataError('server', 'The shop photo upload was rejected by storage.')
+      }
+      return this.request<ShopMedia>(`/owner/shop/media/${encoded(grant.media.id)}/complete`, { method: 'POST' })
+    },
+    removeMedia: (mediaId) => this.request<void>(`/owner/shop/media/${encoded(mediaId)}`, { method: 'DELETE' }),
+    getHiring: () => this.request<OwnerShopHiring | null>('/owner/shop/hiring'),
+    updateHiring: (input) => this.request<OwnerShopHiring>('/owner/shop/hiring', {
+      method: 'PATCH',
+      body: input,
+    }),
   }
 
   readonly favorites: FavoriteService = {
@@ -946,7 +1090,7 @@ export class ApiBackend implements DataBackend {
 
   readonly employment: BarberEmploymentService = {
     listHiringShops: async () => {
-      const rows = await this.request<Array<HiringListing & { shop: { id: string } }>>('/employment/hiring-shops')
+      const rows = await this.request<Array<HiringListing & { shop: { id: string } }>>('/hiring/shops')
       const shops = new Map((await this.shops.list()).map((shop) => [shop.id, shop]))
       return rows.flatMap(({ shop: rawShop, ...hiring }): HiringShop[] => {
         const shop = shops.get(rawShop.id)
@@ -957,23 +1101,48 @@ export class ApiBackend implements DataBackend {
       const employment = await this.employment.getMyEmployment()
       return employment ? this.shops.get(employment.shop_id) : null
     },
-    listMyApplications: () => this.request<BarberApplication[]>('/employment/applications'),
-    apply: (shopId) => this.request<BarberApplication>(`/shops/${encoded(shopId)}/applications`, { method: 'POST' }),
-    joinWithCode: async (input) => {
-      const rawShop = await this.request<{ id: string }>('/employment/join', { method: 'POST', body: input })
-      const shop = await this.shops.get(rawShop.id)
-      if (!shop) throw new DataError('server', 'The joined shop could not be loaded.')
-      return shop
-    },
+    getJobProfile: () => this.request<BarberJobProfile>('/barber/job-profile'),
+    updateJobProfile: (input) => this.request<BarberJobProfile>('/barber/job-profile', { method: 'PUT', body: input }),
+    listJobSeekers: () => this.request<JobSeekerProfile[]>('/hiring/barbers'),
+    listRequests: () => this.request<EmploymentRequest[]>('/employment/requests'),
+    getRequest: (requestId) => this.request<EmploymentRequestDetail>(`/employment/requests/${encoded(requestId)}`),
+    createRequest: (input) => this.request<EmploymentRequest>('/employment/requests', { method: 'POST', body: input }),
+    createJoinCodeRequest: (input) => this.request<EmploymentRequest>('/employment/requests/join-code', {
+      method: 'POST',
+      body: input,
+    }),
+    acceptRequest: (requestId, input) => this.request<EmploymentRequestDecision>(
+      `/employment/requests/${encoded(requestId)}/accept`,
+      { method: 'POST', body: input },
+    ),
+    declineRequest: (requestId, input) => this.request<EmploymentRequest>(
+      `/employment/requests/${encoded(requestId)}/decline`,
+      { method: 'POST', body: input },
+    ),
+    withdrawRequest: (requestId, input) => this.request<EmploymentRequest>(
+      `/employment/requests/${encoded(requestId)}/withdraw`,
+      { method: 'POST', body: input },
+    ),
     getMyShopJoinCode: async () => {
       const shop = await this.ownedShop()
-      const row = await this.request<{ shop_id: string; code: string } | null>(`/shops/${encoded(shop.id)}/join-code`)
-      return row ? { shop, code: row.code } : null
+      const row = await this.request<Omit<ShopJoinCodeDetails, 'shop'> | null>('/owner/shop/join-code')
+      return row ? { ...row, shop } : null
     },
-    rotateMyShopJoinCode: async () => {
+    rotateMyShopJoinCode: async (input) => {
       const shop = await this.ownedShop()
-      const row = await this.request<{ shop_id: string; code: string }>(`/shops/${encoded(shop.id)}/join-code/rotate`, { method: 'POST' })
-      return { shop, code: row.code }
+      const row = await this.request<Omit<ShopJoinCodeDetails, 'shop'>>('/owner/shop/join-code/rotate', {
+        method: 'POST',
+        body: input,
+      })
+      return { ...row, shop }
+    },
+    revokeMyShopJoinCode: async (input) => {
+      const shop = await this.ownedShop()
+      const row = await this.request<Omit<ShopJoinCodeDetails, 'shop'>>('/owner/shop/join-code/revoke', {
+        method: 'POST',
+        body: input,
+      })
+      return { ...row, shop }
     },
     getMyEmployment: () => this.request<BarberEmployment | null>('/employment/me'),
     endEmployment: (employmentId, reason) => this.request<BarberEmployment>(`/employment/${encoded(employmentId)}/end`, {
@@ -981,22 +1150,74 @@ export class ApiBackend implements DataBackend {
       body: { reason },
     }),
     listMyAbsences: () => this.request<BarberAbsence[]>('/employment/absences'),
-    listMyShiftChangeRequests: () => this.request<ShiftChangeRequest[]>('/shift-change-requests'),
-    requestShiftChange: (input) => this.request<ShiftChangeRequest>('/shift-change-requests', { method: 'POST', body: input }),
+    listMyShiftChangeRequests: () => this.request<ShiftChangeRequest[]>('/barber/shift-change-requests'),
+    requestShiftChange: (input) => this.request<ShiftChangeRequest>('/barber/shift-change-requests', { method: 'POST', body: input }),
     listMyShopStaff: async () => {
       const shop = await this.ownedShop()
       const rows = await this.request<ShopStaffMember[]>(`/shops/${encoded(shop.id)}/staff`)
       return rows.map((row) => ({ ...row, rules: row.rules.map(normalizeRule) }))
     },
-    setBarberRules: async (barberId, rules) => {
-      const shop = await this.ownedShop()
-      const path = `/shops/${encoded(shop.id)}/staff/${encoded(barberId)}/shifts/patterns`
-      return (await this.request<AvailabilityRule[]>(path, { method: 'PUT', body: rules })).map(normalizeRule)
+    getStaffSchedule: async (barberId) => {
+      const schedule = await this.request<StaffSchedule>(`/owner/staff/${encoded(barberId)}/shifts`)
+      return {
+        ...schedule,
+        patterns: schedule.patterns.map(normalizeRule),
+        exceptions: schedule.exceptions.map(normalizeOverride),
+      }
     },
-    resolveShiftChangeRequest: (requestId, status) => this.request<ShiftChangeRequest>(`/shift-change-requests/${encoded(requestId)}`, { method: 'PATCH', body: { status } }),
+    replaceStaffShifts: async (barberId, input) => {
+      const result = await this.request<StaffScheduleWriteResult>(
+        `/owner/staff/${encoded(barberId)}/shifts`,
+        { method: 'PUT', body: input },
+      )
+      return {
+        ...result,
+        ...(result.patterns ? { patterns: result.patterns.map(normalizeRule) } : {}),
+        ...(result.exception ? { exception: normalizeOverride(result.exception) } : {}),
+      }
+    },
+    upsertStaffShiftException: async (barberId, input) => {
+      const result = await this.request<StaffScheduleWriteResult>(
+        `/owner/staff/${encoded(barberId)}/shifts/exceptions`,
+        { method: 'POST', body: input },
+      )
+      return {
+        ...result,
+        ...(result.exception ? { exception: normalizeOverride(result.exception) } : {}),
+      }
+    },
+    removeStaffShiftException: (exceptionId, input) => this.request<StaffScheduleWriteResult>(
+      `/owner/staff/shifts/exceptions/${encoded(exceptionId)}`,
+      { method: 'DELETE', body: input },
+    ),
+    resolveShiftChangeRequest: (requestId, input) => this.request<ResolveShiftChangeRequestResult>(
+      `/owner/shift-change-requests/${encoded(requestId)}/${input.decision}`,
+      { method: 'POST', body: { expected_version: input.expected_version, note: input.note ?? null } },
+    ),
     addStaffNote: async (input) => {
       const shop = await this.ownedShop()
       return this.request<StaffNote>(`/shops/${encoded(shop.id)}/staff-notes`, { method: 'POST', body: input })
     },
+  }
+
+  readonly qualifications: QualificationService = {
+    getOwnerWorkspace: () => this.request<OwnerQualificationWorkspace>('/owner/service-qualifications'),
+    updateOwnerCapability: (input) => this.request<OwnerProviderCapability>('/owner/provider-capability', {
+      method: 'PATCH',
+      body: input,
+    }),
+    setProviderQualifications: (input) => this.request<ServiceProviderQualification>('/owner/service-qualifications', {
+      method: 'PUT',
+      body: input,
+    }),
+    getMine: () => this.request<BarberQualificationView>('/barber/service-qualifications'),
+    request: (input) => this.request<ServiceQualificationRequest>('/barber/service-qualification-requests', {
+      method: 'POST',
+      body: input,
+    }),
+    resolveRequest: (requestId, decision, input) => this.request<ServiceQualificationRequest>(
+      `/owner/service-qualification-requests/${encoded(requestId)}/${decision}`,
+      { method: 'POST', body: input },
+    ),
   }
 }

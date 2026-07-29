@@ -1,32 +1,16 @@
 import { Router } from 'express'
 import {
-  availabilityOverrideInputSchema,
-  availabilityRulesInputSchema,
   barberIdParamsSchema,
   idParamsSchema,
-  shopIdParamsSchema,
-  uuidSchema,
+  removeStaffShiftExceptionInputSchema,
+  replaceStaffShiftsInputSchema,
+  upsertStaffShiftExceptionInputSchema,
 } from '@barbershop/shared/schemas'
 import type { ApiDependencies } from '../lib/supabase'
 import { requireActiveEmployment, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams, parseQuery } from '../http/validation'
 import { publicSlotQuerySchema, publicSlots } from './public-catalog'
-
-const ownerRulesParamsSchema = shopIdParamsSchema.extend({ barberId: uuidSchema })
-
-async function replaceRules(
-  dependencies: ApiDependencies,
-  employment: Record<string, unknown>,
-  rules: Array<{ weekday: number; start_time: string; end_time: string }>,
-) {
-  const { data, error } = await dependencies.database.rpc('api_replace_shift_patterns', {
-    p_employment_id: employment.id as string,
-    p_rules: rules,
-  })
-  if (error) throw fromDatabaseError(error)
-  return data ?? []
-}
 
 export function createAvailabilityRouter(dependencies: ApiDependencies): Router {
   const router = Router()
@@ -46,6 +30,24 @@ export function createAvailabilityRouter(dependencies: ApiDependencies): Router 
     if (error) throw fromDatabaseError(error)
     if (!employment) throw new ApiError(404, 'not_found', 'Active barber schedule not found.')
     await requireOwnedShop(dependencies, request, employment.shop_id as string)
+  }
+
+  async function requireOwnedStaff(
+    request: Parameters<typeof parseParams>[0],
+    barberId: string,
+  ): Promise<Record<string, unknown>> {
+    const shop = await requireOwnedShop(dependencies, request)
+    const { data: employment, error } = await dependencies.database
+      .from('barber_employment')
+      .select('*')
+      .eq('shop_id', shop.id as string)
+      .eq('barber_id', barberId)
+      .eq('status', 'active')
+      .is('ended_at', null)
+      .maybeSingle()
+    if (error) throw fromDatabaseError(error)
+    if (!employment) throw new ApiError(404, 'not_found', 'Active staff employment not found.')
+    return employment
   }
 
   router.get('/barbers/:barberId/shifts/patterns', async (request, response) => {
@@ -84,34 +86,63 @@ export function createAvailabilityRouter(dependencies: ApiDependencies): Router 
     response.json({ data: data ?? [] })
   })
 
-  router.put('/shifts/patterns', async (request, response) => {
-    const rules = parseBody(request, availabilityRulesInputSchema)
-    const employment = await requireActiveEmployment(dependencies, request)
-    response.json({ data: await replaceRules(dependencies, employment, rules) })
+  router.get('/owner/staff/:barberId/shifts', async (request, response) => {
+    const { barberId } = parseParams(request, barberIdParamsSchema)
+    const employment = await requireOwnedStaff(request, barberId)
+    const [patternResult, exceptionResult, revisionResult] = await Promise.all([
+      dependencies.database
+        .from('shift_patterns')
+        .select('id,barber_id,weekday,start_time,end_time,created_at')
+        .eq('employment_id', employment.id as string)
+        .order('weekday')
+        .order('start_time'),
+      dependencies.database
+        .from('shift_exceptions')
+        .select('id,barber_id,date,is_available,start_time,end_time,reason')
+        .eq('employment_id', employment.id as string)
+        .order('date'),
+      dependencies.database
+        .from('staff_schedule_revisions')
+        .select('version')
+        .eq('employment_id', employment.id as string)
+        .maybeSingle(),
+    ])
+    for (const result of [patternResult, exceptionResult, revisionResult]) {
+      if (result.error) throw fromDatabaseError(result.error)
+    }
+    response.json({
+      data: {
+        employment_id: employment.id,
+        barber_id: barberId,
+        schedule_version: revisionResult.data?.version ?? 1,
+        patterns: patternResult.data ?? [],
+        exceptions: exceptionResult.data ?? [],
+      },
+    })
   })
 
-  router.put('/shops/:shopId/staff/:barberId/shifts/patterns', async (request, response) => {
-    const { shopId, barberId } = parseParams(request, ownerRulesParamsSchema)
-    await requireOwnedShop(dependencies, request, shopId)
-    const rules = parseBody(request, availabilityRulesInputSchema)
-    const { data: employment, error } = await dependencies.database
-      .from('barber_employment')
-      .select('*')
-      .eq('shop_id', shopId)
-      .eq('barber_id', barberId)
-      .eq('status', 'active')
-      .is('ended_at', null)
-      .maybeSingle()
+  router.put('/owner/staff/:barberId/shifts', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const { barberId } = parseParams(request, barberIdParamsSchema)
+    const input = parseBody(request, replaceStaffShiftsInputSchema)
+    const { data, error } = await dependencies.database.rpc('api_replace_staff_shift_patterns', {
+      p_owner_id: request.auth.profile.id,
+      p_barber_id: barberId,
+      p_expected_version: input.expected_version,
+      p_blocks: input.blocks,
+    })
     if (error) throw fromDatabaseError(error)
-    if (!employment) throw new ApiError(404, 'not_found', 'Active staff employment not found.')
-    response.json({ data: await replaceRules(dependencies, employment, rules) })
+    response.json({ data })
   })
 
-  router.post('/shifts/exceptions', async (request, response) => {
-    const input = parseBody(request, availabilityOverrideInputSchema)
-    const employment = await requireActiveEmployment(dependencies, request)
-    const { data, error } = await dependencies.database.rpc('api_create_shift_exception', {
-      p_employment_id: employment.id as string,
+  router.post('/owner/staff/:barberId/shifts/exceptions', async (request, response) => {
+    requireRole(request, 'shop_owner')
+    const { barberId } = parseParams(request, barberIdParamsSchema)
+    const input = parseBody(request, upsertStaffShiftExceptionInputSchema)
+    const { data, error } = await dependencies.database.rpc('api_upsert_staff_shift_exception', {
+      p_owner_id: request.auth.profile.id,
+      p_barber_id: barberId,
+      p_expected_version: input.expected_version,
       p_date: input.date,
       p_is_available: input.is_available,
       p_start_time: input.start_time ?? null,
@@ -122,27 +153,17 @@ export function createAvailabilityRouter(dependencies: ApiDependencies): Router 
     response.status(201).json({ data })
   })
 
-  router.delete('/shifts/exceptions/:id', async (request, response) => {
-    requireRole(request, 'barber')
+  router.delete('/owner/staff/shifts/exceptions/:id', async (request, response) => {
+    requireRole(request, 'shop_owner')
     const { id } = parseParams(request, idParamsSchema)
-    const { data: row, error: lookupError } = await dependencies.database
-      .from('shift_exceptions')
-      .select('employment_id,barber_id,shop_id')
-      .eq('id', id)
-      .maybeSingle()
-    if (lookupError) throw fromDatabaseError(lookupError)
-    if (!row) throw new ApiError(404, 'not_found', 'Shift exception not found.')
-    if (row.barber_id !== request.auth.profile.id) throw new ApiError(403, 'forbidden', 'You can only remove your own exception.')
-    const employment = await requireActiveEmployment(dependencies, request, row.shop_id as string)
-    if (employment.id !== row.employment_id) {
-      throw new ApiError(403, 'forbidden', 'This exception does not belong to your active employment.')
-    }
-    const { error } = await dependencies.database.rpc('api_remove_shift_exception', {
+    const input = parseBody(request, removeStaffShiftExceptionInputSchema)
+    const { data, error } = await dependencies.database.rpc('api_remove_staff_shift_exception', {
+      p_owner_id: request.auth.profile.id,
       p_exception_id: id,
-      p_barber_id: request.auth.profile.id,
+      p_expected_version: input.expected_version,
     })
     if (error) throw fromDatabaseError(error)
-    response.status(204).end()
+    response.json({ data })
   })
 
   router.get('/availability/slots', async (request, response) => {

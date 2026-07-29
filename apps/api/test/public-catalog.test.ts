@@ -17,8 +17,108 @@ function chain(result: QueryResult) {
   for (const method of ['select', 'in', 'eq', 'is', 'lte', 'gte', 'lt', 'limit', 'maybeSingle', 'single']) {
     builder[method] = vi.fn(() => builder)
   }
-  builder.order = vi.fn(() => promise)
+  builder.order = vi.fn(() => builder)
   return builder
+}
+
+function publicDetailDependencies(options?: {
+  includePrivateField?: boolean
+  previewUnavailable?: boolean
+}) {
+  const shopId = crypto.randomUUID()
+  const serviceId = crypto.randomUUID()
+  const mediaId = crypto.randomUUID()
+  const storagePath = `${shopId}/${mediaId}.jpg`
+  const summary = {
+    id: shopId,
+    name: 'Detailed Public Shop',
+    address: '10 Public Street',
+    city: 'Manila',
+    lat: 14.5995,
+    lng: 120.9842,
+    rating: 4.7,
+    rating_count: 21,
+  }
+  const summaryShops = chain({ data: [summary], error: null })
+  const profiles = chain({ data: [], error: null })
+  const detail = chain({
+    data: {
+      description: 'A published neighbourhood shop.',
+      public_contact_phone: '+639171234567',
+      timezone: 'Asia/Manila',
+      booking_mode: 'manual',
+      chair_count: 3,
+      default_buffer_min: 10,
+      ...(options?.includePrivateField ? { owner_id: crypto.randomUUID() } : {}),
+    },
+    error: null,
+  })
+  const hours = chain({ data: [{
+    weekday: 1,
+    open_time: '09:00:00',
+    close_time: '18:00:00',
+    closed: false,
+    block_order: 0,
+  }], error: null })
+  const closures = chain({ data: [{
+    local_date: '2099-01-08',
+    closed: true,
+    replacement_open_time: null,
+    replacement_close_time: null,
+    reason: 'Private staffing detail',
+  }], error: null })
+  const services = chain({ data: [{
+    id: serviceId,
+    shop_id: shopId,
+    name: 'Classic cut',
+    duration_min: 30,
+    price_cents: 35000,
+  }], error: null })
+  const media = chain({ data: [{
+    id: mediaId,
+    storage_path: storagePath,
+    role: 'storefront',
+    sort_order: 0,
+    alt_text: 'Shop entrance',
+    moderation_status: 'approved',
+  }], error: null })
+  let shopRead = 0
+  const from = vi.fn((table: string) => {
+    if (table === 'shops') return shopRead++ === 0 ? summaryShops : detail
+    if (table === 'users') return profiles
+    if (table === 'shop_operating_hours') return hours
+    if (table === 'shop_closures') return closures
+    if (table === 'services') return services
+    if (table === 'shop_media') return media
+    throw new Error(`Unexpected table: ${table}`)
+  })
+  const createSignedUrl = vi.fn().mockResolvedValue(options?.previewUnavailable
+    ? { data: null, error: new Error('Object missing') }
+    : {
+        data: { signedUrl: 'http://127.0.0.1:54321/storage/v1/object/sign/shop-media/example' },
+        error: null,
+      })
+  const storageFrom = vi.fn(() => ({ createSignedUrl }))
+  const dependencies = {
+    auth: { auth: { getUser: vi.fn() } },
+    database: {
+      rpc: vi.fn().mockResolvedValue({ data: [{ shop_id: shopId }], error: null }),
+      from,
+      storage: { from: storageFrom },
+    },
+  } as unknown as ApiDependencies
+  return {
+    dependencies,
+    shopId,
+    serviceId,
+    mediaId,
+    storagePath,
+    detail,
+    hours,
+    closures,
+    media,
+    createSignedUrl,
+  }
 }
 
 function anonymousDependencies(options?: {
@@ -135,6 +235,81 @@ describe('public catalogue API boundary', () => {
 
     expect(response.status).toBe(400)
     expect(response.body.error).toMatchObject({ code: 'validation' })
+  })
+
+  it('serves strict real shop facts and signs only ready approved media', async () => {
+    const fixture = publicDetailDependencies()
+
+    const response = await request(createApp(fixture.dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
+      .get(`/api/v1/catalog/shops/${fixture.shopId}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toMatchObject({
+      id: fixture.shopId,
+      description: 'A published neighbourhood shop.',
+      public_contact_phone: '+639171234567',
+      timezone: 'Asia/Manila',
+      booking_mode: 'manual',
+      chair_count: 3,
+      default_buffer_min: 10,
+      operating_hours: [{
+        weekday: 1,
+        open_time: '09:00',
+        close_time: '18:00',
+        closed: false,
+        block_order: 0,
+      }],
+      closures: [{
+        local_date: '2099-01-08',
+        closed: true,
+        replacement_open_time: null,
+        replacement_close_time: null,
+      }],
+      services: [{
+        id: fixture.serviceId,
+        shop_id: fixture.shopId,
+        price_cents: 35000,
+      }],
+      media: [{
+        id: fixture.mediaId,
+        role: 'storefront',
+        alt_text: 'Shop entrance',
+        url: 'http://127.0.0.1:54321/storage/v1/object/sign/shop-media/example',
+      }],
+    })
+    expect(response.body.data).not.toHaveProperty('owner_id')
+    expect(response.body.data.closures[0]).not.toHaveProperty('reason')
+    expect(response.body.data.media[0]).not.toHaveProperty('storage_path')
+    expect(fixture.detail.select).toHaveBeenCalledWith(
+      'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min',
+    )
+    expect(fixture.hours.select).toHaveBeenCalledWith('weekday,open_time,close_time,closed,block_order')
+    expect(fixture.closures.select).toHaveBeenCalledWith('local_date,closed,replacement_open_time,replacement_close_time')
+    expect(fixture.media.select).toHaveBeenCalledWith('id,storage_path,role,sort_order,alt_text')
+    expect(fixture.media.eq).toHaveBeenCalledWith('upload_status', 'ready')
+    expect(fixture.media.eq).toHaveBeenCalledWith('moderation_status', 'approved')
+    expect(fixture.createSignedUrl).toHaveBeenCalledWith(fixture.storagePath, 15 * 60)
+  })
+
+  it('fails closed if a private field reaches the public shop-detail projection', async () => {
+    const fixture = publicDetailDependencies({ includePrivateField: true })
+
+    const response = await request(createApp(fixture.dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
+      .get(`/api/v1/catalog/shops/${fixture.shopId}`)
+
+    expect(response.status).toBe(400)
+    expect(response.body.error).toMatchObject({ code: 'validation' })
+  })
+
+  it('omits an unavailable media object without taking down public shop detail', async () => {
+    const fixture = publicDetailDependencies({ previewUnavailable: true })
+
+    const response = await request(createApp(fixture.dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
+      .get(`/api/v1/catalog/shops/${fixture.shopId}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.id).toBe(fixture.shopId)
+    expect(response.body.data.media).toEqual([])
   })
 
   it('does not retain the old authenticated catalogue GET backdoor', async () => {

@@ -1,7 +1,19 @@
 // Request/response shapes for the data-access layer, spoken by the Express +
 // Supabase ApiBackend and consumed through the DataBackend contract.
 
-import type { AppointmentStatus, BugCategory, OnboardingRole, Weekday } from './types'
+import type {
+  AppointmentStatus,
+  AvailabilityOverride,
+  AvailabilityRule,
+  BugCategory,
+  OnboardingRole,
+  ShiftChangeRequestKind,
+  ShopMedia,
+  ShopMediaRole,
+  ShopOperatingHours,
+  ShopHiringStatus,
+  Weekday,
+} from './types'
 
 export interface SignUpInput {
   email: string
@@ -84,8 +96,54 @@ export interface SendMessageInput {
   body: string
 }
 
-export interface JoinShopInput {
+export interface CreateBarberApplicationInput {
+  direction: 'barber_application'
+  shop_id: string
+  message?: string | null
+  idempotency_key: string
+}
+
+export interface CreateOwnerInvitationInput {
+  direction: 'owner_invitation'
+  barber_id: string
+  message?: string | null
+  idempotency_key: string
+}
+
+export type CreateEmploymentRequestInput =
+  | CreateBarberApplicationInput
+  | CreateOwnerInvitationInput
+
+export interface CreateJoinCodeRequestInput {
   code: string
+  message?: string | null
+  idempotency_key: string
+}
+
+export interface ResolveEmploymentRequestInput {
+  expected_version: number
+  reason?: string | null
+}
+
+export interface UpdateBarberJobProfileInput {
+  visible: boolean
+  bio?: string | null
+  experience_years?: number | null
+  specialties: string[]
+  portfolio_media: string[]
+  coarse_work_area?: string | null
+  schedule_preference?: string | null
+}
+
+export interface RotateShopJoinCodeInput {
+  command_id: string
+  expires_in_days: number
+  usage_limit: number
+}
+
+export interface RevokeShopJoinCodeInput {
+  expected_version: number
+  reason: string
 }
 
 /** Owner command to close an active employment after assigned work is resolved. */
@@ -98,6 +156,40 @@ export interface ShiftChangeRequestInput {
   /** ISO date (YYYY-MM-DD) ng shift na gustong baguhin. */
   date: string
   message: string
+  kind: ShiftChangeRequestKind
+  /** Required when `kind` is `different_hours`, omitted for `time_off`. */
+  start_time?: string | null
+  end_time?: string | null
+  /** Replay-safe key; the same key never creates a second request. */
+  idempotency_key: string
+}
+
+/** Owner replaces one staff member's whole weekly roster. */
+export interface ReplaceStaffShiftsInput {
+  expected_version: number
+  blocks: AvailabilityRuleInput[]
+}
+
+/** Owner authors or overwrites one dated exception for a staff member. */
+export interface UpsertStaffShiftExceptionInput {
+  expected_version: number
+  date: string
+  is_available: boolean
+  start_time?: string | null
+  end_time?: string | null
+  reason?: string | null
+}
+
+export interface RemoveStaffShiftExceptionInput {
+  expected_version: number
+}
+
+/** Result of any owner schedule write: the new token plus the affected rows. */
+export interface StaffScheduleWriteResult {
+  schedule_version: number
+  patterns?: AvailabilityRule[]
+  exception?: AvailabilityOverride | null
+  removed_id?: string
 }
 
 /** Owner note attached to one staff member. */
@@ -145,12 +237,22 @@ export interface ResolveAppointmentDisputeInput extends AppointmentReasonInput {
   resolution: 'completed' | 'cancelled'
 }
 
+/**
+ * Owner decision on a barber request. `expected_version` makes the decision
+ * stale-safe; approving applies the schedule change in the same transaction.
+ */
 export interface ResolveShiftChangeRequestInput {
-  status: 'approved' | 'declined'
+  expected_version: number
+  decision: 'approve' | 'decline'
+  note?: string | null
 }
 
-export interface ResolveBarberApplicationInput {
-  status: 'accepted' | 'declined'
+export interface ResolveShiftChangeRequestResult {
+  request_id: string
+  status: 'approved' | 'declined'
+  /** The exception an approval created; null on decline. */
+  exception_id: string | null
+  schedule_version: number
 }
 
 export interface OpenConversationInput {
@@ -180,6 +282,14 @@ export interface UpdateServiceInput {
   name?: string
   duration_min?: number
   price_cents?: number
+  active?: boolean
+}
+
+/** P2-02 owner service editor: the shop is inferred from the signed-in owner. */
+export interface OwnerServiceInput {
+  name: string
+  duration_min: number
+  price_cents: number
   active?: boolean
 }
 
@@ -218,6 +328,45 @@ export interface ShopVersionInput {
   expected_version: number
 }
 
+/** Versioned owner-as-provider capability command. */
+export interface UpdateOwnerProviderCapabilityInput {
+  expected_version: number
+  active: boolean
+  accepting_bookings: boolean
+  reason: string
+  command_id: string
+}
+
+/** Replace the complete qualification set for one eligible shop provider. */
+export interface SetProviderQualificationsInput {
+  provider_user_id: string
+  expected_version: number
+  service_ids: string[]
+  reason: string
+  command_id: string
+}
+
+/** Barber asks the current shop owner for one service qualification. */
+export interface CreateServiceQualificationRequestInput {
+  service_id: string
+  message?: string | null
+  idempotency_key: string
+}
+
+export interface ResolveServiceQualificationRequestInput {
+  expected_version: number
+  reason?: string | null
+}
+
+/** Version-checked owner command for the canonical off/open/full hiring state. */
+export interface UpdateShopHiringInput {
+  expected_version: number
+  status: ShopHiringStatus
+  /** Optional only while open; null means the count is intentionally unknown. */
+  open_positions?: number | null
+  note?: string | null
+}
+
 /** One weekday block in a replace-all hours update. */
 export interface ShopHoursBlockInput {
   weekday: Weekday
@@ -229,7 +378,13 @@ export interface ShopHoursBlockInput {
 
 /** Replace-all weekly operating hours for the owner's shop. */
 export interface SetShopHoursInput {
+  expected_version: number
   blocks: ShopHoursBlockInput[]
+}
+
+export interface SetShopHoursResult {
+  shop_version: number
+  hours: ShopOperatingHours[]
 }
 
 /** Create or update (upsert by date) one shop closure / replacement-hours day. */
@@ -239,6 +394,22 @@ export interface CreateShopClosureInput {
   replacement_open_time?: string | null
   replacement_close_time?: string | null
   reason?: string | null
+}
+
+export interface RequestShopMediaUploadInput {
+  filename: string
+  declared_mime: 'image/jpeg' | 'image/png' | 'image/webp'
+  declared_size_bytes: number
+  role: ShopMediaRole
+  alt_text: string
+  sort_order?: number
+}
+
+export interface ShopMediaUploadGrant {
+  media: ShopMedia
+  upload_url: string
+  headers: Record<string, string>
+  expires_at: string
 }
 
 export interface CreateAttendanceRecordInput {
@@ -276,7 +447,11 @@ export type DataErrorCode =
   | 'employment_not_active'
   | 'rehire_requires_owner_approval'
   | 'already_employed'
+  | 'already_requested'
+  | 'request_already_resolved'
+  | 'hiring_full'
   | 'invalid_code'
+  | 'join_code_rate_limited'
   | 'verification_locked'
   | 'stale_verification'
   | 'idempotency_conflict'
@@ -285,6 +460,10 @@ export type DataErrorCode =
   | 'capability_required'
   | 'evidence_processing'
   | 'evidence_rejected'
+  | 'media_processing'
+  | 'media_rejected'
+  | 'media_limit'
+  | 'schedule_has_active_bookings'
   | 'cooldown_active'
   | 'validation'
   | 'network'

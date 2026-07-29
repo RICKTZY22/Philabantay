@@ -1,8 +1,9 @@
 import 'dotenv/config'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import request from 'supertest'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../src/app'
+import { processStaleShopMedia, SHOP_MEDIA_BUCKET } from '../src/lib/shop-media'
 import { processDueAppointmentTransitions } from '../src/routes/bookings'
 
 const runLocal = process.env.RUN_LOCAL_SUPABASE_TESTS === '1'
@@ -129,6 +130,21 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     authVerifier = createClient(url, publishableKey, serverOptions)
     app = createApp({ auth: authVerifier, database: service }, { webOrigin: 'http://127.0.0.1:5174' })
 
+    // Crash-safe cleanup for an interrupted prior matrix. Historical fixtures
+    // stay in the database, but never remain publicly discoverable.
+    const { error: priorFixtureError } = await service
+      .from('shops')
+      .update({
+        lifecycle_status: 'archived',
+        published_at: null,
+        is_hiring: false,
+        hiring_open_positions: null,
+        hiring_note: null,
+      })
+      .in('name', ['RLS Primary Shop', 'RLS Second Shop'])
+      .eq('lifecycle_status', 'published')
+    if (priorFixtureError) throw priorFixtureError
+
     const customerEmail = fixtureEmail('customer-primary')
     const barberEmail = fixtureEmail('barber-primary')
     const ownerEmail = fixtureEmail('owner-primary')
@@ -212,6 +228,12 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     }).select('*').single()
     if (secondEmploymentError) throw secondEmploymentError
 
+    const { error: shopHoursError } = await service.from('shop_operating_hours').insert([
+      { shop_id: primaryShop.id, weekday: 1, open_time: '09:00', close_time: '18:00', closed: false },
+      { shop_id: secondShop.id, weekday: 2, open_time: '10:00', close_time: '18:00', closed: false },
+    ])
+    if (shopHoursError) throw shopHoursError
+
     // P2-01: shops start as unpublished drafts (BEFORE INSERT trigger). Publish
     // the two catalogue fixtures so they appear in public discovery; the
     // lifecycle gate keeps unpublished shops out.
@@ -277,6 +299,21 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     }
   }, 60_000)
 
+  afterAll(async () => {
+    if (!service || !fixtures) return
+    const { error } = await service
+      .from('shops')
+      .update({
+        lifecycle_status: 'archived',
+        published_at: null,
+        is_hiring: false,
+        hiring_open_positions: null,
+        hiring_note: null,
+      })
+      .in('id', [fixtures.primaryShopId, fixtures.secondShopId])
+    if (error) throw error
+  })
+
   it('keeps anon off base catalogue tables and limits authenticated SELECTs to public columns', async () => {
     const [anonShops, anonBarbers, anonServices] = await Promise.all([
       authVerifier.from('shops').select('id'),
@@ -307,6 +344,70 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(privateShop.error).not.toBeNull()
     expect(privateBarber.error).not.toBeNull()
     expect(privateService.error).not.toBeNull()
+  })
+
+  it('projects real public shop details without private closure or media fields', async () => {
+    const closureDate = '2099-01-08'
+    const { error: shopUpdateError } = await service
+      .from('shops')
+      .update({
+        description: 'A real public integration shop.',
+        public_contact_phone: '+639171234567',
+      })
+      .eq('id', fixtures.primaryShopId)
+    expect(shopUpdateError).toBeNull()
+    const { error: closureError } = await service.from('shop_closures').insert({
+      shop_id: fixtures.primaryShopId,
+      local_date: closureDate,
+      closed: true,
+      reason: 'Private staffing detail',
+    })
+    expect(closureError).toBeNull()
+
+    try {
+      const response = await request(app).get(`/api/v1/catalog/shops/${fixtures.primaryShopId}`)
+      expect(response.status).toBe(200)
+      expect(response.body.data).toMatchObject({
+        id: fixtures.primaryShopId,
+        description: 'A real public integration shop.',
+        public_contact_phone: '+639171234567',
+        timezone: 'Asia/Manila',
+        booking_mode: 'manual',
+        chair_count: 1,
+        default_buffer_min: 0,
+      })
+      expect(response.body.data.operating_hours).toContainEqual({
+        weekday: 1,
+        open_time: '09:00',
+        close_time: '18:00',
+        closed: false,
+        block_order: 0,
+      })
+      expect(response.body.data.closures).toContainEqual({
+        local_date: closureDate,
+        closed: true,
+        replacement_open_time: null,
+        replacement_close_time: null,
+      })
+      expect(response.body.data.services).toContainEqual(expect.objectContaining({
+        id: fixtures.primaryServiceId,
+        shop_id: fixtures.primaryShopId,
+        name: 'Primary Test Cut',
+        price_cents: 30000,
+      }))
+      expect(response.body.data).not.toHaveProperty('owner_id')
+      expect(response.body.data).not.toHaveProperty('version')
+      expect(response.body.data.closures[0]).not.toHaveProperty('reason')
+      for (const media of response.body.data.media as Array<Record<string, unknown>>) {
+        expect(media).not.toHaveProperty('storage_path')
+        expect(media).not.toHaveProperty('moderation_status')
+      }
+    } finally {
+      await service.from('shop_closures')
+        .delete()
+        .eq('shop_id', fixtures.primaryShopId)
+        .eq('local_date', closureDate)
+    }
   })
 
   it('exposes only eligible shops and excludes future-dated employment from public discovery', async () => {
@@ -406,6 +507,14 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       price_cents: 20000,
     })
     expect(draftServiceError).toBeNull()
+    const { error: draftHoursError } = await service.from('shop_operating_hours').insert({
+      shop_id: draftShop!.id,
+      weekday: 1,
+      open_time: '09:00',
+      close_time: '18:00',
+      closed: false,
+    })
+    expect(draftHoursError).toBeNull()
 
     const listedIds = async (): Promise<string[]> => {
       const response = await request(app).get('/api/v1/catalog/shops')
@@ -431,22 +540,26 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       expect(suspendError).toBeNull()
       expect(await listedIds()).not.toContain(draftShop!.id)
     } finally {
-      await service.from('services').delete().eq('shop_id', draftShop!.id)
       await service.from('shops').delete().eq('id', draftShop!.id)
       await service.auth.admin.deleteUser(draftOwnerId)
     }
   })
 
   it('lets an owner set and read shop hours and isolates them from other tenants', async () => {
+    const ownerShop = await request(app)
+      .get('/api/v1/owner/shop')
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(ownerShop.status).toBe(200)
     const put = await request(app)
       .put('/api/v1/owner/shop/hours')
       .set('Authorization', `Bearer ${owner.token}`)
-      .send({ blocks: [
+      .send({ expected_version: ownerShop.body.data.version, blocks: [
         { weekday: 1, open_time: '09:00', close_time: '18:00' },
         { weekday: 0, closed: true },
       ] })
     expect(put.status).toBe(200)
-    expect(put.body.data).toHaveLength(2)
+    expect(put.body.data.hours).toHaveLength(2)
+    expect(put.body.data.shop_version).toBe(ownerShop.body.data.version + 1)
 
     const get = await request(app).get('/api/v1/owner/shop/hours').set('Authorization', `Bearer ${owner.token}`)
     expect(get.status).toBe(200)
@@ -454,10 +567,12 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(monday.open_time).toBe('09:00')
     expect(monday.close_time).toBe('18:00')
 
-    // A different owner sees only their own (unset) hours, never this shop's.
+    // A different owner sees only their own seeded hours, never this shop's.
     const otherGet = await request(app).get('/api/v1/owner/shop/hours').set('Authorization', `Bearer ${otherOwner.token}`)
     expect(otherGet.status).toBe(200)
-    expect(otherGet.body.data).toEqual([])
+    expect(otherGet.body.data).toHaveLength(1)
+    expect(otherGet.body.data[0].shop_id).toBe(fixtures.secondShopId)
+    expect(otherGet.body.data.some((block: { shop_id: string }) => block.shop_id === fixtures.primaryShopId)).toBe(false)
 
     // Direct RLS: a customer JWT cannot read another shop's hours rows.
     const directRead = await customer.client
@@ -466,6 +581,369 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       .eq('shop_id', fixtures.primaryShopId)
     expect(directRead.data ?? []).toEqual([])
   })
+
+  it('keeps a published shop from losing its last open-hours block or active service', async () => {
+    const ownerShop = await request(app)
+      .get('/api/v1/owner/shop')
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(ownerShop.status).toBe(200)
+
+    const closeEveryDay = await request(app)
+      .put('/api/v1/owner/shop/hours')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: ownerShop.body.data.version,
+        blocks: [{ weekday: 1, closed: true }],
+      })
+    expect(closeEveryDay.status).toBe(409)
+    expect(closeEveryDay.body.error.code).toBe('conflict')
+
+    const hours = await request(app)
+      .get('/api/v1/owner/shop/hours')
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(hours.status).toBe(200)
+    expect(hours.body.data).toContainEqual(expect.objectContaining({
+      weekday: 1,
+      closed: false,
+    }))
+
+    const retireLastService = await request(app)
+      .delete(`/api/v1/owner/shop/services/${fixtures.primaryServiceId}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(retireLastService.status).toBe(409)
+    expect(retireLastService.body.error.code).toBe('conflict')
+
+    const { data: serviceRow, error: serviceError } = await service
+      .from('services')
+      .select('active')
+      .eq('id', fixtures.primaryServiceId)
+      .single()
+    expect(serviceError).toBeNull()
+    expect(serviceRow?.active).toBe(true)
+  })
+
+  it('keeps owner hiring off/open/full versioned, fresh, and outside direct-JWT access', async () => {
+    const initial = await request(app)
+      .get('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(initial.status).toBe(200)
+    expect(initial.body.data).toMatchObject({
+      shop_id: fixtures.primaryShopId,
+      status: 'off',
+      is_hiring: false,
+      open_positions: null,
+    })
+
+    const opened = await request(app)
+      .patch('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: initial.body.data.shop_version,
+        status: 'open',
+        open_positions: 2,
+        note: 'Weekend fade specialists welcome.',
+      })
+    expect(opened.status).toBe(200)
+    expect(opened.body.data).toMatchObject({
+      status: 'open',
+      is_hiring: true,
+      open_positions: 2,
+      note: 'Weekend fade specialists welcome.',
+      shop_version: initial.body.data.shop_version + 1,
+    })
+
+    const stale = await request(app)
+      .patch('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: initial.body.data.shop_version, status: 'off' })
+    expect(stale.status).toBe(409)
+    expect(stale.body.error.code).toBe('conflict')
+
+    const hiringShops = await request(app)
+      .get('/api/v1/hiring/shops')
+      .set('Authorization', `Bearer ${barber.token}`)
+    expect(hiringShops.status).toBe(200)
+    expect(hiringShops.body.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        shop_id: fixtures.primaryShopId,
+        status: 'open',
+        open_positions: 2,
+        note: 'Weekend fade specialists welcome.',
+      }),
+    ]))
+    expect(hiringShops.body.data.some((row: { shop_id: string }) => row.shop_id === fixtures.secondShopId)).toBe(false)
+
+    const directRead = await customer.client.from('shops').select('id,is_hiring').eq('id', fixtures.primaryShopId)
+    expect(directRead.error).not.toBeNull()
+    const directWrite = await owner.client.from('shops').update({ is_hiring: false }).eq('id', fixtures.primaryShopId)
+    expect(directWrite.error).not.toBeNull()
+
+    const full = await request(app)
+      .patch('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: opened.body.data.shop_version, status: 'full', note: 'Roster complete.' })
+    expect(full.status).toBe(200)
+    expect(full.body.data).toMatchObject({
+      status: 'full',
+      is_hiring: false,
+      open_positions: 0,
+      note: 'Roster complete.',
+    })
+
+    const afterFull = await request(app)
+      .get('/api/v1/hiring/shops')
+      .set('Authorization', `Bearer ${barber.token}`)
+    expect(afterFull.status).toBe(200)
+    expect(afterFull.body.data.some((row: { shop_id: string }) => row.shop_id === fixtures.primaryShopId)).toBe(false)
+
+    const off = await request(app)
+      .patch('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: full.body.data.shop_version, status: 'off' })
+    expect(off.status).toBe(200)
+    expect(off.body.data).toMatchObject({ status: 'off', is_hiring: false, open_positions: null })
+  })
+
+  it('lets an owner edit only their own service menu and retires instead of deleting history', async () => {
+    const created = await request(app)
+      .post('/api/v1/owner/shop/services')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: `P2 Service ${fixtureNamespace}`, duration_min: 45, price_cents: 45000 })
+    expect(created.status).toBe(201)
+    expect(created.body.data.shop_id).toBe(fixtures.primaryShopId)
+
+    const edited = await request(app)
+      .patch(`/api/v1/owner/shop/services/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ price_cents: 50000 })
+    expect(edited.status).toBe(200)
+    expect(edited.body.data.price_cents).toBe(50000)
+
+    const crossTenant = await request(app)
+      .patch(`/api/v1/owner/shop/services/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${otherOwner.token}`)
+      .send({ price_cents: 1 })
+    expect(crossTenant.status).toBe(404)
+
+    const retired = await request(app)
+      .delete(`/api/v1/owner/shop/services/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(retired.status).toBe(200)
+    expect(retired.body.data.active).toBe(false)
+  })
+
+  it('uploads private shop media through a signed grant and isolates owner previews', async () => {
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    )
+    const grant = await request(app)
+      .post('/api/v1/owner/shop/media/request-upload')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        filename: 'storefront.png',
+        declared_mime: 'image/png',
+        declared_size_bytes: png.length,
+        role: 'storefront',
+        alt_text: 'Primary shop storefront',
+      })
+    expect(grant.status).toBe(201)
+    expect(grant.body.data.media.preview_url).toBeNull()
+
+    const upload = await fetch(grant.body.data.upload_url, {
+      method: 'PUT',
+      headers: { ...grant.body.data.headers, 'Content-Type': 'image/png' },
+      body: png,
+    })
+    expect(upload.ok).toBe(true)
+
+    const completed = await request(app)
+      .post(`/api/v1/owner/shop/media/${grant.body.data.media.id}/complete`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(completed.status).toBe(200)
+    expect(completed.body.data.upload_status).toBe('ready')
+    expect(completed.body.data.preview_url).toContain('token=')
+    const { data: mediaRow, error: mediaLookupError } = await service
+      .from('shop_media')
+      .select('storage_path')
+      .eq('id', grant.body.data.media.id)
+      .single()
+    expect(mediaLookupError).toBeNull()
+
+    const otherList = await request(app)
+      .get('/api/v1/owner/shop/media')
+      .set('Authorization', `Bearer ${otherOwner.token}`)
+    expect(otherList.status).toBe(200)
+    expect(otherList.body.data).toEqual([])
+
+    const removed = await request(app)
+      .delete(`/api/v1/owner/shop/media/${grant.body.data.media.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(removed.status).toBe(204)
+    const missingObject = await service.storage
+      .from(SHOP_MEDIA_BUCKET)
+      .download(mediaRow!.storage_path)
+    expect(missingObject.error).not.toBeNull()
+    const { data: removedRow, error: removedRowError } = await service
+      .from('shop_media')
+      .select('id')
+      .eq('id', grant.body.data.media.id)
+      .maybeSingle()
+    expect(removedRowError).toBeNull()
+    expect(removedRow).toBeNull()
+  }, 15_000)
+
+  it('rejects content that does not match its declared image type and removes the object', async () => {
+    const invalidPng = Buffer.from('This is not a PNG image.', 'utf8')
+    const grant = await request(app)
+      .post('/api/v1/owner/shop/media/request-upload')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        filename: 'invalid.png',
+        declared_mime: 'image/png',
+        declared_size_bytes: invalidPng.length,
+        role: 'gallery',
+        alt_text: 'Invalid content validation fixture',
+      })
+    expect(grant.status).toBe(201)
+    const { data: mediaRow, error: mediaLookupError } = await service
+      .from('shop_media')
+      .select('storage_path')
+      .eq('id', grant.body.data.media.id)
+      .single()
+    expect(mediaLookupError).toBeNull()
+
+    const upload = await fetch(grant.body.data.upload_url, {
+      method: 'PUT',
+      headers: { ...grant.body.data.headers, 'Content-Type': 'image/png' },
+      body: invalidPng,
+    })
+    expect(upload.ok).toBe(true)
+
+    const completed = await request(app)
+      .post(`/api/v1/owner/shop/media/${grant.body.data.media.id}/complete`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(completed.status).toBe(400)
+    expect(completed.body.error.code).toBe('media_rejected')
+
+    const { data: rejectedRow, error: rejectedError } = await service
+      .from('shop_media')
+      .select('upload_status')
+      .eq('id', grant.body.data.media.id)
+      .single()
+    expect(rejectedError).toBeNull()
+    expect(rejectedRow?.upload_status).toBe('rejected')
+    const removedObject = await service.storage
+      .from(SHOP_MEDIA_BUCKET)
+      .download(mediaRow!.storage_path)
+    expect(removedObject.error).not.toBeNull()
+
+    const removed = await request(app)
+      .delete(`/api/v1/owner/shop/media/${grant.body.data.media.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(removed.status).toBe(204)
+  }, 15_000)
+
+  it('keeps owner media listing available when one ready object is missing', async () => {
+    const { data: missingMedia, error: insertError } = await service
+      .from('shop_media')
+      .insert({
+        shop_id: fixtures.primaryShopId,
+        storage_path: `${fixtures.primaryShopId}/${crypto.randomUUID()}.png`,
+        role: 'gallery',
+        alt_text: 'Missing preview fixture',
+        declared_mime: 'image/png',
+        declared_size_bytes: 1,
+        upload_status: 'ready',
+      })
+      .select('id')
+      .single()
+    expect(insertError).toBeNull()
+
+    try {
+      const list = await request(app)
+        .get('/api/v1/owner/shop/media')
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(list.status).toBe(200)
+      expect(list.body.data).toContainEqual(expect.objectContaining({
+        id: missingMedia!.id,
+        upload_status: 'ready',
+        preview_url: null,
+      }))
+      const retryableRemoval = await request(app)
+        .delete(`/api/v1/owner/shop/media/${missingMedia!.id}`)
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(retryableRemoval.status).toBe(204)
+    } finally {
+      await service.from('shop_media').delete().eq('id', missingMedia!.id)
+    }
+  })
+
+  it('cleans stale awaiting-upload metadata only after storage cleanup', async () => {
+    const storagePath = `${fixtures.primaryShopId}/${crypto.randomUUID()}.png`
+    const uploaded = await service.storage.from(SHOP_MEDIA_BUCKET).upload(
+      storagePath,
+      Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+      { contentType: 'image/png', upsert: false },
+    )
+    expect(uploaded.error).toBeNull()
+    const { data: staleMedia, error: insertError } = await service
+      .from('shop_media')
+      .insert({
+        shop_id: fixtures.primaryShopId,
+        storage_path: storagePath,
+        role: 'gallery',
+        alt_text: 'Abandoned upload fixture',
+        declared_mime: 'image/png',
+        declared_size_bytes: 4,
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString(),
+      })
+      .select('id')
+      .single()
+    expect(insertError).toBeNull()
+
+    expect(await processStaleShopMedia({ auth: authVerifier, database: service })).toBeGreaterThanOrEqual(1)
+    const { data: removedRow, error: lookupError } = await service
+      .from('shop_media')
+      .select('id')
+      .eq('id', staleMedia!.id)
+      .maybeSingle()
+    expect(lookupError).toBeNull()
+    expect(removedRow).toBeNull()
+    const removedObject = await service.storage.from(SHOP_MEDIA_BUCKET).download(storagePath)
+    expect(removedObject.error).not.toBeNull()
+  }, 15_000)
+
+  it('caps media metadata per shop and exposes a stable API error', async () => {
+    const prefix = `${fixtures.secondShopId}/cap-${fixtureNamespace}-`
+    const rows = Array.from({ length: 100 }, (_, index) => ({
+      shop_id: fixtures.secondShopId,
+      storage_path: `${prefix}${index}.png`,
+      role: 'gallery',
+      alt_text: `Media cap fixture ${index}`,
+      declared_mime: 'image/png',
+      declared_size_bytes: 1,
+    }))
+    try {
+      const { error: fillError } = await service.from('shop_media').insert(rows)
+      expect(fillError).toBeNull()
+
+      const capped = await request(app)
+        .post('/api/v1/owner/shop/media/request-upload')
+        .set('Authorization', `Bearer ${otherOwner.token}`)
+        .send({
+          filename: 'over-limit.png',
+          declared_mime: 'image/png',
+          declared_size_bytes: 1,
+          role: 'gallery',
+          alt_text: 'Over media limit',
+        })
+      expect(capped.status).toBe(409)
+      expect(capped.body.error.code).toBe('media_limit')
+    } finally {
+      await service.from('shop_media').delete().like('storage_path', `${prefix}%`)
+    }
+  }, 15_000)
 
   it('lets an owner manage shop closures and isolates them from other tenants', async () => {
     const closed = await request(app)
@@ -501,10 +979,9 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(after.body.data).toHaveLength(1)
   })
 
-  it('returns only the public shop summary after joining by code', async () => {
+  it('counts successful join-code redemptions once and never refunds resolved requests', async () => {
     const joiningEmail = fixtureEmail('catalogue-join-barber')
     const joiningBarberId = await createFixtureUser(joiningEmail, 'Catalogue Join Barber')
-    const code = `PB${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`
     const { error: profileError } = await service.from('users').upsert({
       id: joiningBarberId,
       email: joiningEmail,
@@ -517,33 +994,672 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(profileError).toBeNull()
     const { error: barberError } = await service.from('barbers').insert({ id: joiningBarberId })
     expect(barberError).toBeNull()
-    const { error: codeError } = await service.from('shop_join_codes').upsert({ shop_id: fixtures.primaryShopId, code })
-    expect(codeError).toBeNull()
     const joiningBarber = await signIn(joiningEmail)
 
     try {
+      const currentHiring = await request(app).get('/api/v1/owner/shop/hiring').set('Authorization', `Bearer ${owner.token}`)
+      const opened = await request(app)
+        .patch('/api/v1/owner/shop/hiring')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: currentHiring.body.data.shop_version, status: 'open', open_positions: 2 })
+      expect(opened.status).toBe(200)
+      const rotated = await request(app)
+        .post('/api/v1/owner/shop/join-code/rotate')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ command_id: crypto.randomUUID(), expires_in_days: 7, usage_limit: 3 })
+      expect(rotated.status).toBe(200)
+      expect(rotated.body.data.code).toMatch(/^PB-[0-9A-F]{20}$/)
+
+      const joinCommand = crypto.randomUUID()
       const response = await request(app)
-        .post('/api/v1/employment/join')
+        .post('/api/v1/employment/requests/join-code')
         .set('Authorization', `Bearer ${joiningBarber.token}`)
-        .send({ code })
+        .send({ code: rotated.body.data.code, idempotency_key: joinCommand })
 
       expect(response.status).toBe(201)
-      expect(Object.keys(response.body.data).sort()).toEqual([
-        'address',
-        'city',
-        'id',
-        'lat',
-        'lng',
-        'name',
-        'rating',
-        'rating_count',
-      ])
-      expect(response.body.data).not.toHaveProperty('owner_id')
-      expect(response.body.data).not.toHaveProperty('created_at')
+      expect(response.body.data).toMatchObject({
+        barber_id: joiningBarberId,
+        shop_id: fixtures.primaryShopId,
+        direction: 'join_code',
+        status: 'pending',
+      })
+      const { data: activeEmployment } = await service.from('barber_employment')
+        .select('id').eq('barber_id', joiningBarberId).eq('status', 'active').is('ended_at', null)
+      expect(activeEmployment).toEqual([])
+      const hiddenCodes = await joiningBarber.client.from('shop_join_codes').select('code_hash')
+      expect(hiddenCodes.error).not.toBeNull()
+      const replay = await request(app)
+        .post('/api/v1/employment/requests/join-code')
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ code: rotated.body.data.code, idempotency_key: joinCommand })
+      expect(replay.status).toBe(201)
+      expect(replay.body.data.id).toBe(response.body.data.id)
+      const metadata = await request(app).get('/api/v1/owner/shop/join-code').set('Authorization', `Bearer ${owner.token}`)
+      expect(metadata.status).toBe(200)
+      expect(metadata.body.data).not.toHaveProperty('code')
+      expect(metadata.body.data.used_count).toBe(1)
+
+      const declined = await request(app)
+        .post(`/api/v1/employment/requests/${response.body.data.id}/decline`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: response.body.data.version })
+      expect(declined.status).toBe(200)
+      expect(declined.body.data.status).toBe('declined')
+      const afterDecline = await request(app)
+        .get('/api/v1/owner/shop/join-code')
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(afterDecline.body.data.used_count).toBe(1)
+
+      const withdrawnRequest = await request(app)
+        .post('/api/v1/employment/requests/join-code')
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ code: rotated.body.data.code, idempotency_key: crypto.randomUUID() })
+      expect(withdrawnRequest.status).toBe(201)
+      const withdrawn = await request(app)
+        .post(`/api/v1/employment/requests/${withdrawnRequest.body.data.id}/withdraw`)
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ expected_version: withdrawnRequest.body.data.version })
+      expect(withdrawn.status).toBe(200)
+      expect(withdrawn.body.data.status).toBe('withdrawn')
+      const afterWithdraw = await request(app)
+        .get('/api/v1/owner/shop/join-code')
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(afterWithdraw.body.data.used_count).toBe(2)
+
+      const expiringRequest = await request(app)
+        .post('/api/v1/employment/requests/join-code')
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ code: rotated.body.data.code, idempotency_key: crypto.randomUUID() })
+      expect(expiringRequest.status).toBe(201)
+      const { error: expirySetupError } = await service
+        .from('employment_requests')
+        .update({
+          created_at: new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString(),
+          expires_at: new Date(Date.now() - 24 * 60 * 60_000).toISOString(),
+        })
+        .eq('id', expiringRequest.body.data.id)
+      expect(expirySetupError).toBeNull()
+      const expired = await service.rpc('api_expire_employment_requests')
+      expect(expired.error).toBeNull()
+      expect(expired.data).toBeGreaterThanOrEqual(1)
+      const { data: expiredRow, error: expiredLookupError } = await service
+        .from('employment_requests')
+        .select('status')
+        .eq('id', expiringRequest.body.data.id)
+        .single()
+      expect(expiredLookupError).toBeNull()
+      expect(expiredRow?.status).toBe('expired')
+      const afterExpire = await request(app)
+        .get('/api/v1/owner/shop/join-code')
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(afterExpire.body.data.used_count).toBe(3)
+      expect(afterExpire.body.data.remaining_uses).toBe(0)
+
+      const exhausted = await request(app)
+        .post('/api/v1/employment/requests/join-code')
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ code: rotated.body.data.code, idempotency_key: crypto.randomUUID() })
+      expect(exhausted.status).toBe(404)
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const invalid = await request(app)
+          .post('/api/v1/employment/requests/join-code')
+          .set('Authorization', `Bearer ${joiningBarber.token}`)
+          .send({ code: `INVALID-${attempt}`, idempotency_key: crypto.randomUUID() })
+        expect(invalid.status).toBe(attempt === 3 ? 429 : 404)
+      }
+      const throttled = await request(app)
+        .post('/api/v1/employment/requests/join-code')
+        .set('Authorization', `Bearer ${joiningBarber.token}`)
+        .send({ code: rotated.body.data.code, idempotency_key: crypto.randomUUID() })
+      expect(throttled.status).toBe(429)
+      const revoked = await request(app)
+        .post('/api/v1/owner/shop/join-code/revoke')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: afterExpire.body.data.version, reason: 'Integration revocation check.' })
+      expect(revoked.status).toBe(200)
+      expect(revoked.body.data.active).toBe(false)
     } finally {
-      await service.from('shop_join_codes').delete().eq('shop_id', fixtures.primaryShopId)
       await service.auth.admin.deleteUser(joiningBarberId)
     }
+  })
+
+  it('denies employment resolution to a verified owner who owns no shop', async () => {
+    const attackerEmail = fixtureEmail('ownerless-resolution-attacker')
+    const candidateEmail = fixtureEmail('ownerless-resolution-candidate')
+    const attackerId = await createFixtureUser(attackerEmail, 'Ownerless Resolution Attacker')
+    const candidateId = await createFixtureUser(candidateEmail, 'Ownerless Resolution Candidate')
+    let requestId: string | null = null
+
+    const { error: profilesError } = await service.from('users').upsert([
+      {
+        id: attackerId,
+        email: attackerEmail,
+        full_name: 'Ownerless Resolution Attacker',
+        role: 'shop_owner',
+        requested_role: 'shop_owner',
+        verification_status: 'verified',
+        onboarding_completed: true,
+      },
+      {
+        id: candidateId,
+        email: candidateEmail,
+        full_name: 'Ownerless Resolution Candidate',
+        role: 'barber',
+        requested_role: 'barber',
+        verification_status: 'verified',
+        onboarding_completed: true,
+      },
+    ])
+    expect(profilesError).toBeNull()
+    const { error: barberError } = await service.from('barbers').insert({ id: candidateId })
+    expect(barberError).toBeNull()
+      const attacker = await signIn(attackerEmail)
+    const candidate = await signIn(candidateEmail)
+
+    try {
+      const forgedInvitation = await service.from('employment_requests').insert({
+        shop_id: fixtures.primaryShopId,
+        barber_id: candidateId,
+        direction: 'owner_invitation',
+        created_by: attackerId,
+        idempotency_key: crypto.randomUUID(),
+        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      expect(forgedInvitation.error?.code).toBe('42501')
+
+      const currentHiring = await request(app)
+        .get('/api/v1/owner/shop/hiring')
+        .set('Authorization', `Bearer ${owner.token}`)
+      const opened = await request(app)
+        .patch('/api/v1/owner/shop/hiring')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({
+          expected_version: currentHiring.body.data.shop_version,
+          status: 'open',
+          open_positions: 1,
+        })
+      expect(opened.status).toBe(200)
+
+      const application = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${candidate.token}`)
+        .send({
+          direction: 'barber_application',
+          shop_id: fixtures.primaryShopId,
+          idempotency_key: crypto.randomUUID(),
+        })
+      expect(application.status).toBe(201)
+      requestId = application.body.data.id as string
+
+      for (const action of ['accept', 'decline'] as const) {
+        const response = await request(app)
+          .post(`/api/v1/employment/requests/${requestId}/${action}`)
+          .set('Authorization', `Bearer ${attacker.token}`)
+          .send({ expected_version: application.body.data.version })
+        expect(response.status).toBe(404)
+        expect(response.body.error.code).toBe('not_found')
+
+        const { data: stillPending } = await service.from('employment_requests')
+          .select('status,resolved_by,version')
+          .eq('id', requestId)
+          .single()
+        expect(stillPending).toEqual({
+          status: 'pending',
+          resolved_by: null,
+          version: application.body.data.version,
+        })
+      }
+
+      for (const action of ['accept', 'decline'] as const) {
+        const direct = await service.rpc('api_resolve_employment_request', {
+          p_owner_id: attacker.id,
+          p_request_id: requestId,
+          p_expected_version: application.body.data.version,
+          p_action: action,
+          p_reason: 'Unauthorized ownerless resolution attempt.',
+        })
+        expect(direct.error?.code).toBe('42501')
+      }
+
+      const { data: unauthorizedEmployment } = await service.from('barber_employment')
+        .select('id')
+        .eq('barber_id', candidateId)
+        .eq('status', 'active')
+        .is('ended_at', null)
+      expect(unauthorizedEmployment).toEqual([])
+
+      const legitimateDecline = await request(app)
+        .post(`/api/v1/employment/requests/${requestId}/decline`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: application.body.data.version })
+      expect(legitimateDecline.status).toBe(200)
+    } finally {
+      if (requestId) {
+        await service.from('employment_events').delete().eq('request_id', requestId)
+        await service.from('employment_requests').delete().eq('id', requestId)
+      }
+      const currentHiring = await request(app)
+        .get('/api/v1/owner/shop/hiring')
+        .set('Authorization', `Bearer ${owner.token}`)
+      if (currentHiring.status === 200 && currentHiring.body.data.status !== 'off') {
+        await request(app)
+          .patch('/api/v1/owner/shop/hiring')
+          .set('Authorization', `Bearer ${owner.token}`)
+          .send({ expected_version: currentHiring.body.data.shop_version, status: 'off' })
+      }
+      await service.auth.admin.deleteUser(candidateId)
+      await service.auth.admin.deleteUser(attackerId)
+    }
+  })
+
+  it('converges application and invitation acceptance with RLS, stale, vacancy, and one-employment race safety', async () => {
+    const createdIds: string[] = []
+    const makeBarber = async (label: string): Promise<SignedInUser> => {
+      const email = fixtureEmail(label)
+      const id = await createFixtureUser(email, `${label} Barber`)
+      createdIds.push(id)
+      const { error: userError } = await service.from('users').upsert({
+        id,
+        email,
+        full_name: `${label} Barber`,
+        role: 'barber',
+        requested_role: 'barber',
+        verification_status: 'verified',
+        onboarding_completed: true,
+      })
+      expect(userError).toBeNull()
+      const { error: barberError } = await service.from('barbers').insert({ id })
+      expect(barberError).toBeNull()
+      return signIn(email)
+    }
+    const openShop = async (actor: SignedInUser, openPositions: number | null) => {
+      const current = await request(app).get('/api/v1/owner/shop/hiring').set('Authorization', `Bearer ${actor.token}`)
+      const opened = await request(app)
+        .patch('/api/v1/owner/shop/hiring')
+        .set('Authorization', `Bearer ${actor.token}`)
+        .send({
+          expected_version: current.body.data.shop_version,
+          status: 'open',
+          open_positions: openPositions,
+        })
+      expect(opened.status).toBe(200)
+      return opened.body.data
+    }
+
+    const vacancyA = await makeBarber('vacancy-a')
+    const vacancyB = await makeBarber('vacancy-b')
+    const crossShop = await makeBarber('cross-shop')
+    try {
+      await openShop(owner, 1)
+      const command = crypto.randomUUID()
+      const firstApplication = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${vacancyA.token}`)
+        .send({ direction: 'barber_application', shop_id: fixtures.primaryShopId, idempotency_key: command })
+      const replay = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${vacancyA.token}`)
+        .send({ direction: 'barber_application', shop_id: fixtures.primaryShopId, idempotency_key: command })
+      const secondApplication = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${vacancyB.token}`)
+        .send({ direction: 'barber_application', shop_id: fixtures.primaryShopId, idempotency_key: crypto.randomUUID() })
+      expect(firstApplication.status).toBe(201)
+      expect(replay.body.data.id).toBe(firstApplication.body.data.id)
+      expect(secondApplication.status).toBe(201)
+
+      const stale = await request(app)
+        .post(`/api/v1/employment/requests/${firstApplication.body.data.id}/accept`)
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: firstApplication.body.data.version + 1 })
+      expect(stale.status).toBe(409)
+      expect(stale.body.error.code).toBe('conflict')
+
+      const ownerDirect = await owner.client.from('employment_requests').select('id,shop_id')
+      const otherOwnerDirect = await otherOwner.client.from('employment_requests').select('id').eq('shop_id', fixtures.primaryShopId)
+      const barberDirect = await vacancyA.client.from('employment_requests').select('id,barber_id')
+      const directWrite = await vacancyA.client.from('employment_requests').insert({
+        shop_id: fixtures.primaryShopId,
+        barber_id: vacancyA.id,
+        direction: 'barber_application',
+        created_by: vacancyA.id,
+        idempotency_key: crypto.randomUUID(),
+        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      expect(ownerDirect.error).toBeNull()
+      expect(ownerDirect.data?.map((row) => row.id)).toEqual(expect.arrayContaining([
+        firstApplication.body.data.id,
+        secondApplication.body.data.id,
+      ]))
+      expect(otherOwnerDirect.data).toEqual([])
+      expect(barberDirect.data?.every((row) => row.barber_id === vacancyA.id)).toBe(true)
+      expect(directWrite.error).not.toBeNull()
+
+      const vacancyRace = await Promise.all([
+        request(app).post(`/api/v1/employment/requests/${firstApplication.body.data.id}/accept`)
+          .set('Authorization', `Bearer ${owner.token}`).send({ expected_version: firstApplication.body.data.version }),
+        request(app).post(`/api/v1/employment/requests/${secondApplication.body.data.id}/accept`)
+          .set('Authorization', `Bearer ${owner.token}`).send({ expected_version: secondApplication.body.data.version }),
+      ])
+      expect(vacancyRace.map((result) => result.status).sort()).toEqual([200, 409])
+      expect(vacancyRace.find((result) => result.status === 409)?.body.error.code).toBe('hiring_full')
+      const { data: vacancyEmployments } = await service.from('barber_employment')
+        .select('id,barber_id').in('barber_id', [vacancyA.id, vacancyB.id]).eq('status', 'active').is('ended_at', null)
+      expect(vacancyEmployments).toHaveLength(1)
+      const afterVacancy = await request(app).get('/api/v1/owner/shop/hiring').set('Authorization', `Bearer ${owner.token}`)
+      expect(afterVacancy.body.data).toMatchObject({ status: 'full', open_positions: 0, is_hiring: false })
+
+      await openShop(owner, 2)
+      await openShop(otherOwner, 2)
+      const profile = await request(app)
+        .put('/api/v1/barber/job-profile')
+        .set('Authorization', `Bearer ${crossShop.token}`)
+        .send({
+          visible: true,
+          bio: 'Concurrency-safe candidate profile.',
+          experience_years: 4,
+          specialties: ['Fades'],
+          portfolio_media: ['https://portfolio.integration.test/fades'],
+          coarse_work_area: 'Manila',
+          schedule_preference: 'Weekdays',
+        })
+      expect(profile.status).toBe(200)
+      const application = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${crossShop.token}`)
+        .send({ direction: 'barber_application', shop_id: fixtures.primaryShopId, idempotency_key: crypto.randomUUID() })
+      const invitation = await request(app)
+        .post('/api/v1/employment/requests')
+        .set('Authorization', `Bearer ${otherOwner.token}`)
+        .send({ direction: 'owner_invitation', barber_id: crossShop.id, idempotency_key: crypto.randomUUID() })
+      expect(application.status).toBe(201)
+      expect(invitation.status).toBe(201)
+      const crossRace = await Promise.all([
+        request(app).post(`/api/v1/employment/requests/${application.body.data.id}/accept`)
+          .set('Authorization', `Bearer ${owner.token}`).send({ expected_version: application.body.data.version }),
+        request(app).post(`/api/v1/employment/requests/${invitation.body.data.id}/accept`)
+          .set('Authorization', `Bearer ${otherOwner.token}`).send({ expected_version: invitation.body.data.version }),
+      ])
+      expect(crossRace.map((result) => result.status).sort()).toEqual([200, 409])
+      expect(['already_employed', 'request_already_resolved']).toContain(
+        crossRace.find((result) => result.status === 409)?.body.error.code,
+      )
+      const { data: crossEmployment } = await service.from('barber_employment')
+        .select('id,shop_id').eq('barber_id', crossShop.id).eq('status', 'active').is('ended_at', null)
+      expect(crossEmployment).toHaveLength(1)
+      const { data: crossRequests } = await service.from('employment_requests')
+        .select('status').eq('barber_id', crossShop.id)
+      expect(crossRequests?.map((row) => row.status).sort()).toEqual(['accepted', 'superseded'])
+      const events = await crossShop.client.from('employment_events').select('event_type').eq('barber_id', crossShop.id)
+      expect(events.error).toBeNull()
+      expect(events.data?.map((row) => row.event_type)).toEqual(expect.arrayContaining(['request_accepted', 'request_superseded']))
+      const eventMutation = await owner.client.from('employment_events').update({ reason: 'tamper' }).eq('barber_id', crossShop.id)
+      expect(eventMutation.error).not.toBeNull()
+    } finally {
+      await service.from('barber_employment').update({
+        status: 'resigned',
+        ended_at: '2026-07-27',
+        ended_reason: 'Integration fixture cleanup.',
+      }).in('barber_id', createdIds).eq('status', 'active')
+    }
+  })
+
+  it('keeps owner-provider capability and service qualifications owner-authoritative, audited, and race-safe', async () => {
+    const secondService = await request(app)
+      .post('/api/v1/owner/shop/services')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ name: `Provider Request Service ${fixtureNamespace}`, duration_min: 45, price_cents: 45000 })
+    expect(secondService.status).toBe(201)
+
+    const initial = await request(app)
+      .get('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(initial.status).toBe(200)
+    expect(initial.body.data.owner_provider).toMatchObject({
+      owner_id: owner.id,
+      active: false,
+      accepting_bookings: false,
+      version: 0,
+    })
+    expect(initial.body.data.providers.map((provider: { provider_user_id: string }) => provider.provider_user_id))
+      .toEqual(expect.arrayContaining([owner.id, barber.id]))
+
+    const directReads = await Promise.all([
+      owner.client.from('owner_provider_profiles').select('*'),
+      owner.client.from('service_qualifications').select('*'),
+      barber.client.from('service_qualification_requests').select('*'),
+      owner.client.from('provider_capability_events').select('*'),
+    ])
+    expect(directReads.every((result) => result.error?.code === '42501')).toBe(true)
+    const directRpc = await owner.client.rpc('api_set_owner_provider_capability', {
+      p_actor_id: owner.id,
+      p_expected_version: 0,
+      p_active: true,
+      p_accepting_bookings: true,
+      p_reason: 'Forged direct capability call.',
+      p_command_id: crypto.randomUUID(),
+    })
+    expect(directRpc.error?.code).toBe('42501')
+
+    const capabilityCommand = crypto.randomUUID()
+    const enabled = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 0,
+        active: true,
+        accepting_bookings: true,
+        reason: 'Owner will provide selected services.',
+        command_id: capabilityCommand,
+      })
+    expect(enabled.status).toBe(200)
+    expect(enabled.body.data).toMatchObject({
+      owner_id: owner.id,
+      active: true,
+      accepting_bookings: true,
+      version: 1,
+    })
+    const replay = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 0,
+        active: true,
+        accepting_bookings: true,
+        reason: 'Owner will provide selected services.',
+        command_id: capabilityCommand,
+      })
+    expect(replay.status).toBe(200)
+    expect(replay.body.data).toEqual(enabled.body.data)
+    const reusedCommand = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 0,
+        active: false,
+        accepting_bookings: false,
+        reason: 'Different input must not replay.',
+        command_id: capabilityCommand,
+      })
+    expect(reusedCommand.status).toBe(409)
+    expect(reusedCommand.body.error.code).toBe('idempotency_conflict')
+
+    const ownerQualified = await request(app)
+      .put('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        provider_user_id: owner.id,
+        expected_version: 1,
+        service_ids: [fixtures.primaryServiceId],
+        reason: 'Owner is trained for the primary service.',
+        command_id: crypto.randomUUID(),
+      })
+    expect(ownerQualified.status).toBe(200)
+    expect(ownerQualified.body.data).toMatchObject({
+      provider_user_id: owner.id,
+      provider_kind: 'owner',
+      eligible: true,
+      qualification_version: 2,
+      qualified_service_ids: [fixtures.primaryServiceId],
+    })
+
+    const barberQualified = await request(app)
+      .put('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        provider_user_id: barber.id,
+        expected_version: 1,
+        service_ids: [fixtures.primaryServiceId],
+        reason: 'Primary barber demonstrated this service.',
+        command_id: crypto.randomUUID(),
+      })
+    expect(barberQualified.status).toBe(200)
+    expect(barberQualified.body.data).toMatchObject({
+      provider_user_id: barber.id,
+      qualification_version: 2,
+      qualified_service_ids: [fixtures.primaryServiceId],
+    })
+
+    const foreignQualification = await request(app)
+      .put('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${otherOwner.token}`)
+      .send({
+        provider_user_id: barber.id,
+        expected_version: 2,
+        service_ids: [fixtures.primaryServiceId],
+        reason: 'Foreign owner must not grant.',
+        command_id: crypto.randomUUID(),
+      })
+    expect([400, 403]).toContain(foreignQualification.status)
+
+    const directGrant = await barber.client.from('service_qualifications').insert({
+      shop_id: fixtures.primaryShopId,
+      service_id: secondService.body.data.id,
+      provider_user_id: barber.id,
+      active: true,
+      granted_by: barber.id,
+    })
+    expect(directGrant.error?.code).toBe('42501')
+
+    const mine = await request(app)
+      .get('/api/v1/barber/service-qualifications')
+      .set('Authorization', `Bearer ${barber.token}`)
+    expect(mine.status).toBe(200)
+    expect(mine.body.data.services.find((service: { id: string }) => service.id === fixtures.primaryServiceId))
+      .toMatchObject({ qualified: true, pending_request: null })
+
+    const requestKey = crypto.randomUUID()
+    const qualificationRequest = await request(app)
+      .post('/api/v1/barber/service-qualification-requests')
+      .set('Authorization', `Bearer ${barber.token}`)
+      .send({
+        service_id: secondService.body.data.id,
+        message: 'Please review my training for this service.',
+        idempotency_key: requestKey,
+      })
+    expect(qualificationRequest.status).toBe(201)
+    expect(qualificationRequest.body.data).toMatchObject({
+      barber_id: barber.id,
+      service_id: secondService.body.data.id,
+      status: 'pending',
+      version: 1,
+    })
+    const requestReplay = await request(app)
+      .post('/api/v1/barber/service-qualification-requests')
+      .set('Authorization', `Bearer ${barber.token}`)
+      .send({
+        service_id: secondService.body.data.id,
+        message: 'Please review my training for this service.',
+        idempotency_key: requestKey,
+      })
+    expect(requestReplay.status).toBe(201)
+    expect(requestReplay.body.data.id).toBe(qualificationRequest.body.data.id)
+
+    const approved = await request(app)
+      .post(`/api/v1/owner/service-qualification-requests/${qualificationRequest.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 1, reason: 'Training was reviewed in person.' })
+    expect(approved.status, JSON.stringify(approved.body)).toBe(200)
+    expect(approved.body.data.status).toBe('approved')
+    const staleApproval = await request(app)
+      .post(`/api/v1/owner/service-qualification-requests/${qualificationRequest.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 1, reason: 'Stale duplicate approval.' })
+    expect(staleApproval.status).toBe(409)
+    expect(staleApproval.body.error.code).toBe('request_already_resolved')
+
+    const afterApproval = await request(app)
+      .get('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+    const barberProvider = afterApproval.body.data.providers.find(
+      (provider: { provider_user_id: string }) => provider.provider_user_id === barber.id,
+    )
+    expect(barberProvider.qualification_version).toBe(3)
+    expect(barberProvider.qualified_service_ids.sort()).toEqual(
+      [fixtures.primaryServiceId, secondService.body.data.id].sort(),
+    )
+
+    const race = await Promise.all([
+      request(app)
+        .put('/api/v1/owner/service-qualifications')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({
+          provider_user_id: barber.id,
+          expected_version: 3,
+          service_ids: [fixtures.primaryServiceId],
+          reason: 'First concurrent qualification set.',
+          command_id: crypto.randomUUID(),
+        }),
+      request(app)
+        .put('/api/v1/owner/service-qualifications')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({
+          provider_user_id: barber.id,
+          expected_version: 3,
+          service_ids: [secondService.body.data.id],
+          reason: 'Second concurrent qualification set.',
+          command_id: crypto.randomUUID(),
+        }),
+    ])
+    expect(race.map((result) => result.status).sort()).toEqual([200, 409])
+    expect(race.find((result) => result.status === 409)?.body.error.code).toBe('conflict')
+
+    const disabled = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 1,
+        active: false,
+        accepting_bookings: false,
+        reason: 'Owner is pausing provider work.',
+        command_id: crypto.randomUUID(),
+      })
+    expect(disabled.status).toBe(200)
+    expect(disabled.body.data).toMatchObject({ active: false, accepting_bookings: false, version: 2 })
+    const finalWorkspace = await request(app)
+      .get('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+    const ownerProvider = finalWorkspace.body.data.providers.find(
+      (provider: { provider_user_id: string }) => provider.provider_user_id === owner.id,
+    )
+    expect(ownerProvider).toMatchObject({ eligible: false, accepting_bookings: false })
+
+    const { data: events, error: eventsError } = await service.from('provider_capability_events')
+      .select('id,event_type,provider_user_id')
+      .eq('shop_id', fixtures.primaryShopId)
+    expect(eventsError).toBeNull()
+    expect(events?.map((event) => event.event_type)).toEqual(expect.arrayContaining([
+      'owner_provider_enabled',
+      'owner_provider_disabled',
+      'qualification_granted',
+      'qualification_revoked',
+      'qualification_requested',
+      'qualification_request_approved',
+    ]))
+    const eventMutation = await service.from('provider_capability_events')
+      .update({ reason: 'Attempted audit rewrite.' })
+      .eq('id', events?.[0]?.id)
+    expect(eventMutation.error?.code).toBe('42501')
   })
 
   it('customer RLS and Express routes expose only the customer booking/messages', async () => {
@@ -607,16 +1723,16 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     })
     expect(crossShopAttendanceError).not.toBeNull()
 
-    const ownRules = await request(app)
+    const retiredSelfWriter = await request(app)
       .put('/api/v1/shifts/patterns')
       .set('Authorization', `Bearer ${barber.token}`)
       .send([{ weekday: 1, start_time: '08:00', end_time: '16:00' }])
-    expect(ownRules.status).toBe(200)
-    const crossShopRules = await request(app)
-      .put(`/api/v1/shops/${fixtures.secondShopId}/staff/${otherBarber.id}/shifts/patterns`)
+    expect(retiredSelfWriter.status).toBe(404)
+    const ownerOnlyRules = await request(app)
+      .put(`/api/v1/owner/staff/${barber.id}/shifts`)
       .set('Authorization', `Bearer ${barber.token}`)
-      .send([{ weekday: 2, start_time: '08:00', end_time: '16:00' }])
-    expect(crossShopRules.status).toBe(403)
+      .send({ expected_version: 1, blocks: [{ weekday: 2, start_time: '08:00', end_time: '16:00' }] })
+    expect(ownerOnlyRules.status).toBe(403)
   })
 
   it('owner RLS and Express routes include the owned shop and exclude another shop', async () => {
@@ -643,7 +1759,11 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(otherBookings.status).toBe(403)
     const staff = await request(app).get(`/api/v1/shops/${fixtures.primaryShopId}/staff`).set('Authorization', `Bearer ${owner.token}`)
     expect(staff.status).toBe(200)
-    expect(staff.body.data).toHaveLength(1)
+    expect(staff.body.data.some((member: { barber: { id: string } }) => member.barber.id === barber.id)).toBe(true)
+    expect(staff.body.data.every(
+      (member: { employment: { shop_id: string } }) => member.employment.shop_id === fixtures.primaryShopId,
+    )).toBe(true)
+    expect(staff.body.data.some((member: { barber: { id: string } }) => member.barber.id === otherBarber.id)).toBe(false)
     const otherStaff = await request(app).get(`/api/v1/shops/${fixtures.secondShopId}/staff`).set('Authorization', `Bearer ${owner.token}`)
     expect(otherStaff.status).toBe(403)
   })
@@ -699,36 +1819,211 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(accepting.status).toBe(200)
     expect(accepting.body.data).toMatchObject({ id: barber.id, accepting_bookings: true })
 
-    const exception = await request(app)
-      .post('/api/v1/shifts/exceptions')
-      .set('Authorization', `Bearer ${barber.token}`)
-      .send({
+    const ownerSchedulePath = `/api/v1/owner/staff/${barber.id}/shifts`
+    const anonymousRoutes = await Promise.all([
+      request(app).get(ownerSchedulePath),
+      request(app).put(ownerSchedulePath).send({ expected_version: 1, blocks: [] }),
+      request(app).post(`${ownerSchedulePath}/exceptions`).send({
+        expected_version: 1,
         date: '2035-02-12',
         is_available: false,
-        reason: 'Atomic command integration fixture.',
-      })
-    expect(exception.status).toBe(201)
-    expect(exception.body.data).toMatchObject({
+      }),
+      request(app).delete(`/api/v1/owner/staff/shifts/exceptions/${crypto.randomUUID()}`).send({ expected_version: 1 }),
+    ])
+    expect(anonymousRoutes.map((result) => result.status)).toEqual([401, 401, 401, 401])
+
+    const barberOwnerRoutes = await Promise.all([
+      request(app).get(ownerSchedulePath).set('Authorization', `Bearer ${barber.token}`),
+      request(app).put(ownerSchedulePath).set('Authorization', `Bearer ${barber.token}`).send({
+        expected_version: 1,
+        blocks: [],
+      }),
+      request(app).post(`${ownerSchedulePath}/exceptions`).set('Authorization', `Bearer ${barber.token}`).send({
+        expected_version: 1,
+        date: '2035-02-12',
+        is_available: false,
+      }),
+      request(app)
+        .delete(`/api/v1/owner/staff/shifts/exceptions/${crypto.randomUUID()}`)
+        .set('Authorization', `Bearer ${barber.token}`)
+        .send({ expected_version: 1 }),
+    ])
+    expect(barberOwnerRoutes.map((result) => result.status)).toEqual([403, 403, 403, 403])
+
+    const initialSchedule = await request(app)
+      .get(ownerSchedulePath)
+      .set('Authorization', `Bearer ${owner.token}`)
+    expect(initialSchedule.status, JSON.stringify(initialSchedule.body)).toBe(200)
+    expect(initialSchedule.body.data).toMatchObject({
+      employment_id: fixtures.primaryEmploymentId,
       barber_id: barber.id,
-      shop_id: fixtures.primaryShopId,
-      is_available: false,
+      schedule_version: 1,
+    })
+    expect(initialSchedule.body.data.patterns.length).toBeGreaterThan(0)
+
+    const replacement = {
+      expected_version: initialSchedule.body.data.schedule_version,
+      blocks: [{ weekday: 1, start_time: '08:00', end_time: '16:00' }],
+    }
+    const scheduleRace = await Promise.all([
+      request(app).put(ownerSchedulePath).set('Authorization', `Bearer ${owner.token}`).send(replacement),
+      request(app).put(ownerSchedulePath).set('Authorization', `Bearer ${owner.token}`).send(replacement),
+    ])
+    expect(scheduleRace.map((result) => result.status).sort()).toEqual([200, 409])
+    expect(scheduleRace.find((result) => result.status === 409)?.body.error.code).toBe('conflict')
+    const raceWinner = scheduleRace.find((result) => result.status === 200)
+    expect(raceWinner?.body.data.schedule_version).toBe(2)
+
+    const activeBookingConflict = await request(app)
+      .post(`${ownerSchedulePath}/exceptions`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 2,
+        date: '2030-01-07',
+        is_available: false,
+        reason: 'Must not erase an active booking.',
+      })
+    expect(activeBookingConflict.status).toBe(409)
+    expect(activeBookingConflict.body.error).toMatchObject({
+      code: 'schedule_has_active_bookings',
+    })
+    expect(activeBookingConflict.body.error.message).toContain('1 active booking(s)')
+
+    // Narrowing a working window must be refused too, not only removing the day.
+    // Before the 20260728000700 guard this silently left the booking outside the
+    // barber's own availability.
+    const narrowedWindowConflict = await request(app)
+      .post(`${ownerSchedulePath}/exceptions`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 2,
+        date: '2030-01-07',
+        is_available: true,
+        start_time: '23:00',
+        end_time: '23:30',
+        reason: 'Must not orphan a booking outside the new window.',
+      })
+    expect(narrowedWindowConflict.status).toBe(409)
+    expect(narrowedWindowConflict.body.error).toMatchObject({
+      code: 'schedule_has_active_bookings',
+    })
+
+    // A window that still covers the booking is accepted, so the guard is not
+    // simply refusing every edit on a booked date.
+    const wideWindowAccepted = await request(app)
+      .post(`${ownerSchedulePath}/exceptions`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 2,
+        date: '2030-01-07',
+        is_available: true,
+        start_time: '00:00',
+        end_time: '23:59',
+        reason: 'Full-day window keeps the booking inside availability.',
+      })
+    expect(wideWindowAccepted.status, JSON.stringify(wideWindowAccepted.body)).toBe(201)
+    expect(wideWindowAccepted.body.data.schedule_version).toBe(3)
+
+    const exception = await request(app)
+      .post(`${ownerSchedulePath}/exceptions`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 3,
+        date: '2035-02-13',
+        is_available: false,
+        reason: 'Owner-authored integration fixture.',
+      })
+    expect(exception.status, JSON.stringify(exception.body)).toBe(201)
+    expect(exception.body.data).toMatchObject({
+      schedule_version: 4,
+      exception: {
+        barber_id: barber.id,
+        is_available: false,
+        source: 'owner',
+      },
     })
 
     const removedException = await request(app)
-      .delete(`/api/v1/shifts/exceptions/${exception.body.data.id}`)
-      .set('Authorization', `Bearer ${barber.token}`)
-    expect(removedException.status).toBe(204)
+      .delete(`/api/v1/owner/staff/shifts/exceptions/${exception.body.data.exception.id}`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 4 })
+    expect(removedException.status).toBe(200)
+    expect(removedException.body.data).toMatchObject({
+      removed_id: exception.body.data.exception.id,
+      schedule_version: 5,
+    })
 
+    const shiftRequestKey = crypto.randomUUID()
     const shiftRequest = await request(app)
-      .post('/api/v1/shift-change-requests')
+      .post('/api/v1/barber/shift-change-requests')
       .set('Authorization', `Bearer ${barber.token}`)
-      .send({ date: '2035-02-12', message: 'Please adjust this future shift.' })
+      .send({
+        date: '2035-02-12',
+        message: 'Please adjust this future shift.',
+        kind: 'time_off',
+        idempotency_key: shiftRequestKey,
+      })
     expect(shiftRequest.status).toBe(201)
     expect(shiftRequest.body.data).toMatchObject({
       barber_id: barber.id,
       shop_id: fixtures.primaryShopId,
       status: 'pending',
+      requested_kind: 'time_off',
+      version: 1,
     })
+
+    // P2-06 idempotency: the same key returns the same request, never a second.
+    const shiftRequestReplay = await request(app)
+      .post('/api/v1/barber/shift-change-requests')
+      .set('Authorization', `Bearer ${barber.token}`)
+      .send({
+        date: '2035-02-12',
+        message: 'Please adjust this future shift.',
+        kind: 'time_off',
+        idempotency_key: shiftRequestKey,
+      })
+    expect(shiftRequestReplay.status).toBe(201)
+    expect(shiftRequestReplay.body.data.id).toBe(shiftRequest.body.data.id)
+
+    // P2-06 authority: approving writes the exception in the same transaction,
+    // and a foreign owner cannot resolve another shop's request.
+    const foreignResolve = await request(app)
+      .post(`/api/v1/owner/shift-change-requests/${shiftRequest.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${otherOwner.token}`)
+      .send({ expected_version: 1 })
+    expect(foreignResolve.status).toBe(403)
+
+    const staleResolve = await request(app)
+      .post(`/api/v1/owner/shift-change-requests/${shiftRequest.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 99 })
+    expect(staleResolve.status).toBe(409)
+
+    const approved = await request(app)
+      .post(`/api/v1/owner/shift-change-requests/${shiftRequest.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 1 })
+    expect(approved.status).toBe(200)
+    expect(approved.body.data).toMatchObject({ status: 'approved', schedule_version: 6 })
+    expect(approved.body.data.exception_id).toBeTruthy()
+
+    const { data: appliedException } = await service
+      .from('shift_exceptions')
+      .select('id,date,is_available,source,change_request_id')
+      .eq('id', approved.body.data.exception_id as string)
+      .single()
+    expect(appliedException).toMatchObject({
+      date: '2035-02-12',
+      is_available: false,
+      source: 'change_request',
+      change_request_id: shiftRequest.body.data.id,
+    })
+
+    const alreadyResolved = await request(app)
+      .post(`/api/v1/owner/shift-change-requests/${shiftRequest.body.data.id}/decline`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: 2 })
+    expect(alreadyResolved.status).toBe(409)
 
     const { data: sourceMessage, error: sourceMessageError } = await service
       .from('messages')
@@ -776,6 +2071,23 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(commandBoundaryExceptionError).toBeNull()
     if (!commandBoundaryException) throw new Error('A shift exception is required for command-boundary tests.')
 
+    const { data: scheduleRevision, error: scheduleRevisionError } = await owner.client
+      .from('staff_schedule_revisions')
+      .select('employment_id,version')
+      .eq('employment_id', fixtures.primaryEmploymentId)
+      .single()
+    expect(scheduleRevisionError).toBeNull()
+    if (!scheduleRevision) throw new Error('A schedule revision is required for command-boundary tests.')
+
+    const { data: scheduleEvent, error: scheduleEventError } = await owner.client
+      .from('staff_schedule_events')
+      .select('id,event_type')
+      .eq('employment_id', fixtures.primaryEmploymentId)
+      .limit(1)
+      .single()
+    expect(scheduleEventError).toBeNull()
+    if (!scheduleEvent) throw new Error('A schedule event is required for append-only tests.')
+
     const { data: sourceMessage, error: sourceMessageError } = await service
       .from('messages')
       .select('conversation_id')
@@ -812,6 +2124,10 @@ localDescribe('local Supabase RLS and Express authorization', () => {
         date: '2035-03-03',
         message: 'Bypass attempt.',
       }),
+      owner.client.from('shift_change_requests').update({ status: 'declined' }).eq('barber_id', barber.id),
+      owner.client.from('staff_schedule_revisions').update({ version: scheduleRevision.version + 10 }).eq('employment_id', fixtures.primaryEmploymentId),
+      owner.client.from('staff_schedule_events').update({ reason: 'Attempted history rewrite.' }).eq('id', scheduleEvent.id),
+      owner.client.from('staff_schedule_events').delete().eq('id', scheduleEvent.id),
       barber.client.from('messages').insert({
         conversation_id: sourceMessage.conversation_id,
         sender_id: barber.id,
@@ -923,12 +2239,6 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       hired_at: '2026-01-01',
     })
     expect(employmentError).toBeNull()
-    const { error: joinCodeError } = await service.from('shop_join_codes').upsert({
-      shop_id: fixtures.secondShopId,
-      code: `SUSP${fixtureNamespace.replaceAll('-', '').slice(0, 8).toUpperCase()}`,
-    })
-    expect(joinCodeError).toBeNull()
-
     const { error: suspensionError } = await service
       .from('users')
       .update({ verification_status: 'suspended' })
@@ -941,9 +2251,11 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     })
     expect(capability.error?.code).toBe('42501')
 
-    const join = await service.rpc('api_join_shop_by_code', {
+    const join = await service.rpc('api_create_join_code_request', {
       p_barber_id: suspendedBarberId,
       p_code: `SUSP${fixtureNamespace.replaceAll('-', '').slice(0, 8).toUpperCase()}`,
+      p_message: null,
+      p_idempotency_key: crypto.randomUUID(),
     })
     expect(join.error?.code).toBe('42501')
 
@@ -1083,6 +2395,7 @@ localDescribe('local Supabase RLS and Express authorization', () => {
         shop_id: fixtures.primaryShopId,
         date: '2026-07-29',
         message: 'Historical schedule request.',
+        idempotency_key: crypto.randomUUID(),
       })
       .select('*')
       .single()
@@ -1192,17 +2505,23 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       ended_reason: 'Employment concluded after every assigned visit was resolved.',
     })
 
-    const rememberedCode = `PB${crypto.randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`
-    const { error: rememberedCodeError } = await service
-      .from('shop_join_codes')
-      .upsert({ shop_id: fixtures.primaryShopId, code: rememberedCode })
-    expect(rememberedCodeError).toBeNull()
+    const currentHiring = await request(app).get('/api/v1/owner/shop/hiring').set('Authorization', `Bearer ${owner.token}`)
+    const reopened = await request(app)
+      .patch('/api/v1/owner/shop/hiring')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ expected_version: currentHiring.body.data.shop_version, status: 'open', open_positions: 1 })
+    expect(reopened.status).toBe(200)
+    const rememberedCode = await request(app)
+      .post('/api/v1/owner/shop/join-code/rotate')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ command_id: crypto.randomUUID(), expires_in_days: 7, usage_limit: 2 })
+    expect(rememberedCode.status).toBe(200)
     const rejoin = await request(app)
-      .post('/api/v1/employment/join')
+      .post('/api/v1/employment/requests/join-code')
       .set('Authorization', `Bearer ${former.token}`)
-      .send({ code: rememberedCode })
-    expect(rejoin.status).toBe(409)
-    expect(rejoin.body.error.code).toBe('rehire_requires_owner_approval')
+      .send({ code: rememberedCode.body.data.code, idempotency_key: crypto.randomUUID() })
+    expect(rejoin.status).toBe(201)
+    expect(rejoin.body.data).toMatchObject({ status: 'pending', direction: 'join_code' })
     const { data: activeAfterRejoinAttempt, error: activeAfterRejoinError } = await service
       .from('barber_employment')
       .select('id')
@@ -1211,7 +2530,6 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       .is('ended_at', null)
     expect(activeAfterRejoinError).toBeNull()
     expect(activeAfterRejoinAttempt).toEqual([])
-    await service.from('shop_join_codes').delete().eq('shop_id', fixtures.primaryShopId)
 
     const revokedReads = await Promise.all([
       former.client.from('appointments').select('id').eq('id', historicalAppointment.id as string),

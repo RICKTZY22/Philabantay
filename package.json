@@ -12,6 +12,7 @@
     "dev:api": "npm run dev --workspace @barbershop/api",
     "build": "npm run typecheck --workspace @barbershop/shared && npm run build --workspace @barbershop/api && npm run build --workspace @barbershop/web",
     "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }

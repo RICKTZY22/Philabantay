@@ -1,4 +1,4 @@
-import type { OwnerShop } from './types'
+import type { OwnerShop, OwnerShopHiring, ShopHiringStatus } from './types'
 
 /** Result of checking whether a draft shop may be published. */
 export interface ShopPublicationReadiness {
@@ -35,4 +35,33 @@ export function shopPublicationReadiness(
   if (counts.operatingHours < 1) missing.push('at least one operating-hours block')
   if (counts.activeServices < 1) missing.push('at least one active service')
   return { ready: missing.length === 0, missing }
+}
+
+export function shopHiringStatus(
+  isHiring: boolean,
+  openPositions: number | null,
+): ShopHiringStatus {
+  if (isHiring) return 'open'
+  if (openPositions === 0) return 'full'
+  return 'off'
+}
+
+/** Normalize a private shop row into the stable owner hiring contract. */
+export function ownerShopHiringFromRow(row: {
+  id: string
+  is_hiring: boolean
+  hiring_open_positions: number | null
+  hiring_note: string | null
+  version: number
+  updated_at: string
+}): OwnerShopHiring {
+  return {
+    shop_id: row.id,
+    status: shopHiringStatus(row.is_hiring, row.hiring_open_positions),
+    is_hiring: row.is_hiring,
+    open_positions: row.hiring_open_positions,
+    note: row.hiring_note,
+    shop_version: row.version,
+    updated_at: row.updated_at,
+  }
 }

@@ -3,6 +3,7 @@ import { createApp } from './app'
 import { readConfig } from './config'
 import { createSupabaseDependencies } from './lib/supabase'
 import { processDueAppointmentTransitions } from './routes/bookings'
+import { processStaleShopMedia } from './lib/shop-media'
 
 const config = readConfig(process.env)
 const dependencies = createSupabaseDependencies(config)
@@ -13,9 +14,12 @@ async function runLifecycleWorker(): Promise<void> {
   if (lifecycleWorkerRunning) return
   lifecycleWorkerRunning = true
   try {
-    await processDueAppointmentTransitions(dependencies)
+    await Promise.all([
+      processDueAppointmentTransitions(dependencies),
+      processStaleShopMedia(dependencies),
+    ])
   } catch (error) {
-    console.error('Appointment lifecycle worker failed.', error)
+    console.error('Lifecycle worker failed.', error)
   } finally {
     lifecycleWorkerRunning = false
   }

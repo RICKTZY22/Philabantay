@@ -138,6 +138,75 @@ export interface Service extends PublicService {}
 export interface StoredService extends PublicService {
   active: boolean
   created_at: string
+  updated_at: string
+}
+
+/** Owner-only service-menu row, including inactive entries. */
+export interface OwnerService extends StoredService {}
+
+export type ServiceProviderKind = 'owner' | 'barber'
+
+/** One shop-scoped provider together with the owner's qualification revision. */
+export interface ServiceProviderQualification {
+  shop_id: string
+  provider_user_id: string
+  provider_kind: ServiceProviderKind
+  profile: PublicProfile
+  /** Eligibility is still derived from owner capability or active employment. */
+  eligible: boolean
+  accepting_bookings: boolean
+  qualification_version: number
+  qualified_service_ids: string[]
+}
+
+/** Explicit owner-as-provider capability. It never changes the account role. */
+export interface OwnerProviderCapability {
+  shop_id: string
+  owner_id: string
+  active: boolean
+  accepting_bookings: boolean
+  rating: number
+  rating_count: number
+  version: number
+  granted_at: string | null
+  revoked_at: string | null
+}
+
+export type ServiceQualificationRequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'declined'
+  | 'withdrawn'
+
+/** Barber request for one service. Only the owner can turn it into a grant. */
+export interface ServiceQualificationRequest {
+  id: string
+  shop_id: string
+  service_id: string
+  barber_id: string
+  status: ServiceQualificationRequestStatus
+  message: string | null
+  version: number
+  created_at: string
+  resolved_at: string | null
+  service: Pick<StoredService, 'id' | 'name' | 'active'>
+  barber?: PublicProfile
+}
+
+export interface OwnerQualificationWorkspace {
+  shop_id: string
+  owner_provider: OwnerProviderCapability
+  services: StoredService[]
+  providers: ServiceProviderQualification[]
+  requests: ServiceQualificationRequest[]
+}
+
+export interface BarberQualificationView {
+  shop_id: string | null
+  services: Array<Pick<StoredService, 'id' | 'name' | 'active'> & {
+    qualified: boolean
+    pending_request: ServiceQualificationRequest | null
+  }>
 }
 
 /** Recurring weekly working block. Times are local wall-clock "HH:MM". */
@@ -270,6 +339,53 @@ export interface ShopWithStatus extends PublicShop {
   available_barber_count: number
 }
 
+/** Public weekly schedule row. Internal row/shop IDs are deliberately omitted. */
+export interface PublicShopHoursBlock {
+  weekday: Weekday
+  open_time: string | null
+  close_time: string | null
+  closed: boolean
+  block_order: number
+}
+
+/**
+ * Public date exception. The owner's free-text reason is private because it can
+ * contain staffing or personal information.
+ */
+export interface PublicShopClosure {
+  local_date: string
+  closed: boolean
+  replacement_open_time: string | null
+  replacement_close_time: string | null
+}
+
+/** Approved public image backed by a short-lived signed object URL. */
+export interface PublicShopMedia {
+  id: string
+  role: ShopMediaRole
+  sort_order: number
+  alt_text: string
+  url: string
+}
+
+/**
+ * Anonymous shop-detail projection. It composes only explicitly public facts;
+ * owner identity, lifecycle/version fields, storage paths, private closure
+ * reasons, moderation state, and internal timestamps never cross this seam.
+ */
+export interface PublicShopDetail extends ShopWithStatus {
+  description: string | null
+  public_contact_phone: string | null
+  timezone: string
+  booking_mode: ShopBookingMode
+  chair_count: number
+  default_buffer_min: number
+  operating_hours: PublicShopHoursBlock[]
+  closures: PublicShopClosure[]
+  services: PublicService[]
+  media: PublicShopMedia[]
+}
+
 /** Publication lifecycle. Only `published` shops appear in public discovery. */
 export type ShopLifecycleStatus =
   | 'draft'
@@ -279,6 +395,20 @@ export type ShopLifecycleStatus =
   | 'archived'
 
 export type ShopBookingMode = 'manual' | 'instant'
+export type ShopHiringStatus = 'off' | 'open' | 'full'
+
+/** Owner-only hiring configuration for one shop. */
+export interface OwnerShopHiring {
+  shop_id: string
+  status: ShopHiringStatus
+  is_hiring: boolean
+  /** Null means the owner has not published an exact opening count. */
+  open_positions: number | null
+  note: string | null
+  /** Same optimistic token used by the rest of Shop Setup. */
+  shop_version: number
+  updated_at: string
+}
 
 /**
  * The owner's private, editable view of their own shop, including lifecycle and
@@ -326,17 +456,32 @@ export interface ShopClosure {
   reason: string | null
 }
 
-export type EmploymentType = 'full_time' | 'part_time' | 'chair_rental'
-export type BarberApplicationStatus = 'pending' | 'accepted' | 'declined'
+export type ShopMediaRole = 'storefront' | 'interior' | 'team' | 'gallery'
+export type ShopMediaUploadStatus = 'awaiting_upload' | 'ready' | 'rejected' | 'deleting'
+export type ShopMediaModerationStatus = 'pending' | 'approved' | 'rejected'
 
-/** Public hiring notice attached to a shop. Join codes are intentionally absent. */
+/** Owner-only metadata. The object itself stays in a private storage bucket. */
+export interface ShopMedia {
+  id: string
+  shop_id: string
+  role: ShopMediaRole
+  sort_order: number
+  alt_text: string
+  upload_status: ShopMediaUploadStatus
+  moderation_status: ShopMediaModerationStatus
+  /** Short-lived owner preview URL, omitted while the upload is incomplete. */
+  preview_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EmploymentType = 'full_time' | 'part_time' | 'chair_rental'
+/** Public hiring notice attached to a published shop. */
 export interface HiringListing {
   shop_id: string
-  role_title: string
-  employment_type: EmploymentType
-  requirements: string[]
-  open_positions: number
-  accepting_applications: boolean
+  status: 'open'
+  open_positions: number | null
+  note: string | null
   updated_at: string
 }
 
@@ -344,17 +489,100 @@ export interface HiringShop extends ShopWithStatus {
   hiring: HiringListing
 }
 
-/** A barber's application; approval is controlled by the shop in production. */
-export interface BarberApplication {
-  id: string
+export type EmploymentRequestDirection =
+  | 'barber_application'
+  | 'owner_invitation'
+  | 'join_code'
+
+export type EmploymentRequestStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'withdrawn'
+  | 'expired'
+  | 'superseded'
+
+export type EmploymentRequestAction = 'accept' | 'decline' | 'withdraw'
+
+/** Opt-in profile owners may use when considering an invitation. */
+export interface BarberJobProfile {
   barber_id: string
-  shop_id: string
-  status: BarberApplicationStatus
-  created_at: string
+  visible: boolean
+  bio: string | null
+  experience_years: number | null
+  specialties: string[]
+  portfolio_media: string[]
+  coarse_work_area: string | null
+  schedule_preference: string | null
   updated_at: string
 }
 
-export type BarberEmploymentStatus = 'applied' | 'active' | 'resigned'
+export interface JobSeekerProfile extends BarberJobProfile {
+  full_name: string
+  avatar_url: string | null
+}
+
+export interface EmploymentRequestBarber {
+  id: string
+  full_name: string
+  avatar_url: string | null
+  job_profile: BarberJobProfile | null
+}
+
+/** One converged application, owner invitation, or join-code request. */
+export interface EmploymentRequest {
+  id: string
+  barber_id: string
+  shop_id: string
+  direction: EmploymentRequestDirection
+  status: EmploymentRequestStatus
+  message: string | null
+  join_code_id: string | null
+  created_by: string
+  resolved_by: string | null
+  expires_at: string
+  resolved_at: string | null
+  version: number
+  created_at: string
+  updated_at: string
+  allowed_actions: EmploymentRequestAction[]
+  shop: PublicShop
+  barber: EmploymentRequestBarber
+}
+
+export type EmploymentEventType =
+  | 'request_created'
+  | 'request_accepted'
+  | 'request_declined'
+  | 'request_withdrawn'
+  | 'request_expired'
+  | 'request_superseded'
+  | 'join_code_rotated'
+  | 'join_code_revoked'
+
+export interface EmploymentEvent {
+  id: string
+  request_id: string | null
+  employment_id: string | null
+  shop_id: string
+  barber_id: string | null
+  actor_id: string | null
+  event_type: EmploymentEventType
+  reason: string | null
+  created_at: string
+}
+
+export interface EmploymentRequestDetail extends EmploymentRequest {
+  events: EmploymentEvent[]
+}
+
+export interface EmploymentRequestDecision {
+  request: EmploymentRequest
+  employment: BarberEmployment | null
+  hiring: OwnerShopHiring
+}
+
+export type BarberEmploymentStatus = 'active' | 'resigned'
 
 /**
  * One stint at one shop. Attendance, absences, and shift change requests are
@@ -403,6 +631,12 @@ export type ShiftChangeRequestStatus = 'pending' | 'approved' | 'declined'
  * Barber-initiated request to adjust one day's shift. The owner decides;
  * barbers never edit an assigned day directly.
  */
+/** What the barber is asking for on that date. */
+export type ShiftChangeRequestKind = 'time_off' | 'different_hours'
+
+/** Whether an exception was authored by the owner or produced by an approval. */
+export type ShiftExceptionSource = 'owner' | 'change_request'
+
 export interface ShiftChangeRequest {
   id: string
   barber_id: string
@@ -411,8 +645,32 @@ export interface ShiftChangeRequest {
   date: string
   message: string
   status: ShiftChangeRequestStatus
+  /** Optimistic-concurrency token for the owner's approve/decline decision. */
+  version: number
+  requested_kind: ShiftChangeRequestKind
+  /** Present only when `requested_kind` is `different_hours`. */
+  requested_start_time: string | null
+  requested_end_time: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  decision_note: string | null
+  /** The shift exception an approval created, linking decision to schedule. */
+  applied_exception_id: string | null
   created_at: string
   updated_at: string
+}
+
+/**
+ * One staff member's authoritative roster. `schedule_version` is the token every
+ * owner write must echo back, so two owner sessions cannot both apply stale
+ * edits.
+ */
+export interface StaffSchedule {
+  employment_id: string
+  barber_id: string
+  schedule_version: number
+  patterns: AvailabilityRule[]
+  exceptions: AvailabilityOverride[]
 }
 
 /**
@@ -430,8 +688,15 @@ export interface ShopStaffMember {
 }
 
 export interface ShopJoinCodeDetails {
-  shop: ShopWithStatus
-  code: string
+  shop: OwnerShop
+  active: boolean
+  expires_at: string | null
+  usage_limit: number | null
+  used_count: number
+  remaining_uses: number | null
+  version: number | null
+  /** Returned only once from rotate. It is never persisted in plaintext. */
+  code?: string
 }
 
 export interface Conversation {

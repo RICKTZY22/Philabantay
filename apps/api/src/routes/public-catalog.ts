@@ -7,6 +7,7 @@ import {
   idParamsSchema,
   publicBarberSchema,
   publicServiceSchema,
+  publicShopDetailSchema,
   publicShopWithStatusSchema,
   publicSlotSchema,
   uuidSchema,
@@ -15,10 +16,16 @@ import type { ApiDependencies } from '../lib/supabase'
 import { manilaMoment, manilaNow, wallMinute } from '../lib/manila-time'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseParams, parseQuery } from '../http/validation'
+import { issueShopMediaPreview } from '../lib/shop-media'
 
 export const PUBLIC_SHOP_COLUMNS = 'id,name,address,city,lat,lng,rating,rating_count'
+export const PUBLIC_SHOP_DETAIL_COLUMNS =
+  'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min'
 export const PUBLIC_BARBER_COLUMNS = 'id,bio,rating,rating_count,shift_status,accepting_bookings'
 export const PUBLIC_SERVICE_COLUMNS = 'id,shop_id,name,duration_min,price_cents'
+const PUBLIC_HOURS_COLUMNS = 'weekday,open_time,close_time,closed,block_order'
+const PUBLIC_CLOSURE_COLUMNS = 'local_date,closed,replacement_open_time,replacement_close_time'
+const PUBLIC_MEDIA_COLUMNS = 'id,storage_path,role,sort_order,alt_text'
 
 const servicesQuerySchema = z.strictObject({ shopId: uuidSchema.optional() })
 export const publicSlotQuerySchema = z.strictObject({
@@ -187,6 +194,100 @@ async function publicServices(dependencies: ApiDependencies, shopId?: string) {
   return publicServiceSchema.array().parse(data ?? [])
 }
 
+function publicWallTime(value: unknown): string | null {
+  return typeof value === 'string' ? value.slice(0, 5) : null
+}
+
+export async function publicShopDetail(dependencies: ApiDependencies, shopId: string) {
+  const summary = (await publicCatalogueSnapshot(dependencies)).shops
+    .find((candidate) => candidate.id === shopId)
+  if (!summary) return null
+
+  // Recheck publication on the detail row itself so an unpublish between the
+  // eligibility RPC and this read cannot expose a now-private shop.
+  const { data: detailFields, error: detailError } = await dependencies.database
+    .from('shops')
+    .select(PUBLIC_SHOP_DETAIL_COLUMNS)
+    .eq('id', shopId)
+    .eq('lifecycle_status', 'published')
+    .maybeSingle()
+  if (detailError) throw fromDatabaseError(detailError)
+  if (!detailFields) return null
+
+  const [
+    { data: hourRows, error: hoursError },
+    { data: closureRows, error: closuresError },
+    services,
+    { data: mediaRows, error: mediaError },
+  ] = await Promise.all([
+    dependencies.database
+      .from('shop_operating_hours')
+      .select(PUBLIC_HOURS_COLUMNS)
+      .eq('shop_id', shopId)
+      .order('weekday', { ascending: true })
+      .order('block_order', { ascending: true })
+      .limit(64),
+    dependencies.database
+      .from('shop_closures')
+      .select(PUBLIC_CLOSURE_COLUMNS)
+      .eq('shop_id', shopId)
+      .gte('local_date', manilaNow().date)
+      .order('local_date', { ascending: true })
+      .limit(366),
+    publicServices(dependencies, shopId),
+    dependencies.database
+      .from('shop_media')
+      .select(PUBLIC_MEDIA_COLUMNS)
+      .eq('shop_id', shopId)
+      .eq('upload_status', 'ready')
+      .eq('moderation_status', 'approved')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(100),
+  ])
+  if (hoursError) throw fromDatabaseError(hoursError)
+  if (closuresError) throw fromDatabaseError(closuresError)
+  if (mediaError) throw fromDatabaseError(mediaError)
+
+  const operatingHours = (hourRows ?? []).map((row) => ({
+    weekday: row.weekday,
+    open_time: publicWallTime(row.open_time),
+    close_time: publicWallTime(row.close_time),
+    closed: row.closed,
+    block_order: row.block_order,
+  }))
+  const closures = (closureRows ?? []).map((row) => ({
+    local_date: row.local_date,
+    closed: row.closed,
+    replacement_open_time: publicWallTime(row.replacement_open_time),
+    replacement_close_time: publicWallTime(row.replacement_close_time),
+  }))
+  const media = (await Promise.all((mediaRows ?? []).map(async (row) => {
+    try {
+      return {
+        id: row.id,
+        role: row.role,
+        sort_order: row.sort_order,
+        alt_text: row.alt_text,
+        url: await issueShopMediaPreview(dependencies, row.storage_path as string),
+      }
+    } catch {
+      // One stale storage object must not take down an otherwise valid public
+      // shop detail response.
+      return null
+    }
+  }))).filter((item) => item !== null)
+
+  return publicShopDetailSchema.parse({
+    ...summary,
+    ...detailFields,
+    operating_hours: operatingHours,
+    closures,
+    services,
+    media,
+  })
+}
+
 export async function publicSlots(
   dependencies: ApiDependencies,
   input: z.infer<typeof publicSlotQuerySchema>,
@@ -258,8 +359,7 @@ export function createPublicCatalogRouter(dependencies: ApiDependencies): Router
 
   router.get('/shops/:id', async (request, response) => {
     const { id } = parseParams(request, idParamsSchema)
-    const shop = (await publicCatalogueSnapshot(dependencies)).shops.find((candidate) => candidate.id === id) ?? null
-    response.json({ data: shop })
+    response.json({ data: await publicShopDetail(dependencies, id) })
   })
 
   router.get('/barbers', async (_request, response) => {
