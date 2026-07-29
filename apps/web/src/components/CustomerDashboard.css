@@ -158,18 +158,11 @@
 /* Alternating tilt, matching the hand-placed feel of the rest of the theme. */
 .cd-stats .cd-stat:nth-child(1) { transform: rotate(-1deg); }
 .cd-stats .cd-stat:nth-child(2) { transform: rotate(1deg); }
-.cd-stats .cd-stat:nth-child(3) { transform: rotate(1deg); }
-.cd-stats .cd-stat:nth-child(4) { transform: rotate(-1deg); }
 
 a.cd-stat:hover { border-color: #16878d; }
 a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offset: 3px; }
 .cd-stat.cd-stat-blue { background: var(--blue); }
 .cd-stat.cd-stat-pink { background: var(--pink); }
-
-/* Dashadong slots pa lang — walang totoong datos, sadyang placeholder. */
-.cd-stat.cd-stat-placeholder { border-style: dashed; }
-.cd-stat-placeholder-a { background: #e7eab4; }
-.cd-stat-placeholder-b { background: var(--purple); }
 
 .cd-profile-avatar {
   position: relative;
@@ -244,16 +237,6 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
   background: #fff;
 }
 
-.cd-stat-badge.is-dashed { border-style: dashed; }
-
-.cd-stat-diamond {
-  width: 13px;
-  height: 13px;
-  border: 2.4px dashed var(--ink);
-  border-radius: 3px;
-  transform: rotate(45deg);
-}
-
 /* Filtered SVG + rotated card can render as a black rectangle in Chromium.
    The plain circular badge already carries the doodle character. */
 .cd-stat-badge .doodle-icon { filter: none; }
@@ -276,7 +259,7 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 
 .cd-filter-bar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(125px, auto));
+  grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(125px, auto));
   align-items: end;
   gap: 9px;
   padding: 13px;
@@ -539,12 +522,17 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 .cd-discovery-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .cd-discovery-card h3 { margin: 11px 0 2px; font-size: 1.18rem; }
 .cd-discovery-card > p { margin: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
-.cd-discovery-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; color: var(--faint); font-size: 13px; text-transform: capitalize; }
+/* No text-transform: the meta row now shows real names and prices verbatim. */
+.cd-discovery-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; color: var(--faint); font-size: 13px; }
 .cd-discovery-meta span { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; }
 .cd-discovery-meta .doodle-icon { color: #d99a1b; }
 .cd-service-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
 .cd-service-tags span { padding: 2px 7px; background: var(--blue); border: 1px solid var(--ink); border-radius: 7px 10px 8px 11px; font-size: 12px; }
+/* Honest empty state — no tag chrome when the shop has published nothing. */
+.cd-service-tags .cd-service-tags-empty { padding: 0; background: none; border: 0; color: var(--faint); font-size: 12px; }
 .cd-discovery-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 13px; color: #388c50; font-size: 13px; }
+/* Zero free barbers is a real reading, so it must not read as a positive one. */
+.cd-discovery-actions.is-none-free { color: var(--faint); }
 
 /* ---- Side: nearest + favorites ---- */
 /* Normal na daloy — nag-scroll kasama ng buong page (dati sticky, pero nagagalaw
@@ -630,14 +618,10 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
 .cd-engagement-wide .cd-card-head { grid-column: 1 / -1; }
 .cd-engagement-wide .cd-stamp-row { grid-column: 1; grid-row: 2; grid-template-columns: repeat(10, minmax(36px, 1fr)); }
 .cd-engagement-wide > .muted { grid-column: 1; grid-row: 3; }
-.cd-engagement-wide .cd-referral-box { grid-column: 2; grid-row: 2; }
-.cd-engagement-wide .cd-notification-link { grid-column: 2; grid-row: 3; }
+.cd-engagement-wide .cd-notification-link { grid-column: 2; grid-row: 2; align-self: start; }
 .cd-stamp-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin: 3px 0 12px; }
 .cd-stamp-row > span { aspect-ratio: 1; display: grid; place-items: center; border: 2px dashed var(--line); border-radius: 50% 45% 55% 48%; color: var(--faint); font: 700 13px 'Kalam', cursive; }
 .cd-stamp-row > span.is-filled { border-style: solid; border-color: var(--ink); background: var(--green); color: var(--ink); }
-.cd-referral-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); background: var(--paper-soft); transform: rotate(.5deg); }
-.cd-referral-box > div { display: grid; }
-.cd-referral-box span { color: var(--muted); font-size: 13px; }
 .cd-notification-link { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--muted); }
 .cd-notification-link .doodle-icon:last-child { margin-left: auto; }
 
@@ -647,7 +631,7 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
   .cd-head { width: auto; }
   .cd-head h1 br { display: none; }
   .cd-head-sub { max-width: none; }
-  .cd-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; }
+  .cd-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
   .cd-profile-avatar { position: absolute; top: 18px; right: 22px; margin: 0; }
   .cd-profile-avatar-frame { width: 112px; height: 112px; }
   .cd-profile-avatar-frame .doodle-avatar { --avatar-size: 112px !important; }
@@ -660,7 +644,6 @@ a.cd-stat:hover .cd-stat-label { text-decoration: underline; text-underline-offs
   .cd-engagement-wide .cd-card-head,
   .cd-engagement-wide .cd-stamp-row,
   .cd-engagement-wide > .muted,
-  .cd-engagement-wide .cd-referral-box,
   .cd-engagement-wide .cd-notification-link { grid-column: 1; grid-row: auto; }
 }
 

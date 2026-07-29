@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  APPOINTMENT_STATUS_LABELS,
   canModifyAppointment,
   DataError,
   isUpcomingAppointment,
@@ -15,15 +14,8 @@ import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { ModalPortal } from '../components/ModalPortal'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { money, timeOfDay, dayLabel } from '../lib/format'
+import { appointmentStatusPresentation } from '../lib/appointmentStatus'
 import './AppointmentsPage.css'
-
-const STATUS_CLASS: Record<string, string> = {
-  pending: 'pill-yellow',
-  confirmed: 'pill-on',
-  completed: 'pill-blue',
-  cancelled: 'pill-off',
-  no_show: 'pill-off',
-}
 
 export function AppointmentsPage() {
   const backend = useBackend()
@@ -161,7 +153,9 @@ export function AppointmentsPage() {
             <button type="button" className="booking-notebook-close" aria-label="Close booking details" data-dialog-initial-focus onClick={closeSelected}>x</button>
             <header>
               <div><span className="eyebrow">BOOKING NOTEBOOK</span><h2 id="booking-notebook-title">{selected.service.name}</h2></div>
-              <span className={`pill ${STATUS_CLASS[selected.status] ?? 'pill-off'}`}>{APPOINTMENT_STATUS_LABELS[selected.status]}</span>
+              <span className={`pill ${appointmentStatusPresentation(selected.status).className}`}>
+                {appointmentStatusPresentation(selected.status).label}
+              </span>
             </header>
 
             <div className="booking-notebook-main">
@@ -234,4 +228,3 @@ function ScheduleList({ title, tone, appointments, empty, onSelect }: {
     </section>
   )
 }
-

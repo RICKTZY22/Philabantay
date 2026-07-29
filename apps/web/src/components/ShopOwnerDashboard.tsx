@@ -282,7 +282,11 @@ function OwnerOverview({
     setRotatingCode(true)
     setJoinCodeError('')
     try {
-      onJoinCodeChange(await backend.employment.rotateMyShopJoinCode())
+      onJoinCodeChange(await backend.employment.rotateMyShopJoinCode({
+        command_id: crypto.randomUUID(),
+        expires_in_days: 7,
+        usage_limit: 10,
+      }))
     } catch (error) {
       setJoinCodeError(error instanceof DataError ? error.message : 'Hindi makagawa ng bagong join code.')
     } finally {
@@ -442,8 +446,7 @@ function OwnerOverview({
               <div><span className="owner-card-kicker">team access</span><h2 id="owner-join-code-title">Barber join code</h2></div>
               <DoodleIcon name="user" size={24} />
             </div>
-            <p>{joinCode ? `Share only with a barber hired at ${joinCode.shop.name}.` : joinCodeError}</p>
-            {joinCode && <code>{joinCode.code}</code>}
+            <p>{joinCode ? `Code status: ${joinCode.active ? 'active' : 'inactive'}. Plaintext is only shown once in Hiring.` : joinCodeError}</p>
             <button type="button" className="btn btn-sm" disabled={rotatingCode} onClick={() => void rotateJoinCode()}>
               {rotatingCode ? 'Generating...' : 'Generate new code'}
             </button>
@@ -499,7 +502,11 @@ export function OwnerOverviewLegacy({
     setRotatingCode(true)
     setJoinCodeError('')
     try {
-      onJoinCodeChange(await backend.employment.rotateMyShopJoinCode())
+      onJoinCodeChange(await backend.employment.rotateMyShopJoinCode({
+        command_id: crypto.randomUUID(),
+        expires_in_days: 7,
+        usage_limit: 10,
+      }))
     } catch (error) {
       setJoinCodeError(error instanceof DataError ? error.message : 'Hindi makagawa ng bagong join code.')
     } finally {
@@ -515,9 +522,8 @@ export function OwnerOverviewLegacy({
           <div>
             <span className="owner-card-kicker">team access</span>
             <h2 id="owner-join-code-title">Barber join code</h2>
-            <p>{joinCode ? `Ibigay ito sa barber na hired na sa ${joinCode.shop.name}.` : joinCodeError}</p>
+            <p>{joinCode ? `Code status: ${joinCode.active ? 'active' : 'inactive'}. Manage one-time codes in Hiring.` : joinCodeError}</p>
           </div>
-          {joinCode && <code>{joinCode.code}</code>}
           <button type="button" className="btn btn-sm" disabled={rotatingCode} onClick={() => void rotateJoinCode()}>
             {rotatingCode ? 'Generating...' : 'Generate new code'}
           </button>

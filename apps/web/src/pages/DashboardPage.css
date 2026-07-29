@@ -59,6 +59,8 @@
 .schedule-card-heading { display: flex; justify-content: space-between; gap: 14px; }
 .schedule-card-heading h2 { margin: 2px 0 8px; }
 .hours-editor { display: grid; gap: 4px; }
+.schedule-readonly-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.schedule-readonly-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1.5px dashed var(--line); border-radius: 10px; }
 .hours-row { display: grid; grid-template-columns: minmax(120px, 1.2fr) auto auto auto; gap: 8px; align-items: center; padding: 5px 9px; border: 1.5px dashed var(--line); border-radius: 10px; opacity: .66; }
 .hours-row.is-enabled { opacity: 1; background: color-mix(in srgb, var(--green, #bfe5bd) 18%, var(--paper-soft)); }
 .hours-day { display: flex; align-items: center; gap: 8px; font-family: 'Kalam', cursive; }

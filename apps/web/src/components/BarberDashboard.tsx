@@ -7,10 +7,10 @@ import {
   type AvailabilityOverride,
   type AvailabilityRule,
   type BarberAbsence,
-  type BarberApplication,
   type BarberEmployment,
   type ConversationDetailed,
   type HiringShop,
+  type EmploymentRequest,
   type ShiftChangeRequest,
   type ShopWithStatus,
 } from '@barbershop/shared'
@@ -35,7 +35,7 @@ interface BarberDashboardProps {
 interface BarberHomeData {
   shop: ShopWithStatus | null
   hiringShops: HiringShop[]
-  applications: BarberApplication[]
+  requests: EmploymentRequest[]
   appointments: AppointmentDetailed[]
   conversations: ConversationDetailed[]
   rules: AvailabilityRule[]
@@ -48,7 +48,7 @@ interface BarberHomeData {
 const emptyData: BarberHomeData = {
   shop: null,
   hiringShops: [],
-  applications: [],
+  requests: [],
   appointments: [],
   conversations: [],
   rules: [],
@@ -68,11 +68,11 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
     try {
       const shop = await backend.employment.getMyShop()
       if (!shop) {
-        const [hiringShops, applications] = await Promise.all([
+        const [hiringShops, requests] = await Promise.all([
           backend.employment.listHiringShops(),
-          backend.employment.listMyApplications(),
+          backend.employment.listRequests(),
         ])
-        setData({ ...emptyData, hiringShops, applications })
+        setData({ ...emptyData, hiringShops, requests })
         return
       }
       const [appointments, conversations, rules, overrides, employment, absences, shiftRequests] = await Promise.all([
@@ -103,7 +103,7 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
         barberName={barberName}
         pending={pending}
         hiringShops={data.hiringShops}
-        applications={data.applications}
+        requests={data.requests}
         loadError={loadError}
         onRefresh={load}
       />
@@ -130,14 +130,14 @@ function BarberJobBoard({
   barberName,
   pending,
   hiringShops,
-  applications,
+  requests,
   loadError,
   onRefresh,
 }: {
   barberName: string
   pending: boolean
   hiringShops: HiringShop[]
-  applications: BarberApplication[]
+  requests: EmploymentRequest[]
   loadError: string
   onRefresh: () => Promise<void>
 }) {
@@ -164,19 +164,27 @@ function BarberJobBoard({
   const hiringMapShops = useMemo(() => hiringShops.map((shop) => ({
     ...shop,
     status: 'open' as const,
-    available_barber_count: shop.hiring.open_positions,
+    available_barber_count: 0,
   })), [hiringShops])
   const selectedShop = hiringShops.find((shop) => shop.id === selectedId) ?? sortedShops[0] ?? null
-  const applicationByShop = useMemo(() => new Map(
-    applications.map((application) => [application.shop_id, application]),
-  ), [applications])
+  const requestByShop = useMemo(() => {
+    const byShop = new Map<string, EmploymentRequest>()
+    requests.forEach((request) => {
+      if (!byShop.has(request.shop_id) || request.status === 'pending') byShop.set(request.shop_id, request)
+    })
+    return byShop
+  }, [requests])
 
   async function apply(shopId: string) {
     setBusyShopId(shopId)
     setMessage('')
     try {
-      await backend.employment.apply(shopId)
-      setMessage('Application sent. Makikita rito ang status habang hinihintay ang shop.')
+      await backend.employment.createRequest({
+        direction: 'barber_application',
+        shop_id: shopId,
+        idempotency_key: crypto.randomUUID(),
+      })
+      setMessage('Application request sent. Owner approval is required before employment starts.')
       await onRefresh()
     } catch (error) {
       setMessage(error instanceof DataError ? error.message : 'Hindi ma-send ang application.')
@@ -190,13 +198,34 @@ function BarberJobBoard({
     setJoining(true)
     setMessage('')
     try {
-      const shop = await backend.employment.joinWithCode({ code: joinCode })
-      setMessage(`Welcome sa ${shop.name}! Binubuksan ang shop workspace mo.`)
+      const employmentRequest = await backend.employment.createJoinCodeRequest({
+        code: joinCode,
+        idempotency_key: crypto.randomUUID(),
+      })
+      setJoinCode('')
+      setMessage(`Request sent to ${employmentRequest.shop.name}. The owner still needs to approve it.`)
       await onRefresh()
     } catch (error) {
       setMessage(error instanceof DataError ? error.message : 'Hindi ma-verify ang shop code.')
     } finally {
       setJoining(false)
+    }
+  }
+
+  async function withdraw(request: EmploymentRequest) {
+    setBusyShopId(request.shop_id)
+    setMessage('')
+    try {
+      await backend.employment.withdrawRequest(request.id, {
+        expected_version: request.version,
+        reason: 'Withdrawn by the barber.',
+      })
+      setMessage('Request withdrawn.')
+      await onRefresh()
+    } catch (error) {
+      setMessage(error instanceof DataError ? error.message : 'Hindi ma-withdraw ang request.')
+    } finally {
+      setBusyShopId(null)
     }
   }
 
@@ -251,7 +280,7 @@ function BarberJobBoard({
             <div><span className="eyebrow">NOW HIRING</span><h2>{sortedShops.length} open shops</h2></div>
           </div>
           {sortedShops.map((shop) => {
-            const application = applicationByShop.get(shop.id)
+            const employmentRequest = requestByShop.get(shop.id)
             return (
               <button
                 type="button"
@@ -259,9 +288,9 @@ function BarberJobBoard({
                 onClick={() => setSelectedId(shop.id)}
                 key={shop.id}
               >
-                <span className="barber-hiring-row-top"><strong>{shop.name}</strong><span>{shop.hiring.open_positions} slot{shop.hiring.open_positions === 1 ? '' : 's'}</span></span>
-                <span>{shop.city} · {employmentLabel(shop.hiring.employment_type)}</span>
-                {application && <em className={`barber-application is-${application.status}`}>{application.status}</em>}
+                <span className="barber-hiring-row-top"><strong>{shop.name}</strong><span>{openingLabel(shop.hiring.open_positions)}</span></span>
+                <span>{shop.city} · Hiring now</span>
+                {employmentRequest && <em className={`barber-application is-${employmentRequest.status}`}>{employmentRequest.status}</em>}
               </button>
             )
           })}
@@ -275,33 +304,33 @@ function BarberJobBoard({
             <>
               <div className="barber-section-heading">
                 <div><span className="eyebrow">SHOP DETAILS</span><h2>{selectedShop.name}</h2><p>{selectedShop.address}, {selectedShop.city}</p></div>
-                <span className="pill pill-green">{selectedShop.hiring.open_positions} open</span>
+                <span className="pill pill-green">{openingLabel(selectedShop.hiring.open_positions)}</span>
               </div>
               <div className="barber-role-strip">
-                <div><span>Role</span><strong>{selectedShop.hiring.role_title}</strong></div>
-                <div><span>Setup</span><strong>{employmentLabel(selectedShop.hiring.employment_type)}</strong></div>
+                <div><span>Hiring status</span><strong>Open</strong></div>
+                <div><span>Openings</span><strong>{selectedShop.hiring.open_positions ?? 'Not specified'}</strong></div>
                 <div><span>Shop rating</span><strong>{selectedShop.rating.toFixed(1)} / 5</strong></div>
               </div>
-              <h3>What the shop needs</h3>
-              <ul className="barber-requirements">
-                {selectedShop.hiring.requirements.map((requirement) => <li key={requirement}><DoodleIcon name="check" size={16} /> {requirement}</li>)}
-              </ul>
+              <h3>Hiring note</h3>
+              <p>{selectedShop.hiring.note ?? 'The owner has not added a hiring note yet.'}</p>
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={busyShopId === selectedShop.id || Boolean(applicationByShop.get(selectedShop.id))}
+                disabled={busyShopId === selectedShop.id || requestByShop.get(selectedShop.id)?.status === 'pending'}
                 onClick={() => void apply(selectedShop.id)}
               >
-                {applicationByShop.get(selectedShop.id) ? 'Application sent' : busyShopId === selectedShop.id ? 'Sending...' : 'Apply to this shop'}
+                {requestByShop.get(selectedShop.id)?.status === 'pending'
+                  ? 'Request pending'
+                  : busyShopId === selectedShop.id ? 'Sending...' : 'Apply to this shop'}
               </button>
             </>
           ) : <p className="muted">Pumili ng hiring shop para makita ang requirements.</p>}
         </section>
 
         <section className="barber-join-card rough-card barber-paper-stack">
-          <span className="eyebrow">ALREADY HIRED?</span>
-          <h2>Join with a shop code</h2>
-          <p>Hingin ang private code sa owner. Isang valid code lang ang kailangan para ma-register sa shop roster.</p>
+          <span className="eyebrow">OWNER-SHARED CODE</span>
+          <h2>Request with a shop code</h2>
+          <p>A valid code creates a pending request. It never adds you to a roster until the owner approves.</p>
           <form onSubmit={join}>
             <label htmlFor="barber-shop-code">Shop code</label>
             <div className="barber-code-row">
@@ -309,21 +338,44 @@ function BarberJobBoard({
                 id="barber-shop-code"
                 value={joinCode}
                 onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                placeholder="EXAMPLE26"
-                maxLength={24}
+                placeholder="PB-…"
+                maxLength={64}
                 autoComplete="off"
               />
               <button className="btn btn-green" disabled={joining || joinCode.trim().length < 4}>
-                {joining ? 'Checking...' : 'Join shop'}
+                {joining ? 'Checking...' : 'Send request'}
               </button>
             </div>
           </form>
-          <details>
-            <summary>Demo codes</summary>
-            <p><code>TONDO26</code>, <code>SOUTH26</code>, or <code>MAGIN26</code></p>
-          </details>
         </section>
       </div>
+
+      <section className="barber-request-history rough-card barber-paper-stack" aria-labelledby="barber-request-history-title">
+        <div className="barber-section-heading">
+          <div><span className="eyebrow">REQUEST TIMELINE</span><h2 id="barber-request-history-title">Applications and invitations</h2></div>
+          <Link className="btn btn-sm" to="/professional">Edit job profile</Link>
+        </div>
+        {requests.length === 0
+          ? <p className="muted">Wala ka pang employment request.</p>
+          : requests.map((request) => (
+            <article className="barber-request-row" key={request.id}>
+              <div>
+                <strong>{request.shop.name}</strong>
+                <span>{request.direction.replaceAll('_', ' ')} · {request.status}</span>
+              </div>
+              {request.allowed_actions.includes('withdraw') && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={busyShopId === request.shop_id}
+                  onClick={() => void withdraw(request)}
+                >
+                  Withdraw
+                </button>
+              )}
+            </article>
+          ))}
+      </section>
       </div>
     </DoodleBoard>
   )
@@ -431,10 +483,9 @@ function firstName(name: string) {
   return name.trim().split(/\s+/)[0]
 }
 
-function employmentLabel(value: HiringShop['hiring']['employment_type']) {
-  if (value === 'full_time') return 'Full-time'
-  if (value === 'part_time') return 'Part-time'
-  return 'Chair rental'
+function openingLabel(value: number | null) {
+  if (value === null) return 'Open count not set'
+  return `${value} slot${value === 1 ? '' : 's'}`
 }
 
 function nextWeekdayDistance(weekday: number) {

@@ -33,6 +33,7 @@ const CUSTOMER_MENU_ITEMS: MenuItem[] = [
 
 const BARBER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard', icon: 'home', label: 'Home', end: true },
+  { to: '/professional', icon: 'user', label: 'Professional profile' },
   { to: '/chat', icon: 'chat', label: 'Chats' },
   { to: '/schedule', icon: 'calendar', label: 'Schedule' },
   { to: '/settings', icon: 'gear', label: 'Settings' },
@@ -40,6 +41,7 @@ const BARBER_MENU_ITEMS: MenuItem[] = [
 
 const BARBER_SEEKER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard', icon: 'home', label: 'Hiring map', end: true },
+  { to: '/professional', icon: 'user', label: 'Professional profile' },
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]
 
@@ -47,8 +49,10 @@ const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard/owner/overview', icon: 'home', label: 'Overview', end: true },
   { to: '/dashboard/owner/reservations', icon: 'calendar', label: 'Reservations', end: true },
   { to: '/dashboard/owner/staff', icon: 'user', label: 'Staff', end: true },
+  { to: '/dashboard/owner/hiring', icon: 'search', label: 'Hiring', end: true },
   { to: '/chat', icon: 'chat', label: 'Messages' },
   { to: '/dashboard/owner/barbers', icon: 'scissors', label: 'Barbers', end: true },
+  { to: '/dashboard/owner/shop', icon: 'pole', label: 'Shop Setup', end: true },
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]
 

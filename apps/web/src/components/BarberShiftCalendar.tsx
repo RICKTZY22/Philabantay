@@ -4,6 +4,7 @@ import type {
   AvailabilityRule,
   BarberAbsence,
   BarberEmployment,
+  ShiftChangeRequestInput,
   ShiftChangeRequest,
 } from '@barbershop/shared'
 import { localDateKey, parseLocalDateKey, todayLocalDateKey } from '../lib/date'
@@ -46,7 +47,7 @@ interface BarberShiftCalendarProps {
   absences: BarberAbsence[]
   requests?: ShiftChangeRequest[]
   /** Kapag naka-set, may request form sa day card (schedule page mode). */
-  onRequestChange?: (date: string, message: string) => Promise<void>
+  onRequestChange?: (input: Omit<ShiftChangeRequestInput, 'idempotency_key'>) => Promise<void>
 }
 
 export function BarberShiftCalendar({
@@ -64,6 +65,9 @@ export function BarberShiftCalendar({
   })
   const [selectedDay, setSelectedDay] = useState<string | null>(today)
   const [draftMessage, setDraftMessage] = useState('')
+  const [requestKind, setRequestKind] = useState<ShiftChangeRequestInput['kind']>('time_off')
+  const [requestedStart, setRequestedStart] = useState('10:00')
+  const [requestedEnd, setRequestedEnd] = useState('19:00')
   const [submitting, setSubmitting] = useState(false)
   const [formMessage, setFormMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
 
@@ -141,8 +145,16 @@ export function BarberShiftCalendar({
     setSubmitting(true)
     setFormMessage(null)
     try {
-      await onRequestChange(selectedDay, draftMessage)
+      await onRequestChange({
+        date: selectedDay,
+        message: draftMessage,
+        kind: requestKind,
+        ...(requestKind === 'different_hours'
+          ? { start_time: requestedStart, end_time: requestedEnd }
+          : {}),
+      })
       setDraftMessage('')
+      setRequestKind('time_off')
       setFormMessage({ kind: 'ok', text: 'Naipasa ang request. Hihintayin ang desisyon ng owner.' })
     } catch (error) {
       setFormMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Hindi maipasa ang request.' })
@@ -246,22 +258,54 @@ export function BarberShiftCalendar({
           {selected.request && (
             <div className="bsc-request-status">
               <span className={REQUEST_PILL[selected.request.status]}>{REQUEST_LABEL[selected.request.status]}</span>
+              <strong>
+                {selected.request.requested_kind === 'time_off'
+                  ? 'Time off'
+                  : `Different hours: ${formatWallTime(selected.request.requested_start_time!)} – ${formatWallTime(selected.request.requested_end_time!)}`}
+              </strong>
               <span className="muted">“{selected.request.message}”</span>
             </div>
           )}
 
           {onRequestChange && !selected.request && selected.key >= today && !selected.beforeHire && !selected.absence && selected.blocks.length > 0 && (
             <form className="bsc-request-form" onSubmit={submitRequest}>
-              <label htmlFor={`bsc-request-${selected.key}`}>Request a change para sa shift na ito</label>
-              <div>
+              <label htmlFor={`bsc-request-kind-${selected.key}`}>Request a change para sa shift na ito</label>
+              <select
+                id={`bsc-request-kind-${selected.key}`}
+                value={requestKind}
+                onChange={(event) => setRequestKind(event.target.value as ShiftChangeRequestInput['kind'])}
+              >
+                <option value="time_off">Time off</option>
+                <option value="different_hours">Different hours</option>
+              </select>
+              {requestKind === 'different_hours' && (
+                <div className="bsc-request-times">
+                  <label>
+                    Start
+                    <input type="time" value={requestedStart} onChange={(event) => setRequestedStart(event.target.value)} />
+                  </label>
+                  <label>
+                    End
+                    <input type="time" value={requestedEnd} onChange={(event) => setRequestedEnd(event.target.value)} />
+                  </label>
+                </div>
+              )}
+              <div className="bsc-request-message-row">
                 <input
-                  id={`bsc-request-${selected.key}`}
+                  aria-label="Reason for schedule change"
                   value={draftMessage}
                   maxLength={300}
-                  placeholder="Hal. pa-late start po, 1 PM na lang…"
+                  placeholder={requestKind === 'time_off' ? 'Reason for requesting time off…' : 'Why do you need different hours?'}
                   onChange={(event) => setDraftMessage(event.target.value)}
                 />
-                <button className="btn btn-sm btn-primary" disabled={submitting || draftMessage.trim().length < 3}>
+                <button
+                  className="btn btn-sm btn-primary"
+                  disabled={
+                    submitting
+                    || draftMessage.trim().length < 3
+                    || (requestKind === 'different_hours' && requestedStart >= requestedEnd)
+                  }
+                >
                   {submitting ? 'Sending…' : 'Send request'}
                 </button>
               </div>

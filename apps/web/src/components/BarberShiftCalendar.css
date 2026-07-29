@@ -122,7 +122,8 @@
 .bsc-request-form { display: grid; gap: 5px; padding-top: 7px; border-top: 1.5px dashed var(--line); }
 .bsc-request-form label { font-size: .85rem; }
 .bsc-request-form > div { display: flex; gap: 7px; }
-.bsc-request-form input {
+.bsc-request-form input,
+.bsc-request-form select {
   flex: 1;
   min-width: 0;
   padding: 7px 9px;
@@ -130,4 +131,6 @@
   border: 1.8px solid var(--ink);
   border-radius: 8px 11px 7px 10px;
 }
+.bsc-request-times label { display: grid; flex: 1; gap: 3px; }
+.bsc-request-message-row { align-items: stretch; }
 .bsc-form-ok { margin: 0; color: #367044; }

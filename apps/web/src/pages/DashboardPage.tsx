@@ -6,11 +6,10 @@ import {
   WEEKDAY_LABELS,
   type AvailabilityOverride,
   type AvailabilityRule,
-  type AvailabilityRuleInput,
   type BarberAbsence,
   type BarberEmployment,
+  type ShiftChangeRequestInput,
   type ShiftChangeRequest,
-  type Weekday,
 } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useAuth } from '../features/auth/AuthContext'
@@ -19,14 +18,7 @@ import { BarberShiftCalendar } from '../components/BarberShiftCalendar'
 import { Loading } from '../components/Loading'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { dayLabel } from '../lib/format'
-import { todayLocalDateKey } from '../lib/date'
 import './DashboardPage.css'
-
-interface DayRow {
-  enabled: boolean
-  start: string
-  end: string
-}
 
 /**
  * Present/absent record ng barber — kasalukuyang buwan at buong tenure sa
@@ -73,9 +65,6 @@ function AttendanceCard({ employment, rules, absences }: {
   )
 }
 
-const emptyWeek = (): DayRow[] =>
-  Array.from({ length: 7 }, () => ({ enabled: false, start: '10:00', end: '19:00' }))
-
 function formatWallTime(value: string) {
   const [hours, minutes] = value.split(':').map(Number)
   return new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' })
@@ -90,7 +79,6 @@ export function DashboardPage() {
   const [loaded, setLoaded] = useState(false)
   const [shiftOn, setShiftOn] = useState(false)
   const [accepting, setAccepting] = useState(true)
-  const [week, setWeek] = useState<DayRow[]>(emptyWeek())
   const [rules, setRules] = useState<AvailabilityRule[]>([])
   const [overrides, setOverrides] = useState<AvailabilityOverride[]>([])
   const [employment, setEmployment] = useState<BarberEmployment | null>(null)
@@ -98,8 +86,6 @@ export function DashboardPage() {
   const [shiftRequests, setShiftRequests] = useState<ShiftChangeRequest[]>([])
   const [message, setMessage] = useState('')
   const [busyAction, setBusyAction] = useState('')
-  const [ovDate, setOvDate] = useState(todayLocalDateKey)
-  const [ovReason, setOvReason] = useState('')
 
   const loadAll = useCallback(async () => {
     try {
@@ -115,11 +101,6 @@ export function DashboardPage() {
         setShiftOn(me.shift_status === 'on')
         setAccepting(me.accepting_bookings)
       }
-      const nextWeek = emptyWeek()
-      loadedRules.forEach((rule) => {
-        nextWeek[rule.weekday] = { enabled: true, start: rule.start_time, end: rule.end_time }
-      })
-      setWeek(nextWeek)
       setRules(loadedRules)
       setOverrides(exceptions)
       setEmployment(employmentRecord)
@@ -167,63 +148,12 @@ export function DashboardPage() {
     }
   }
 
-  function updateDay(index: number, patch: Partial<DayRow>) {
-    setWeek((current) => current.map((day, dayIndex) => dayIndex === index ? { ...day, ...patch } : day))
-  }
-
-  async function saveHours() {
-    const rules: AvailabilityRuleInput[] = week
-      .map((day, index) => ({ day, index }))
-      .filter(({ day }) => day.enabled)
-      .map(({ day, index }) => ({ weekday: index as Weekday, start_time: day.start, end_time: day.end }))
-    setBusyAction('hours')
-    setMessage('')
-    try {
-      setRules(await backend.availability.setRules(rules))
-      setMessage('Weekly shift availability saved.')
-    } catch (error) {
-      setMessage(error instanceof DataError ? error.message : 'Hindi ma-save ang weekly shifts.')
-    } finally {
-      setBusyAction('')
-    }
-  }
-
-  async function submitShiftChange(date: string, requestMessage: string) {
-    await backend.employment.requestShiftChange({ date, message: requestMessage })
+  async function submitShiftChange(input: Omit<ShiftChangeRequestInput, 'idempotency_key'>) {
+    await backend.employment.requestShiftChange({
+      ...input,
+      idempotency_key: crypto.randomUUID(),
+    })
     setShiftRequests(await backend.employment.listMyShiftChangeRequests())
-  }
-
-  async function addDayOff() {
-    setBusyAction('override')
-    setMessage('')
-    try {
-      const created = await backend.availability.addOverride({
-        date: ovDate,
-        is_available: false,
-        reason: ovReason || null,
-      })
-      setOverrides((current) => [...current, created])
-      setOvReason('')
-      setMessage('Unavailable date added.')
-    } catch (error) {
-      setMessage(error instanceof DataError ? error.message : 'Hindi maidagdag ang unavailable date.')
-    } finally {
-      setBusyAction('')
-    }
-  }
-
-  async function removeOverride(id: string) {
-    setBusyAction(id)
-    setMessage('')
-    try {
-      await backend.availability.removeOverride(id)
-      setOverrides((current) => current.filter((override) => override.id !== id))
-      setMessage('Unavailable date removed.')
-    } catch (error) {
-      setMessage(error instanceof DataError ? error.message : 'Hindi maalis ang date.')
-    } finally {
-      setBusyAction('')
-    }
   }
 
   if (!loaded) return <Loading label="Opening your schedule..." />
@@ -244,7 +174,7 @@ export function DashboardPage() {
         <div>
           <span className="eyebrow">YOUR ROSTER</span>
           <h1>Schedule</h1>
-          <p>Piliin ang regular shifts at markahan ang dates na hindi ka available.</p>
+          <p>View your owner-assigned roster and request a one-day change.</p>
         </div>
         <Link className="btn" to="/dashboard"><DoodleIcon name="home" size={18} /> Barber home</Link>
       </header>
@@ -304,43 +234,35 @@ export function DashboardPage() {
 
       <div className="schedule-editor-grid">
         <section className="schedule-paper-card barber-paper-stack">
-          <div className="schedule-card-heading"><div><span className="eyebrow">WEEKLY PATTERN</span><h2>Available shifts</h2></div><DoodleIcon name="clock" size={25} /></div>
-          <div className="hours-editor">
-            {week.map((day, index) => (
-              <div className={`hours-row${day.enabled ? ' is-enabled' : ''}`} key={WEEKDAY_LABELS[index]}>
-                <label className="hours-day">
-                  <input type="checkbox" checked={day.enabled} onChange={(event) => updateDay(index, { enabled: event.target.checked })} />
-                  <span>{WEEKDAY_LABELS[index]}</span>
-                </label>
-                <input type="time" value={day.start} disabled={!day.enabled} onChange={(event) => updateDay(index, { start: event.target.value })} />
-                <span className="faint">to</span>
-                <input type="time" value={day.end} disabled={!day.enabled} onChange={(event) => updateDay(index, { end: event.target.value })} />
-              </div>
+          <div className="schedule-card-heading"><div><span className="eyebrow">WEEKLY PATTERN</span><h2>Assigned shifts</h2></div><DoodleIcon name="clock" size={25} /></div>
+          <p className="muted">Read-only roster from your shop owner.</p>
+          <ul className="schedule-readonly-list">
+            {rules.length === 0 && <li>Wala pang assigned weekly shift.</li>}
+            {[...rules].sort((left, right) => left.weekday - right.weekday).map((rule) => (
+              <li key={rule.id}>
+                <strong>{WEEKDAY_LABELS[rule.weekday]}</strong>
+                <span>{formatWallTime(rule.start_time)} – {formatWallTime(rule.end_time)}</span>
+              </li>
             ))}
-          </div>
-          <button type="button" className="btn btn-primary schedule-save" disabled={Boolean(busyAction)} onClick={() => void saveHours()}>
-            {busyAction === 'hours' ? 'Saving...' : 'Save weekly shifts'}
-          </button>
+          </ul>
         </section>
 
         <section className="schedule-paper-card schedule-days-off barber-paper-stack">
-          <div className="schedule-card-heading"><div><span className="eyebrow">EXCEPTIONS</span><h2>Unavailable dates</h2></div><DoodleIcon name="calendar" size={25} /></div>
-          <p className="muted">Day off, leave, or any one-time schedule change.</p>
-          <div className="ov-form">
-            <input aria-label="Unavailable date" type="date" value={ovDate} onChange={(event) => setOvDate(event.target.value)} />
-            <input aria-label="Reason" placeholder="Reason (private, optional)" value={ovReason} maxLength={120} onChange={(event) => setOvReason(event.target.value)} />
-            <button type="button" className="btn btn-sm" disabled={Boolean(busyAction)} onClick={() => void addDayOff()}>
-              {busyAction === 'override' ? 'Adding...' : 'Add date'}
-            </button>
-          </div>
+          <div className="schedule-card-heading"><div><span className="eyebrow">EXCEPTIONS</span><h2>Owner-approved changes</h2></div><DoodleIcon name="calendar" size={25} /></div>
+          <p className="muted">Use the calendar above to request time off or different hours.</p>
           <div className="schedule-override-list">
-            {overrides.length === 0 && <div className="schedule-empty"><DoodleIcon name="check" size={22} /> No blocked dates.</div>}
+            {overrides.length === 0 && <div className="schedule-empty"><DoodleIcon name="check" size={22} /> No schedule exceptions.</div>}
             {overrides.map((override) => (
               <div className="ov-item" key={override.id}>
-                <span><strong>{dayLabel(`${override.date}T00:00:00`)}</strong>{override.reason && <small>{override.reason}</small>}</span>
-                <button type="button" className="btn btn-ghost btn-sm" aria-label={`Remove ${override.date}`} disabled={Boolean(busyAction)} onClick={() => void removeOverride(override.id)}>
-                  {busyAction === override.id ? '...' : <DoodleIcon name="x" size={16} />}
-                </button>
+                <span>
+                  <strong>{dayLabel(`${override.date}T00:00:00`)}</strong>
+                  <small>
+                    {override.is_available && override.start_time && override.end_time
+                      ? `${formatWallTime(override.start_time)} – ${formatWallTime(override.end_time)}`
+                      : 'Unavailable'}
+                    {override.reason ? ` · ${override.reason}` : ''}
+                  </small>
+                </span>
               </div>
             ))}
           </div>

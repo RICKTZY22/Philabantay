@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import {
   DataError,
   shopPublicationReadiness,
   type OwnerShop,
   type ShopOperatingHours,
   type ShopClosure,
+  type StoredService,
+  type ShopMedia,
+  type ShopMediaRole,
 } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { Loading } from '../components/Loading'
 import { DoodleIcon } from '../theme/DoodleDefs'
+import { ShopLocationPicker } from '../components/ShopLocationPicker'
 import './ShopSetupPage.css'
 
 type ShopForm = {
@@ -76,7 +80,15 @@ export function ShopSetupPage() {
   const [loadError, setLoadError] = useState('')
   const [form, setForm] = useState<ShopForm>(BLANK)
   const [hoursRows, setHoursRows] = useState<HoursRow[]>(() => rowsFromHours([]))
-  const [busy, setBusy] = useState<null | 'save' | 'hours' | 'closure' | 'publish' | 'unpublish'>(null)
+  const [busy, setBusy] = useState<null | 'save' | 'hours' | 'closure' | 'service' | 'media' | 'publish' | 'unpublish'>(null)
+  const [services, setServices] = useState<StoredService[]>([])
+  const [serviceDraft, setServiceDraft] = useState({ name: '', duration_min: '30', price: '' })
+  const [media, setMedia] = useState<ShopMedia[]>([])
+  const [mediaDraft, setMediaDraft] = useState<{ role: ShopMediaRole; alt_text: string }>({
+    role: 'storefront',
+    alt_text: '',
+  })
+  const [locating, setLocating] = useState(false)
   const [closures, setClosures] = useState<ShopClosure[]>([])
   const [closureDraft, setClosureDraft] = useState({ local_date: '', closed: true, open_time: '09:00', close_time: '18:00', reason: '' })
   const [message, setMessage] = useState('')
@@ -92,6 +104,8 @@ export function ShopSetupPage() {
       setSavedHours(hours)
       setHoursRows(rowsFromHours(hours))
       setClosures(mine ? await backend.ownerShop.getClosures() : [])
+      setServices(mine ? await backend.ownerShop.listServices() : [])
+      setMedia(mine ? await backend.ownerShop.listMedia() : [])
     } catch (err) {
       setShop(undefined)
       setLoadError(err instanceof DataError ? err.message : 'Hindi ma-load ang shop setup.')
@@ -102,19 +116,20 @@ export function ShopSetupPage() {
 
   const update = (patch: Partial<ShopForm>) => setForm((prev) => ({ ...prev, ...patch }))
   const openDays = useMemo(() => savedHours.filter((h) => !h.closed).length, [savedHours])
+  const activeServices = useMemo(() => services.filter((service) => service.active).length, [services])
 
-  // Readiness for the checklist. activeServices is passed as satisfied because
-  // the client cannot verify it (service editor arrives later in P2-02); the
-  // backend enforces it on publish. operatingHours reflects the SAVED hours.
+  // Readiness mirrors the backend rule exactly: both counts come from SAVED
+  // server state (not unsaved form edits), so the checklist cannot claim ready
+  // while publish would still fail.
   const readiness = useMemo(() => shopPublicationReadiness({
-    name: form.name,
-    address: form.address,
-    city: form.city,
-    lat: Number(form.lat),
-    lng: Number(form.lng),
-    timezone: form.timezone,
-    chair_count: Number(form.chair_count),
-  }, { activeServices: 1, operatingHours: openDays }), [form, openDays])
+    name: shop?.name ?? '',
+    address: shop?.address ?? '',
+    city: shop?.city ?? '',
+    lat: shop?.lat ?? Number.NaN,
+    lng: shop?.lng ?? Number.NaN,
+    timezone: shop?.timezone ?? '',
+    chair_count: shop?.chair_count ?? 0,
+  }, { activeServices, operatingHours: openDays }), [shop, activeServices, openDays])
 
   function buildInput() {
     return {
@@ -177,9 +192,10 @@ export function ShopSetupPage() {
         open_time: row.closed ? null : row.open_time,
         close_time: row.closed ? null : row.close_time,
       }))
-      const saved = await backend.ownerShop.setHours({ blocks })
-      setSavedHours(saved)
-      setHoursRows(rowsFromHours(saved))
+      const saved = await backend.ownerShop.setHours({ expected_version: shop.version, blocks })
+      setSavedHours(saved.hours)
+      setHoursRows(rowsFromHours(saved.hours))
+      setShop((current) => current ? { ...current, version: saved.shop_version } : current)
       setMessage('Na-save ang operating hours.')
     } catch (err) {
       setError(err instanceof DataError ? err.message : 'Hindi ma-save ang hours. Subukan ulit.')
@@ -224,6 +240,150 @@ export function ShopSetupPage() {
     } finally {
       setBusy(null)
     }
+  }
+
+  async function addService() {
+    const name = serviceDraft.name.trim()
+    const durationMin = Number(serviceDraft.duration_min)
+    const pesos = Number(serviceDraft.price)
+    if (busy || !shop || !name) return
+    if (!Number.isFinite(durationMin) || durationMin < 5 || durationMin > 480) {
+      setError('Ang duration ay dapat 5 to 480 minutes.')
+      return
+    }
+    if (!Number.isFinite(pesos) || pesos < 0) {
+      setError('Maglagay ng valid na presyo.')
+      return
+    }
+    setBusy('service')
+    setError('')
+    setMessage('')
+    try {
+      // Prices are entered in pesos but stored as integer centavos.
+      const created = await backend.ownerShop.createService({
+        name,
+        duration_min: Math.round(durationMin),
+        price_cents: Math.round(pesos * 100),
+      })
+      setServices((prev) => [...prev, created])
+      setServiceDraft({ name: '', duration_min: '30', price: '' })
+      setMessage('Naidagdag ang service.')
+    } catch (err) {
+      setError(err instanceof DataError ? err.message : 'Hindi ma-save ang service. Subukan ulit.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function toggleService(service: StoredService) {
+    if (busy) return
+    setBusy('service')
+    setError('')
+    setMessage('')
+    try {
+      const updated = await backend.ownerShop.updateService(service.id, { active: !service.active })
+      setServices((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+      setMessage(updated.active ? 'Aktibo na ulit ang service.' : 'Na-retire ang service.')
+    } catch (err) {
+      setError(err instanceof DataError ? err.message : 'Hindi ma-update ang service.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function saveService(service: StoredService) {
+    if (busy) return
+    setBusy('service')
+    setError('')
+    setMessage('')
+    try {
+      const updated = await backend.ownerShop.updateService(service.id, {
+        name: service.name.trim(),
+        duration_min: service.duration_min,
+        price_cents: service.price_cents,
+      })
+      setServices((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+      setMessage('Na-save ang service details.')
+    } catch (err) {
+      setError(err instanceof DataError ? err.message : 'Hindi ma-update ang service.')
+      setServices(await backend.ownerShop.listServices())
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  function editService(serviceId: string, patch: Partial<StoredService>) {
+    setServices((prev) => prev.map((service) => (
+      service.id === serviceId ? { ...service, ...patch } : service
+    )))
+  }
+
+  async function uploadMedia(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || busy || !shop) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('JPEG, PNG, or WebP images only.')
+      return
+    }
+    if (!mediaDraft.alt_text.trim()) {
+      setError('Add a short photo description before choosing a file.')
+      return
+    }
+    setBusy('media')
+    setError('')
+    setMessage('')
+    try {
+      const uploaded = await backend.ownerShop.uploadMedia({
+        filename: file.name,
+        declared_mime: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+        declared_size_bytes: file.size,
+        role: mediaDraft.role,
+        alt_text: mediaDraft.alt_text.trim(),
+        sort_order: media.length,
+      }, file)
+      setMedia((prev) => [...prev, uploaded])
+      setMediaDraft({ role: 'gallery', alt_text: '' })
+      setMessage('Na-upload ang shop photo. Pending moderation muna bago ito maging public.')
+    } catch (err) {
+      setError(err instanceof DataError ? err.message : 'Hindi ma-upload ang shop photo.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function removeMedia(id: string) {
+    if (busy) return
+    setBusy('media')
+    setError('')
+    try {
+      await backend.ownerShop.removeMedia(id)
+      setMedia((prev) => prev.filter((item) => item.id !== id))
+    } catch (err) {
+      setError(err instanceof DataError ? err.message : 'Hindi ma-remove ang shop photo.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation || locating) {
+      setError('Location access is not available on this device.')
+      return
+    }
+    setLocating(true)
+    setError('')
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        update({ lat: coords.latitude.toFixed(6), lng: coords.longitude.toFixed(6) })
+        setLocating(false)
+      },
+      () => {
+        setError('Location access was denied. Click the map or enter coordinates instead.')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    )
   }
 
   function onSubmit(event: FormEvent) {
@@ -321,6 +481,20 @@ export function ShopSetupPage() {
                 <span>Longitude</span>
                 <input type="number" step="any" value={form.lng} onChange={(e) => update({ lng: e.target.value })} required />
               </label>
+              <div className="shop-field is-wide">
+                <span>Exact map pin</span>
+                <ShopLocationPicker
+                  lat={Number.isFinite(Number(form.lat)) && form.lat !== '' ? Number(form.lat) : null}
+                  lng={Number.isFinite(Number(form.lng)) && form.lng !== '' ? Number(form.lng) : null}
+                  onChange={(lat, lng) => update({ lat: lat.toFixed(6), lng: lng.toFixed(6) })}
+                />
+                <div className="shop-location-actions">
+                  <button type="button" className="btn btn-sm" disabled={locating} onClick={useCurrentLocation}>
+                    {locating ? 'Hinahanap…' : 'Use my current location'}
+                  </button>
+                  <span>Click the map or drag the pink pin. Coordinate inputs remain available as a fallback.</span>
+                </div>
+              </div>
               <label className="shop-field">
                 <span>Chairs</span>
                 <input type="number" min={1} max={200} value={form.chair_count} onChange={(e) => update({ chair_count: e.target.value })} required />
@@ -330,11 +504,191 @@ export function ShopSetupPage() {
                 <input type="number" min={0} max={120} value={form.default_buffer_min} onChange={(e) => update({ default_buffer_min: e.target.value })} />
               </label>
             </div>
-            <p className="shop-field-note">Map pin picker and address search arrive with a later step; enter coordinates for now.</p>
             <button type="submit" className="btn btn-primary" disabled={busy !== null}>
               {busy === 'save' ? 'Sine-save…' : shop ? 'Save details' : 'Create shop draft'}
             </button>
           </form>
+
+          <article className="shop-setup-panel" aria-labelledby="services-title">
+            <div className="shop-setup-panel-head">
+              <h2 id="services-title">Service menu</h2>
+              <span className="shop-setup-muted">{activeServices} active</span>
+            </div>
+            {shop ? (
+              <>
+                {services.length > 0 && (
+                  <ul className="shop-services">
+                    {services.map((service) => (
+                      <li key={service.id} className={`shop-service-row${service.active ? '' : ' is-inactive'}`}>
+                        <label className="shop-field">
+                          <span>Service name</span>
+                          <input
+                            value={service.name}
+                            maxLength={120}
+                            onChange={(event) => editService(service.id, { name: event.target.value })}
+                          />
+                        </label>
+                        <label className="shop-field">
+                          <span>Minutes</span>
+                          <input
+                            type="number"
+                            min={5}
+                            max={480}
+                            value={service.duration_min}
+                            onChange={(event) => editService(service.id, { duration_min: Number(event.target.value) })}
+                          />
+                        </label>
+                        <label className="shop-field">
+                          <span>Price (PHP)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={service.price_cents / 100}
+                            onChange={(event) => editService(service.id, {
+                              price_cents: Math.round(Number(event.target.value) * 100),
+                            })}
+                          />
+                        </label>
+                        <div className="shop-service-actions">
+                          <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => void saveService(service)}>
+                            Save
+                          </button>
+                          <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => void toggleService(service)}>
+                            {service.active ? 'Retire' : 'Restore'}
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="shop-service-add">
+                  <label className="shop-field">
+                    <span>New service</span>
+                    <input
+                      value={serviceDraft.name}
+                      maxLength={120}
+                      placeholder="e.g. Classic haircut"
+                      onChange={(event) => setServiceDraft((draft) => ({ ...draft, name: event.target.value }))}
+                    />
+                  </label>
+                  <label className="shop-field">
+                    <span>Minutes</span>
+                    <input
+                      type="number"
+                      min={5}
+                      max={480}
+                      value={serviceDraft.duration_min}
+                      onChange={(event) => setServiceDraft((draft) => ({ ...draft, duration_min: event.target.value }))}
+                    />
+                  </label>
+                  <label className="shop-field">
+                    <span>Price (PHP)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={serviceDraft.price}
+                      onChange={(event) => setServiceDraft((draft) => ({ ...draft, price: event.target.value }))}
+                    />
+                  </label>
+                  <button type="button" className="btn" disabled={busy !== null || !serviceDraft.name.trim()} onClick={() => void addService()}>
+                    {busy === 'service' ? 'Sine-save…' : 'Add service'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="shop-setup-muted">Create your shop draft first, then add its real service menu.</p>
+            )}
+          </article>
+
+          <article className="shop-setup-panel" aria-labelledby="photos-title">
+            <div className="shop-setup-panel-head">
+              <h2 id="photos-title">Shop photos</h2>
+              <span className="shop-setup-muted">{media.length} uploaded</span>
+            </div>
+            {shop ? (
+              <>
+                {media.length > 0 && (
+                  <ul className="shop-media-grid">
+                    {media.map((item) => {
+                      const status = item.upload_status === 'deleting'
+                        ? 'Removing…'
+                        : item.upload_status === 'rejected'
+                          ? 'Upload rejected'
+                          : item.upload_status === 'awaiting_upload'
+                            ? 'Awaiting upload'
+                            : item.moderation_status === 'rejected'
+                              ? 'Photo rejected'
+                              : item.moderation_status === 'approved'
+                                ? 'Approved'
+                                : item.preview_url
+                                  ? 'Awaiting review'
+                                  : 'Preview unavailable'
+                      return (
+                        <li key={item.id} className="shop-media-card">
+                          {item.preview_url
+                            ? <img src={item.preview_url} alt={item.alt_text} />
+                            : <div className="shop-media-placeholder">{status}</div>}
+                          <div>
+                            <strong>{item.role}</strong>
+                            <span>{item.alt_text}</span>
+                            <small>{status}</small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={busy !== null || item.upload_status === 'deleting'}
+                            onClick={() => void removeMedia(item.id)}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                <div className="shop-media-upload">
+                  <label className="shop-field">
+                    <span>Photo type</span>
+                    <select
+                      value={mediaDraft.role}
+                      onChange={(event) => setMediaDraft((draft) => ({
+                        ...draft,
+                        role: event.target.value as ShopMediaRole,
+                      }))}
+                    >
+                      <option value="storefront">Storefront</option>
+                      <option value="interior">Interior</option>
+                      <option value="team">Team</option>
+                      <option value="gallery">Gallery</option>
+                    </select>
+                  </label>
+                  <label className="shop-field">
+                    <span>Photo description</span>
+                    <input
+                      value={mediaDraft.alt_text}
+                      maxLength={240}
+                      placeholder="Describe what customers can see"
+                      onChange={(event) => setMediaDraft((draft) => ({ ...draft, alt_text: event.target.value }))}
+                    />
+                  </label>
+                  <label className="btn shop-media-file">
+                    {busy === 'media' ? 'Uploading…' : 'Choose photo'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      disabled={busy !== null || !mediaDraft.alt_text.trim()}
+                      onChange={(event) => void uploadMedia(event)}
+                    />
+                  </label>
+                </div>
+                <p className="shop-setup-muted">JPEG, PNG, or WebP up to 8 MB. Photos stay private until moderation approves them.</p>
+              </>
+            ) : (
+              <p className="shop-setup-muted">Create your shop draft first, then upload storefront and gallery photos.</p>
+            )}
+          </article>
 
           <article className="shop-setup-panel" aria-labelledby="hours-title">
             <div className="shop-setup-panel-head">
@@ -481,7 +835,7 @@ export function ShopSetupPage() {
               <ReadyItem ok={!readiness.missing.includes('timezone')} label="Timezone" />
               <ReadyItem ok={!readiness.missing.includes('at least one chair')} label="At least one chair" />
               <ReadyItem ok={!readiness.missing.includes('at least one operating-hours block')} label="At least one open day" />
-              <ReadyItem ok={null} label="At least one active service" hint="Checked when you publish" />
+              <ReadyItem ok={activeServices > 0} label="At least one active service" />
             </ul>
             {shop ? (
               isPublished ? (

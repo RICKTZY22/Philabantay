@@ -31,29 +31,7 @@ const ShopMap = lazy(() => import('./ShopMap'))
 type ShopFilter = 'all' | 'open' | 'top'
 type ViewMode = 'map' | 'list'
 type SortMode = 'nearest' | 'rating' | 'name'
-type PriceFilter = 'all' | 'budget' | 'standard' | 'premium'
 type AreaMode = 'nearby' | 'all'
-
-interface DiscoveryMeta {
-  price: Exclude<PriceFilter, 'all'>
-  serviceIds: string[]
-  waitMinutes: number
-}
-
-// Frontend preview metadata muna. Ililipat ito sa shop_services/queue tables
-// kapag nakakabit na ang Supabase adapter.
-const DISCOVERY_META: Record<string, DiscoveryMeta> = {
-  'sh-tondo': { price: 'standard', serviceIds: ['s-fade', 's-cut', 's-beard', 's-combo'], waitMinutes: 18 },
-  'sh-norte': { price: 'premium', serviceIds: ['s-fade', 's-cut', 's-shave'], waitMinutes: 12 },
-  'sh-baguio': { price: 'standard', serviceIds: ['s-fade', 's-cut', 's-kids'], waitMinutes: 9 },
-  'sh-cebu': { price: 'premium', serviceIds: ['s-fade', 's-beard', 's-combo'], waitMinutes: 22 },
-  'sh-iloilo': { price: 'budget', serviceIds: ['s-cut', 's-kids'], waitMinutes: 14 },
-  'sh-davao': { price: 'standard', serviceIds: ['s-fade', 's-shave', 's-beard'], waitMinutes: 27 },
-  'sh-maginhawa': { price: 'budget', serviceIds: ['s-cut', 's-kids'], waitMinutes: 0 },
-  'sh-bfhomes': { price: 'standard', serviceIds: ['s-fade', 's-cut', 's-combo'], waitMinutes: 10 },
-  'sh-laspinas': { price: 'budget', serviceIds: ['s-cut', 's-beard', 's-kids'], waitMinutes: 8 },
-  'sh-poblacion': { price: 'premium', serviceIds: ['s-fade', 's-shave', 's-combo'], waitMinutes: 20 },
-}
 
 const NEAREST_LIST_LIMIT = 7
 const MANILA_HOUR = new Intl.DateTimeFormat('en-PH', {
@@ -125,12 +103,11 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
   const [viewMode, setViewMode] = useState<ViewMode>('map')
   const [mapResetKey, setMapResetKey] = useState(0)
   const [sortMode, setSortMode] = useState<SortMode>('nearest')
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
+  // Holds a real service name from the catalogue, not a synthetic category.
   const [serviceFilter, setServiceFilter] = useState('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [openingShopChat, setOpeningShopChat] = useState(false)
   const [shopActionError, setShopActionError] = useState('')
-  const [referralCopied, setReferralCopied] = useState(false)
   const [query, setQuery] = useState('')
 
   // One live GPS stream keeps both nearby filtering and the map viewport fresh.
@@ -192,18 +169,38 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
 
   const searchNeedle = query.trim().toLowerCase()
 
-  // Ang Discover map/list ay filters lang (Near me, status, price, service);
-  // hindi ito ginagalaw ng text search. May sariling results dropdown ang
-  // search sa ilalim ng search bar.
+  // The public catalogue returns every active service with its owning shop_id,
+  // so the shop -> services relationship is real data, never a local mapping.
+  const servicesByShopId = useMemo(() => {
+    const grouped = new Map<string, Service[]>()
+    for (const service of services) {
+      const existing = grouped.get(service.shop_id)
+      if (existing) existing.push(service)
+      else grouped.set(service.shop_id, [service])
+    }
+    return grouped
+  }, [services])
+
+  // Service rows are per shop, so the same haircut exists under many ids. The
+  // filter therefore offers the distinct published names.
+  const serviceNameOptions = useMemo(
+    () => [...new Set(services.map((service) => service.name))].sort((a, b) => a.localeCompare(b)),
+    [services],
+  )
+
+  // Ang Discover map/list ay filters lang (Near me, status, service); hindi ito
+  // ginagalaw ng text search. May sariling results dropdown ang search sa
+  // ilalim ng search bar.
   const filteredShops = useMemo(() => {
     if (!shops) return []
     const result = shops.filter((shop) => {
-      const meta = DISCOVERY_META[shop.id]
       if (areaMode === 'nearby' && nearbyShopIds && !nearbyShopIds.has(shop.id)) return false
       if (filter === 'open' && shop.status !== 'open') return false
       if (filter === 'top' && shop.rating < 4.5) return false
-      if (priceFilter !== 'all' && meta?.price !== priceFilter) return false
-      if (serviceFilter !== 'all' && !meta?.serviceIds.includes(serviceFilter)) return false
+      if (serviceFilter !== 'all'
+        && !(servicesByShopId.get(shop.id) ?? []).some((service) => service.name === serviceFilter)) {
+        return false
+      }
       return true
     })
     return result.sort((a, b) => {
@@ -214,7 +211,7 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
       }
       return b.rating - a.rating
     })
-  }, [shops, areaMode, filter, nearbyShopIds, priceFilter, proximityByShopId, serviceFilter, sortMode])
+  }, [shops, areaMode, filter, nearbyShopIds, proximityByShopId, serviceFilter, servicesByShopId, sortMode])
 
   // Nationwide text match para sa search dropdown — name hits muna, tapos
   // rating. Hindi ito gumagamit ng GPS proximity kailanman.
@@ -288,14 +285,10 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
     () => selectedShopStaff.filter((barber) => availableIds.has(barber.id)),
     [selectedShopStaff, availableIds],
   )
-  const selectedShopServices = useMemo(() => {
-    if (!selectedShop) return []
-    const meta = DISCOVERY_META[selectedShop.id]
-    if (!meta) return []
-    return meta.serviceIds
-      .map((id) => services.find((service) => service.id === id))
-      .filter((service): service is Service => Boolean(service))
-  }, [selectedShop, services])
+  const selectedShopServices = useMemo(
+    () => (selectedShop ? servicesByShopId.get(selectedShop.id) ?? [] : []),
+    [selectedShop, servicesByShopId],
+  )
 
   async function openShopChat(shopId: string) {
     if (openingShopChat) return
@@ -313,12 +306,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
 
   async function toggleFavorite(shopId: string) {
     setFavoriteIds(await backend.favorites.toggle(shopId))
-  }
-
-  async function copyReferralCode() {
-    await navigator.clipboard?.writeText('PHILA-DEMO-25')
-    setReferralCopied(true)
-    window.setTimeout(() => setReferralCopied(false), 1800)
   }
 
   function showMap() {
@@ -426,16 +413,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
               <strong>{stats.unread}</strong>
               <span className="cd-stat-label">Unread chats</span>
             </Link>
-            <div className="cd-stat cd-stat-placeholder cd-stat-placeholder-a" aria-hidden="true">
-              <span className="cd-stat-badge is-dashed"><span className="cd-stat-diamond" /></span>
-              <strong>0</strong>
-              <span className="cd-stat-label">Placeholder</span>
-            </div>
-            <div className="cd-stat cd-stat-placeholder cd-stat-placeholder-b" aria-hidden="true">
-              <span className="cd-stat-badge is-dashed"><span className="cd-stat-diamond" /></span>
-              <strong>0</strong>
-              <span className="cd-stat-label">Placeholder</span>
-            </div>
           </div>
 
           <Link
@@ -514,18 +491,15 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
               </div>
               <label>
                 <span>Service</span>
-                <select value={serviceFilter} onChange={(event) => { setSelectedId(null); setServiceFilter(event.target.value) }}>
-                  <option value="all">Any service</option>
-                  {services.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}
-                </select>
-              </label>
-              <label>
-                <span>Price</span>
-                <select value={priceFilter} onChange={(event) => { setSelectedId(null); setPriceFilter(event.target.value as PriceFilter) }}>
-                  <option value="all">Any price</option>
-                  <option value="budget">Budget</option>
-                  <option value="standard">Standard</option>
-                  <option value="premium">Premium</option>
+                <select
+                  value={serviceFilter}
+                  disabled={serviceNameOptions.length === 0}
+                  onChange={(event) => { setSelectedId(null); setServiceFilter(event.target.value) }}
+                >
+                  <option value="all">
+                    {serviceNameOptions.length === 0 ? 'No published services yet' : 'Any service'}
+                  </option>
+                  {serviceNameOptions.map((name) => <option value={name} key={name}>{name}</option>)}
                 </select>
               </label>
               <label>
@@ -563,7 +537,7 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
             ) : (
               <ShopList
                 shops={filteredShops}
-                services={services}
+                servicesByShopId={servicesByShopId}
                 favoriteIds={favoriteIds}
                 onToggleFavorite={toggleFavorite}
               />
@@ -735,15 +709,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
             ))}
           </div>
           <p className="muted">Every 10 completed cuts, may free classic haircut reward.</p>
-          <div className="cd-referral-box">
-            <div>
-              <strong>Invite a tropa</strong>
-              <span>Code: PHILA-DEMO-25</span>
-            </div>
-            <button type="button" className="btn btn-sm" onClick={copyReferralCode}>
-              {referralCopied ? 'Copied!' : 'Copy code'}
-            </button>
-          </div>
           <Link className="cd-notification-link" to="/settings/notifications">
             <DoodleIcon name="chat" size={18} /> Booking and chat notifications <DoodleIcon name="arrow" size={16} />
           </Link>
@@ -755,19 +720,23 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
 
 function ShopList({
   shops,
-  services,
+  servicesByShopId,
   favoriteIds,
   onToggleFavorite,
 }: {
   shops: ShopWithStatus[]
-  services: Service[]
+  servicesByShopId: Map<string, Service[]>
   favoriteIds: string[]
   onToggleFavorite: (shopId: string) => void
 }) {
   return (
     <div className="cd-shop-list-grid">
       {shops.map((shop) => {
-        const meta = DISCOVERY_META[shop.id]
+        const shopServices = servicesByShopId.get(shop.id) ?? []
+        // Lowest published price is a real catalogue fact, not a price band.
+        const fromPriceCents = shopServices.length > 0
+          ? Math.min(...shopServices.map((service) => service.price_cents))
+          : null
         return (
           <article className="cd-discovery-card" key={shop.id}>
             <div className="cd-discovery-card-top">
@@ -786,21 +755,18 @@ function ShopList({
             <div className="cd-discovery-meta">
               <span><DoodleIcon name="star" size={15} /> {shop.rating.toFixed(1)}</span>
               <span>{shop.city}</span>
-              <span>{meta?.price ?? 'pricing pending'}</span>
+              <span>{fromPriceCents === null ? 'Prices not published' : `From ${money(fromPriceCents)}`}</span>
             </div>
             <div className="cd-service-tags">
-              {(meta?.serviceIds ?? []).slice(0, 3).map((id) => {
-                const service = services.find((candidate) => candidate.id === id)
-                return service ? <span key={id}>{service.name}</span> : null
-              })}
+              {shopServices.length === 0
+                ? <span className="cd-service-tags-empty">No published services yet</span>
+                : shopServices.slice(0, 3).map((service) => <span key={service.id}>{service.name}</span>)}
             </div>
-            <div className="cd-discovery-actions">
+            <div className={`cd-discovery-actions${shop.available_barber_count > 0 ? '' : ' is-none-free'}`}>
               <span>
-                {shop.status !== 'open'
-                  ? 'Queue unavailable'
-                  : meta
-                    ? `~${meta.waitMinutes} min wait`
-                    : 'Contact shop for wait time'}
+                {shop.available_barber_count > 0
+                  ? `${shop.available_barber_count} barber${shop.available_barber_count === 1 ? '' : 's'} free now`
+                  : 'Walang bakanteng barber ngayon'}
               </span>
             </div>
           </article>
