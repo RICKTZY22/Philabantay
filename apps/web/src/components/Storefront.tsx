@@ -21,6 +21,13 @@ interface HaircutCustomer {
   skin: string
 }
 
+interface ClockTowerTime {
+  label: string
+  hourAngle: number
+  minuteAngle: number
+  secondAngle: number
+}
+
 const HAIRCUT_CUSTOMERS: readonly HaircutCustomer[] = [
   {
     id: 'taper',
@@ -121,10 +128,16 @@ export const bird = (w: number, h: number) => (
   </svg>
 )
 
-export function Storefront({ fullBleed = false }: { fullBleed?: boolean }) {
+export function Storefront({
+  fullBleed = false,
+  clockTower,
+}: {
+  fullBleed?: boolean
+  clockTower?: ClockTowerTime
+}) {
   return (
     <div className={`phil-stage phil-neighborhood-stage${fullBleed ? ' is-full-bleed' : ''}`}>
-      <CityDoodleBackdrop />
+      <CityDoodleBackdrop clockTower={clockTower} />
       <div className="phil-shop-core">
       {/* sky */}
       <div className="phil-shop-sun" style={{ position: 'absolute', left: 14, top: 8, width: 42, height: 42, borderRadius: '50%', background: '#ffd76a', border: `2.5px solid ${INK}`, boxShadow: '0 0 24px 8px rgba(255,205,90,.55)', zIndex: 0 }} />
@@ -371,11 +384,46 @@ function StreetCrowd() {
   )
 }
 
-function CityDoodleBackdrop() {
+function CityClockTower({ time }: { time: ClockTowerTime }) {
+  const handStyle = {
+    '--clock-hour-angle': `${time.hourAngle}deg`,
+    '--clock-minute-angle': `${time.minuteAngle}deg`,
+    '--clock-second-angle': `${time.secondAngle}deg`,
+  } as CSSProperties
+
+  return (
+    <div className="city-clock-tower" data-ph-time={time.label} style={handStyle}>
+      <span className="city-clock-tower-spire" />
+      <span className="city-clock-tower-cap" />
+      <div className="city-clock-face">
+        {Array.from({ length: 12 }, (_, index) => (
+          <i
+            key={index}
+            style={{ '--clock-tick-angle': `${index * 30}deg` } as CSSProperties}
+          />
+        ))}
+        <span className="city-clock-hand city-clock-hour-hand" />
+        <span className="city-clock-hand city-clock-minute-hand" />
+        <span className="city-clock-hand city-clock-second-hand" />
+        <b />
+      </div>
+      <div className="city-clock-tower-body">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+      <span className="city-clock-tower-base" />
+    </div>
+  )
+}
+
+function CityDoodleBackdrop({ clockTower }: { clockTower?: ClockTowerTime }) {
   return (
     <div className="city-doodle" aria-hidden="true">
       <div className="city-depth city-depth-far" />
       <div className="city-depth city-depth-near" />
+      {clockTower ? <CityClockTower time={clockTower} /> : null}
       <Building
         pos={{ left: 6, top: 192 }}
         w={132}

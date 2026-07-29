@@ -328,8 +328,10 @@ export function VerificationLockPage() {
     setWorking('signout')
     setError('')
     try {
-      await signOut()
+      // Same ordering as AppMenu: leave this guarded route before the session
+      // clears, or RequireAuth redirects to /login instead of the landing page.
       navigate('/', { replace: true })
+      await signOut()
     } catch (requestError) {
       setError(errorMessage(requestError))
       setWorking('')

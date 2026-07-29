@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { LandingPage } from './pages/LandingPage'
@@ -13,9 +13,12 @@ import { useAuth } from './features/auth/AuthContext'
 // default export ang hinihingi ng React.lazy. Ito ang tulay nila; pag tinanggal,
 // sabog ang route chunk sa runtime kahit mukhang okay ang import path.
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })))
+const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const AppDashboardPage = lazy(() => import('./pages/AppDashboardPage').then((m) => ({ default: m.AppDashboardPage })))
 const ShopSetupPage = lazy(() => import('./pages/ShopSetupPage').then((m) => ({ default: m.ShopSetupPage })))
+const OwnerHiringPage = lazy(() => import('./pages/OwnerHiringPage').then((m) => ({ default: m.OwnerHiringPage })))
+const ProfessionalProfilePage = lazy(() => import('./pages/ProfessionalProfilePage').then((m) => ({ default: m.ProfessionalProfilePage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
 const VerificationLockPage = lazy(() => import('./pages/VerificationLockPage').then((m) => ({ default: m.VerificationLockPage })))
@@ -28,17 +31,6 @@ const SettingsNotificationsPage = lazy(() => import('./pages/SettingsPage').then
 const SettingsSecurityPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsSecurityPage })))
 const SettingsBugReportPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsBugReportPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
-
-/**
- * Nasa landing billboard ang auth form. Dinadala lang nito ang tamang mode at
- * yung `from` destination para makabalik ang user sa original niyang sadya.
- */
-function AuthRedirect() {
-  const location = useLocation()
-  const mode: 'signin' | 'signup' = location.pathname === '/signup' ? 'signup' : 'signin'
-  const prev = (location.state as Record<string, unknown> | null) ?? {}
-  return <Navigate to="/" replace state={{ ...prev, authMode: mode }} />
-}
 
 function RoleAwareAppointments() {
   const { profile } = useAuth()
@@ -54,9 +46,9 @@ export function App() {
       <Route element={<Layout />}>
         {/* Public home: intentionally hindi lazy para instant ang unang screen. */}
         <Route index element={<LandingPage />} />
-        {/* Auth aliases: walang duplicate login/signup page, billboard lang. */}
-        <Route path="login" element={<AuthRedirect />} />
-        <Route path="signup" element={<AuthRedirect />} />
+        {/* Real deep-linkable auth pages keep the public landing value-first. */}
+        <Route path="login" element={<AuthPage mode="signin" />} />
+        <Route path="signup" element={<AuthPage mode="signup" />} />
 
         {/* One-time role request: signed in dapat, pero incomplete profile is allowed. */}
         <Route
@@ -121,6 +113,14 @@ export function App() {
           }
         />
         <Route
+          path="dashboard/owner/hiring"
+          element={
+            <RequireAuth role="shop_owner">
+              <OwnerHiringPage />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="dashboard/owner/:ownerSection"
           element={
             <RequireAuth>
@@ -153,6 +153,7 @@ export function App() {
           }
         />
         <Route path="dashboard/barber" element={<Navigate to="/schedule" replace />} />
+        <Route path="professional" element={<RequireAuth role="barber"><ProfessionalProfilePage /></RequireAuth>} />
         <Route path="admin/verifications" element={<RequireAuth role="admin"><AdminVerificationPage /></RequireAuth>} />
         <Route path="admin/verifications/:submissionId" element={<RequireAuth role="admin"><AdminVerificationDetailPage /></RequireAuth>} />
         <Route path="admin/users/:userId" element={<RequireAuth role="admin"><AdminProfessionalPage /></RequireAuth>} />

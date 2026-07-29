@@ -1,19 +1,26 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { isProfessionalLocked } from '../lib/access'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
+import { AuthSlider } from './AuthSlider'
 import { CurtainProvider } from './CurtainTransition'
 import { Loading } from './Loading'
+import { ModalPortal } from './ModalPortal'
 import { RouteErrorBoundary } from './RouteErrorBoundary'
+
+export type LandingOutletContext = {
+  openLandingAuth: (mode: 'signin' | 'signup') => void
+}
 
 export function Layout() {
   const { profile, loading } = useAuth()
   const location = useLocation()
   const [headerVisible, setHeaderVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [landingAuthMode, setLandingAuthMode] = useState<'signin' | 'signup' | null>(null)
   const verificationLocked = Boolean(profile && isProfessionalLocked(profile))
 
   // Route changes should open at the top instead of inheriting the scroll
@@ -21,8 +28,9 @@ export function Layout() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [location.pathname])
-  // May sariling auth billboard ang landing, kaya chill at malinis lang ang nav doon.
+  // Landing keeps a transparent marketing header; auth lives on dedicated routes.
   const onLanding = location.pathname === '/'
+  const onAuth = location.pathname === '/login' || location.pathname === '/signup'
   // Signed-in app pages: naka-pin ang header bar sa taas para laging abot ang
   // hamburger habang nag-scroll, pero HINDI tumatakip nang biglaan sa content
   // (kabaligtaran ng floating button). Iniiwasan ang landing para buo ang scroll
@@ -47,6 +55,16 @@ export function Layout() {
     && profile.requested_role !== 'barber'
     && profile.requested_role !== 'shop_owner'
   const hideBrand = isCustomerRole && location.pathname.startsWith('/chat')
+  const openLandingAuth = useCallback((mode: 'signin' | 'signup') => {
+    setLandingAuthMode(mode)
+  }, [])
+  const closeLandingAuth = useCallback(() => {
+    setLandingAuthMode(null)
+  }, [])
+
+  useEffect(() => {
+    if (!onLanding) setLandingAuthMode(null)
+  }, [onLanding])
 
   useEffect(() => {
     setHeaderVisible(true)
@@ -143,12 +161,43 @@ export function Layout() {
             {profile && !verificationLocked ? (
               <AppMenu onOpenChange={setMenuOpen} />
             ) : (
-              !profile && !onLanding && (
+              !profile && (onLanding ? (
                 <>
-                  <NavLink to="/login" className="nav-link">Log in</NavLink>
-                  <Link to="/signup" className="btn btn-sm btn-primary">Sign up</Link>
+                  <a href="#home" className="nav-link">Home</a>
+                  <a href="#services" className="nav-link">Services</a>
+                  <a href="#contact" className="nav-link">Contact Us</a>
+                  <button
+                    type="button"
+                    className="nav-link landing-auth-trigger"
+                    aria-haspopup="dialog"
+                    onClick={() => openLandingAuth('signin')}
+                  >
+                    Log in
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary landing-auth-trigger"
+                    aria-haspopup="dialog"
+                    onClick={() => openLandingAuth('signup')}
+                  >
+                    Sign up
+                  </button>
                 </>
-              )
+              ) : (
+                onAuth ? (
+                  <Link
+                    to={location.pathname === '/login' ? '/signup' : '/login'}
+                    className="btn btn-sm btn-primary"
+                  >
+                    {location.pathname === '/login' ? 'Sign up' : 'Log in'}
+                  </Link>
+                ) : (
+                  <>
+                    <NavLink to="/login" className="nav-link">Log in</NavLink>
+                    <Link to="/signup" className="btn btn-sm btn-primary">Sign up</Link>
+                  </>
+                )
+              ))
             )}
           </div>
         </nav>
@@ -165,12 +214,34 @@ export function Layout() {
           */}
           <RouteErrorBoundary key={location.key}>
             <Suspense fallback={<Loading label="Sandali, binubuksan ang page..." />}>
-              <Outlet />
+              <Outlet context={{ openLandingAuth } satisfies LandingOutletContext} />
             </Suspense>
           </RouteErrorBoundary>
         </div>
       </main>
     </div>
+    {onLanding && landingAuthMode && (
+      <ModalPortal
+        backdropClassName="landing-auth-backdrop"
+        dialogClassName="landing-auth-dialog"
+        labelledBy="auth-page-title"
+        onClose={closeLandingAuth}
+      >
+        <button
+          type="button"
+          className="landing-auth-close"
+          aria-label="Close account form"
+          data-dialog-initial-focus
+          onClick={closeLandingAuth}
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+        <AuthSlider
+          mode={landingAuthMode}
+          onModeChange={setLandingAuthMode}
+        />
+      </ModalPortal>
+    )}
     </CurtainProvider>
   )
 }

@@ -97,8 +97,12 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
 
   async function handleSignOut() {
     setOpen(false)
+    // Leave the guarded route BEFORE clearing the session. Signing out first
+    // makes `profile` null while RequireAuth is still mounted, and its
+    // `Navigate to="/login"` wins the race, so the user lands on the login page
+    // instead of the public landing page they asked for.
+    navigate('/', { replace: true })
     await signOut()
-    navigate('/')
   }
 
   // Pareho ang barbershop-curtain handoff dito gaya ng ginagamit pagkatapos

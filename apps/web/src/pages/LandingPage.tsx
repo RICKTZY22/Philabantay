@@ -1,22 +1,90 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
-import { AuthSlider } from '../components/AuthSlider'
+import { Link, useOutletContext } from 'react-router-dom'
 import { WalkFigure } from '../components/WalkFigure'
-import { Storefront, Building } from '../components/Storefront'
+import { Building } from '../components/Storefront'
+import { RiveScene } from '../components/RiveScene'
+import type { LandingOutletContext } from '../components/Layout'
+import { heroSceneForHour } from '../lib/philippineHeroTime'
 import { useJourneyScroll } from './useJourneyScroll'
 import './LandingPage.css'
+
+type FeatureId = 'booking' | 'schedule' | 'facts'
+
+/**
+ * Bottom-section feature rows. Copy describes behavior the product actually
+ * has: one advancing reservation, owner-authored schedules, and published shop
+ * facts with no invented queue or wait estimates.
+ */
+const LANDING_FEATURES: Array<{
+  id: FeatureId
+  title: string
+  body: string
+  cta: string
+  mode: 'signin' | 'signup'
+  sceneLabel: string
+  /** Optional .riv in `public/rive`. Without it the static glyph is used. */
+  riveSrc?: string
+}> = [
+  {
+    id: 'booking',
+    title: 'You send one request, the shop takes it from there',
+    body: 'A service, barber, date, and time become a single reservation. Accepting, checking in, and finishing all advance that same booking instead of creating another version of the truth.',
+    cta: 'See how booking works',
+    mode: 'signup',
+    sceneLabel: 'One booking request advancing through its stages',
+    riveSrc: '/rive/character-follow.riv',
+  },
+  {
+    id: 'schedule',
+    title: 'Owners set the roster, barbers ask to change it',
+    body: 'The shop owner authors weekly shifts and day exceptions. Barbers see the authoritative schedule and submit a request; approving one writes the change straight onto the calendar.',
+    cta: 'Explore the schedule tools',
+    mode: 'signup',
+    sceneLabel: 'A weekly roster with an approved change request',
+  },
+  {
+    id: 'facts',
+    title: 'Only the shop facts that are actually published',
+    body: 'Hours, closures, services, and prices come from the shop itself. Nothing is estimated and nothing is filled in with samples, so what you read before booking is what the shop set.',
+    cta: 'Browse real shops',
+    mode: 'signin',
+    sceneLabel: 'A shop profile showing published hours and prices',
+  },
+]
 
 const ACCENT = '#f4b8c4'
 const INK = '#2b2b2b'
 
 type DayPhase = 'morning' | 'afternoon' | 'dusk' | 'night'
 
-function localDayPhase(now = new Date()): DayPhase {
-  const hour = now.getHours() + now.getMinutes() / 60
+const PH_CLOCK_PARTS = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'Asia/Manila',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+function dayPhaseForHour(hour: number): DayPhase {
   if (hour >= 5 && hour < 11) return 'morning'
   if (hour >= 11 && hour < 17) return 'afternoon'
   if (hour >= 17 && hour < 19.5) return 'dusk'
   return 'night'
+}
+
+function philippineClock(now: Date) {
+  const parts = Object.fromEntries(
+    PH_CLOCK_PARTS
+      .formatToParts(now)
+      .filter(({ type }) => type === 'hour' || type === 'minute')
+      .map(({ type, value }) => [type, Number(value)]),
+  )
+  const hour = parts.hour ?? 0
+  const minute = parts.minute ?? 0
+
+  return {
+    phase: dayPhaseForHour(hour + minute / 60),
+    heroScene: heroSceneForHour(hour + minute / 60),
+  }
 }
 
 interface Step {
@@ -35,18 +103,12 @@ interface SystemStage {
   body: string
 }
 
-interface CapabilityGroup {
-  role: string
-  eyebrow: string
-  color: string
-  items: string[]
-}
 
 const SYSTEM_STAGES: SystemStage[] = [
   {
     label: '01',
     title: 'Discover',
-    body: 'Customers compare nearby shops, hours, services, prices, and live chair availability.',
+    body: 'Customers compare published shop details, hours, services, and prices before sending a request.',
   },
   {
     label: '02',
@@ -75,47 +137,15 @@ const SYSTEM_STAGES: SystemStage[] = [
   },
 ]
 
-const CAPABILITY_GROUPS: CapabilityGroup[] = [
-  {
-    role: 'Customers',
-    eyebrow: 'FIND, BOOK, FOLLOW',
-    color: '#fbe7a2',
-    items: [
-      'Find shops, services, prices, barbers, and open slots',
-      'Book once, then follow the reservation status and reminders',
-      'Chat, keep cut history, and rate only after a completed visit',
-    ],
-  },
-  {
-    role: 'Barbers',
-    eyebrow: 'PLAN, SERVE, FINISH',
-    color: '#bee0f1',
-    items: [
-      'See reservations, shifts, exceptions, and attendance',
-      'Keep cut notes and move visits through the correct status',
-      'Track completed cuts, ratings, and performance signals',
-    ],
-  },
-  {
-    role: 'Shop owners',
-    eyebrow: 'OPERATE, SUPPORT, GROW',
-    color: '#f8cad6',
-    items: [
-      'Set up the shop, hours, services, prices, and staff',
-      'Manage reservations, assignments, attendance, and messages',
-      'Review revenue, visitors, services, ratings, and staff reports',
-    ],
-  },
-]
 
 const CUSTOMER_STEPS: Step[] = [
   {
     no: 1,
-    title: 'Spot a free chair',
+    title: 'Find the right shop',
     color: '#fbe7a2',
     tags: ['LIVE STATUS', 'NEARBY'],
     footer: 'FIND A CHAIR',
-    body: 'Buksan ang app, makikita agad kung sinong barbershop ang bukas o may pila.',
+    body: 'Buksan ang app para makita ang published shop details, oras, services, at presyo.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><circle cx="32" cy="32" r="24" fill="#f4efe2" /><line x1="32" y1="32" x2="32" y2="18" /><line x1="32" y1="32" x2="43" y2="38" /></g></svg>
     ),
@@ -180,11 +210,11 @@ const BARBER_STEPS: Step[] = [
   },
   {
     no: 2,
-    title: 'Switch your chair on',
+    title: 'Set the working day',
     color: '#f8cad6',
     tags: ['LIVE STATUS', 'ACCEPTING'],
     footer: 'GO LIVE',
-    body: 'I-on ang shift at accepting bookings para alam ng customers na may libreng upuan.',
+    body: 'Ayusin ang working hours at shop status para iisa ang malinaw na schedule ng team.',
     icon: (
       <svg width="84" height="84" viewBox="0 0 64 64"><g stroke={INK} strokeWidth="4" fill="none" strokeLinecap="round"><path d="M32 8 V28" /><path d="M20 16 Q8 24 11 39 Q14 54 32 55 Q50 54 53 39 Q56 24 44 16" fill="#c7e7c4" /><circle cx="32" cy="36" r="3" fill={INK} /></g></svg>
     ),
@@ -226,35 +256,88 @@ const BARBER_STEPS: Step[] = [
 
 export function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null)
-  const location = useLocation()
-  const [dayPhase, setDayPhase] = useState<DayPhase>(() => localDayPhase())
-  // /login and /signup redirect here carrying the desired form mode + `from`.
-  const navState = location.state as { authMode?: 'signin' | 'signup'; from?: string } | null
+  const [clockNow, setClockNow] = useState(() => new Date())
+  const { openLandingAuth } = useOutletContext<LandingOutletContext>()
+  const manilaClock = philippineClock(clockNow)
+  const dayPhase = manilaClock.phase
+  const heroScene = manilaClock.heroScene
 
   // Ambient scenes are paused when off-screen. The five-step journey itself
   // stays in normal document flow and never runs a scroll-frame JS loop.
   useJourneyScroll(rootRef)
 
   useEffect(() => {
-    const updatePhase = () => setDayPhase(localDayPhase())
-    const timer = window.setInterval(updatePhase, 60_000)
+    const resetHorizontalDrift = () => {
+      if (window.scrollX !== 0) window.scrollTo({ left: 0, top: window.scrollY })
+    }
+    resetHorizontalDrift()
+    window.addEventListener('resize', resetHorizontalDrift)
+    return () => window.removeEventListener('resize', resetHorizontalDrift)
+  }, [])
+
+  useEffect(() => {
+    const updateClock = () => setClockNow(new Date())
+    const timer = window.setInterval(updateClock, 30_000)
     return () => window.clearInterval(timer)
   }, [])
 
   const heroVars = { '--accent': ACCENT } as CSSProperties // --walk is set on .phil in CSS
 
   return (
-    <div className="phil" ref={rootRef} style={heroVars} data-day-phase={dayPhase}>
+    <div
+      className="phil"
+      ref={rootRef}
+      style={heroVars}
+      data-day-phase={dayPhase}
+      data-hero-scene={heroScene}
+    >
       <main className="phil-hero-main" style={{ position: 'relative', zIndex: 1 }}>
-        <SpaceDoodleBackdrop />
-        <section className="phil-hero phil-hero-auth">
-          {/* The auth slider IS the billboard now — one form, front and center. */}
-          <div className="phil-billboard-col phil-billboard-col-wide phil-auth-station-wrap">
-            <AuthSlider
-              initialMode={navState?.authMode ?? 'signin'}
-              from={navState?.from ?? '/dashboard'}
-            />
+        <div className="phil-hero-time-scenes" aria-hidden="true">
+          <span className="phil-hero-time-scene is-morning" />
+          <span className="phil-hero-time-scene is-afternoon" />
+          <span className="phil-hero-time-scene is-evening" />
+          <span className="phil-hero-time-scene is-midnight" />
+        </div>
+        <section id="home" className="phil-hero phil-hero-marketing" aria-labelledby="phil-hero-title">
+          <div className="phil-hero-copy">
+            <span className="phil-hero-kicker">THE LOCAL BARBER BOOKING DESK</span>
+            <h1 id="phil-hero-title">
+              <strong>Local shops. Clear bookings.</strong>
+              <span>Better barber days.</span>
+            </h1>
+            <p className="phil-hero-lead">
+              One place for customers to find a cut, barbers to follow their
+              day, and owners to keep the shop moving.
+            </p>
+            <div className="phil-hero-actions">
+              <button
+                className="phil-hero-primary"
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => openLandingAuth('signup')}
+              >
+                Request a Demo
+              </button>
+              <a
+                className="phil-hero-secondary"
+                href="#how"
+                aria-label="Watch the Philabantay product walkthrough"
+              >
+                Watch the Video
+              </a>
+            </div>
+            <p className="phil-hero-login">
+              May account ka na?{' '}
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => openLandingAuth('signin')}
+              >
+                Log in
+              </button>
+            </p>
           </div>
+
         </section>
 
         {/* The hero is intentionally space-only. Keep the legacy street source
@@ -322,77 +405,208 @@ export function LandingPage() {
         </div>}
       </main>
 
-      {/* How it works */}
-      <section id="how" className="phil-how">
+      <section id="how" className="phil-workflow" aria-labelledby="phil-workflow-title">
         <HowStreetBackdrop />
 
-        <div className="phil-how-title">
-          <div className="phil-how-label">how Philabantay works</div>
-          <h2>One booking, clear from search<br />to finished cut.</h2>
+        <header className="phil-workflow-heading">
+          <span>HOW PHILABANTAY WORKS</span>
+          <h2 id="phil-workflow-title">One clear flow for every side of the chair.</h2>
+          <p>
+            Follow the booking from discovery to completion, then see exactly
+            what the customer, barber, and shop owner control.
+          </p>
+        </header>
+
+        <div className="phil-workflow-shell">
+          <div className="phil-workflow-content">
+            <section
+              id="workflow-lifecycle"
+              className="phil-workflow-chapter is-lifecycle"
+              data-workflow-section
+              aria-labelledby="workflow-lifecycle-title"
+            >
+              <header>
+                <span>01 · ONE BOOKING FLOW</span>
+                <h3 id="workflow-lifecycle-title">From a published shop to a finished visit.</h3>
+                <p>Every status advances the same reservation instead of creating separate versions of the truth.</p>
+              </header>
+              <ol className="phil-workflow-lifecycle" aria-label="Appointment lifecycle">
+                {SYSTEM_STAGES.map((stage, index) => (
+                  <li data-reveal key={stage.label} style={{ '--motion-index': index } as CSSProperties}>
+                    <span>{stage.label}</span>
+                    <div>
+                      <h4>{stage.title}</h4>
+                      <p>{stage.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section
+              id="workflow-customer"
+              className="phil-workflow-chapter is-customer"
+              data-workflow-section
+              aria-labelledby="workflow-customer-title"
+            >
+              <header>
+                <span>02 · CUSTOMER SIDE</span>
+                <h3 id="workflow-customer-title">Less guessing before and after the cut.</h3>
+                <p>Published shop facts, one booking request, and one place to follow what happens next.</p>
+              </header>
+              <ol className="phil-workflow-steps">
+                {CUSTOMER_STEPS.map((step) => (
+                  <li data-reveal key={step.no} style={{ '--step-color': step.color } as CSSProperties}>
+                    <div className="phil-workflow-step-icon" aria-hidden="true">{step.icon}</div>
+                    <span>STEP {step.no}</span>
+                    <h4>{step.title}</h4>
+                    <p>{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section
+              id="workflow-shop"
+              className="phil-workflow-chapter is-shop"
+              data-workflow-section
+              aria-labelledby="workflow-shop-title"
+            >
+              <header>
+                <span>03 · SHOP-SIDE FLOW</span>
+                <h3 id="workflow-shop-title">The working day stays owner-authoritative.</h3>
+                <p>Barbers see their assigned work while owners keep control of shop facts, staff, and decisions.</p>
+              </header>
+              <ol className="phil-workflow-steps">
+                {BARBER_STEPS.map((step) => (
+                  <li data-reveal key={step.no} style={{ '--step-color': step.color } as CSSProperties}>
+                    <div className="phil-workflow-step-icon" aria-hidden="true">{step.icon}</div>
+                    <span>STEP {step.no}</span>
+                    <h4>{step.title}</h4>
+                    <p>{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+          </div>
         </div>
 
-        <ol className="phil-system-lifecycle" aria-label="Appointment lifecycle">
-          {SYSTEM_STAGES.map((stage, index) => (
-            <li data-reveal key={stage.label} style={{ '--motion-index': index } as CSSProperties}>
-              <span>{stage.label}</span>
-              <div>
-                <h3>{stage.title}</h3>
-                <p>{stage.body}</p>
+        {/* Alternating feature rows. Each `RiveScene` currently renders its
+            static fallback; pass a `src` once the .riv artwork exists and the
+            row animates with no other change. */}
+        <section id="services" className="phil-features" aria-labelledby="phil-features-title">
+          <h2 id="phil-features-title" className="phil-visually-hidden">
+            What Philabantay handles for you
+          </h2>
+
+          {LANDING_FEATURES.map((feature, index) => (
+            <article
+              key={feature.id}
+              className={`phil-feature-row${index % 2 === 1 ? ' is-reversed' : ''}`}
+              data-reveal=""
+            >
+              <div className="phil-feature-copy">
+                <h3>{feature.title}</h3>
+                <p>{feature.body}</p>
+                <button
+                  type="button"
+                  className="phil-feature-cta"
+                  aria-haspopup="dialog"
+                  onClick={() => openLandingAuth(feature.mode)}
+                >
+                  {feature.cta}
+                </button>
               </div>
-            </li>
+              <div className="phil-feature-art">
+                <RiveScene
+                  src={feature.riveSrc}
+                  label={feature.sceneLabel}
+                  fallback={<FeatureGlyph kind={feature.id} />}
+                />
+              </div>
+            </article>
           ))}
-        </ol>
+        </section>
 
-        <div className="phil-role-journeys">
-          <JourneyGuide
-            tone="customer"
-            eyebrow="FOR THE PERSON IN THE CHAIR"
-            title="The customer journey"
-            description="From finding a real opening to reviewing a finished cut."
-            steps={CUSTOMER_STEPS}
-          />
-          <JourneyGuide
-            tone="shop"
-            eyebrow="FOR BARBERS AND OWNERS"
-            title="The shop-side workflow"
-            description="From setting up the shop to serving, closing, and learning from each visit."
-            steps={BARBER_STEPS}
-          />
-        </div>
-
-        <section className="phil-capabilities" aria-labelledby="phil-capabilities-title">
-          <header>
-            <span>WHAT THE SYSTEM HANDLES</span>
-            <h2 id="phil-capabilities-title">Useful before, during, and after every cut.</h2>
-            <p>Each role gets the tools it needs without exposing another shop&apos;s work.</p>
-          </header>
-          <div className="phil-capability-grid">
-            {CAPABILITY_GROUPS.map((group, index) => (
-              <article
-                data-reveal
-                key={group.role}
-                style={{ '--capability-color': group.color, '--motion-index': index } as CSSProperties}
-              >
-                <span>{group.eyebrow}</span>
-                <h3>{group.role}</h3>
-                <ul>
-                  {group.items.map((item) => <li key={item}>{item}</li>)}
-                </ul>
-              </article>
-            ))}
+        {/* Centered closing band: one heading, one line of context, one action,
+            then a wide scene. Swap in a .riv via `src` when the artwork lands. */}
+        <section id="contact" className="phil-cta-band" aria-labelledby="phil-contact-title">
+          <div className="phil-cta-copy">
+            <h2 id="phil-contact-title">Bring the whole barber day into one clear desk.</h2>
+            <p>
+              Set up your shop, or log in to pick up where your last cut left off.
+            </p>
+            <button
+              type="button"
+              className="phil-cta-button"
+              aria-haspopup="dialog"
+              onClick={() => openLandingAuth('signup')}
+            >
+              Create your shop account
+            </button>
+            <p className="phil-cta-alt">
+              May account ka na?{' '}
+              <button type="button" aria-haspopup="dialog" onClick={() => openLandingAuth('signin')}>
+                Log in
+              </button>
+            </p>
+          </div>
+          <div className="phil-cta-scene">
+            <RiveScene
+              label="A barbershop counter with the day's bookings in view"
+              fallback={<CtaBandGlyph />}
+            />
           </div>
         </section>
 
-        {/* The shop itself closes the page — walk in scruffy, walk out sharp. */}
-        <div className="phil-shopfront-outro">
-          <Storefront fullBleed />
-        </div>
+        {/* Every destination here is a route or anchor that actually exists.
+            No blog, careers, or policy columns until those pages are real. */}
+        <footer className="phil-footer">
+          <div className="phil-footer-top">
+            <div className="phil-footer-brand">
+              <span className="phil-footer-mark">
+                <span className="brand-pole" aria-hidden="true" />
+                Philabantay
+              </span>
+              <p>The local barber booking desk. Real shop facts, one clear booking.</p>
+            </div>
+
+            <nav className="phil-footer-nav" aria-label="Footer">
+              <div>
+                <h2>Product</h2>
+                <ul>
+                  <li><a href="#how">How it works</a></li>
+                  <li><a href="#services">What it handles</a></li>
+                                  </ul>
+              </div>
+              <div>
+                <h2>Account</h2>
+                <ul>
+                  <li><Link to="/login">Log in</Link></li>
+                  <li><Link to="/signup">Create an account</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h2>Get in touch</h2>
+                <ul>
+                  <li><a href="#contact">Request a demo</a></li>
+                </ul>
+              </div>
+            </nav>
+          </div>
+
+          <p className="phil-footer-legal">
+            © {new Date().getFullYear()} Philabantay. Built for Philippine barbershops.
+          </p>
+        </footer>
+
       </section>
     </div>
   )
 }
 
-function JourneyGuide({
+export function JourneyGuide({
   tone,
   eyebrow,
   title,
@@ -429,72 +643,6 @@ function JourneyGuide({
         ))}
       </ol>
     </section>
-  )
-}
-
-function SpaceDoodleBackdrop() {
-  return (
-    <div className="phil-space-world" aria-hidden="true">
-      <div className="phil-space-moon"><span /></div>
-      <div className="phil-space-planet phil-space-planet-one"><span /></div>
-      <div className="phil-space-planet phil-space-planet-two"><span /></div>
-      <div className="phil-space-galaxy phil-space-galaxy-one">
-        <i /><i /><i />
-      </div>
-      <div className="phil-space-galaxy phil-space-galaxy-two">
-        <i /><i /><i />
-      </div>
-      <div className="phil-space-meteors">
-        <i /><i /><i /><i />
-      </div>
-      <div className="phil-space-astronaut phil-space-astronaut-one">
-        <WalkFigure
-          view="front"
-          walking={false}
-          showGround={false}
-          showMotionLines={false}
-          costume="astronaut"
-          hairStyle="curly"
-          hair="#3f3029"
-          skin="#d69b74"
-          shirt="#f5f7fa"
-          pants="#dbe7f2"
-        />
-      </div>
-      <div className="phil-space-astronaut phil-space-astronaut-two">
-        <WalkFigure
-          view="front"
-          walking={false}
-          showGround={false}
-          showMotionLines={false}
-          costume="astronaut"
-          hairStyle="bob"
-          hair="#302a28"
-          skin="#e0ad86"
-          shirt="#f5f7fa"
-          pants="#dbe7f2"
-        />
-      </div>
-      <div className="phil-space-ship">
-        <svg viewBox="0 0 210 100">
-          <g stroke={INK} strokeWidth="5" strokeLinejoin="round">
-            <path d="M30 58 Q86 8 177 31 L199 51 Q126 83 35 72 Z" fill="#f8f5eb" />
-            <path d="M73 43 Q96 9 128 30 L136 43 Z" fill="#8ecce6" />
-            <path d="M36 59 L8 43 L19 71 Z" fill="#f4b8c4" />
-            <circle cx="94" cy="55" r="8" fill="#ffd76a" />
-            <circle cx="122" cy="51" r="8" fill="#9c87d8" />
-            <circle cx="150" cy="47" r="8" fill="#6fc1c9" />
-          </g>
-        </svg>
-      </div>
-      <svg className="phil-space-constellation" viewBox="0 0 220 120">
-        <path d="M18 83 L55 41 L98 64 L139 24 L194 56" />
-        {[['18','83'], ['55','41'], ['98','64'], ['139','24'], ['194','56']].map(([cx, cy]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4" />
-        ))}
-      </svg>
-      <div className="phil-space-horizon" />
-    </div>
   )
 }
 
@@ -880,5 +1028,68 @@ function ScatterDoodles() {
         </div>
       </div>
     </>
+  )
+}
+
+/**
+ * Static artwork behind each feature row. These are the honest baseline the
+ * page reads with when motion is reduced or a `.riv` file has not been supplied
+ * yet, so they must stand on their own rather than look like a loading state.
+ */
+function FeatureGlyph({ kind }: { kind: FeatureId }) {
+  const stroke = { fill: 'none', stroke: INK, strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  return (
+    <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" className="phil-feature-glyph">
+      <circle cx="100" cy="100" r="86" fill={kind === 'schedule' ? '#e8f4f6' : '#fdeef1'} />
+      {kind === 'booking' && (
+        <g {...stroke}>
+          <rect x="52" y="46" width="96" height="112" rx="10" fill="#fff" />
+          <path d="M68 78h64M68 100h64M68 122h40" />
+          <circle cx="140" cy="140" r="24" fill={ACCENT} />
+          <path d="M130 140l7 7 13-14" stroke="#fff" strokeWidth="3.4" />
+        </g>
+      )}
+      {kind === 'schedule' && (
+        <g {...stroke}>
+          <rect x="42" y="56" width="116" height="94" rx="10" fill="#fff" />
+          <path d="M42 82h116M72 56v-12M128 56v-12" />
+          <rect x="58" y="96" width="26" height="16" rx="4" fill="#bfe4ea" />
+          <rect x="92" y="96" width="26" height="16" rx="4" fill="#bfe4ea" />
+          <rect x="58" y="122" width="26" height="16" rx="4" fill={ACCENT} />
+          <path d="M126 130l7 7 14-15" strokeWidth="3.4" />
+        </g>
+      )}
+      {kind === 'facts' && (
+        <g {...stroke}>
+          <path d="M56 152V84l44-30 44 30v68z" fill="#fff" />
+          <path d="M84 152v-34h32v34" />
+          <path d="M74 100h16M110 100h16" />
+          <circle cx="148" cy="62" r="18" fill={ACCENT} />
+          <path d="M148 54v9l6 4" stroke="#fff" strokeWidth="3.2" />
+        </g>
+      )}
+    </svg>
+  )
+}
+
+/** Wide static scene for the closing band, in the same doodle vocabulary. */
+function CtaBandGlyph() {
+  const stroke = { fill: 'none', stroke: INK, strokeWidth: 2.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  return (
+    <svg viewBox="0 0 420 180" aria-hidden="true" focusable="false" className="phil-cta-glyph">
+      <rect x="18" y="112" width="384" height="8" rx="4" fill="#cfe8ec" />
+      <g {...stroke}>
+        <rect x="42" y="42" width="128" height="70" rx="8" fill="#fff" />
+        <path d="M58 62h96M58 78h96M58 94h60" />
+        <rect x="196" y="26" width="92" height="86" rx="8" fill="#fff" />
+        <path d="M212 48h60M212 66h60M212 84h36" />
+        <circle cx="266" cy="96" r="12" fill={ACCENT} />
+        <path d="M260 96l4 4 8-8" stroke="#fff" strokeWidth="2.8" />
+        <rect x="316" y="54" width="62" height="58" rx="8" fill="#fff" />
+        <path d="M330 72h34M330 88h22" />
+        <path d="M347 54V34" />
+        <circle cx="347" cy="28" r="7" fill="#9fdbe4" />
+      </g>
+    </svg>
   )
 }

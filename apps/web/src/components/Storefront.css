@@ -450,6 +450,193 @@
   background-color: rgba(111, 135, 144, .38);
   clip-path: polygon(0 38%, 8% 38%, 8% 7%, 15% 7%, 15% 32%, 24% 32%, 24% 15%, 32% 15%, 32% 39%, 41% 39%, 41% 2%, 49% 2%, 49% 30%, 60% 30%, 60% 12%, 70% 12%, 70% 35%, 80% 35%, 80% 6%, 89% 6%, 89% 40%, 100% 40%, 100% 100%, 0 100%);
 }
+
+/* A real analog landmark for the landing city. The hand angles are supplied
+   from Asia/Manila time; no digital time label is rendered in the scene. */
+.city-clock-tower {
+  position: absolute;
+  top: -90px;
+  right: 72px;
+  z-index: 1;
+  width: 220px;
+  height: 570px;
+  filter: drop-shadow(7px 9px 0 rgba(28, 36, 47, .2));
+}
+
+.city-clock-tower-spire {
+  position: absolute;
+  z-index: 4;
+  top: -30px;
+  left: 50%;
+  width: 4px;
+  height: 46px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #cf776a;
+  transform: translateX(-50%);
+}
+
+.city-clock-tower-spire::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: #f4ce69;
+  transform: translateX(-50%);
+}
+
+.city-clock-tower-cap {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 10px;
+  width: 200px;
+  height: 92px;
+  border: 3px solid var(--ink);
+  background: linear-gradient(145deg, #8b7896, #5d5878);
+  clip-path: polygon(50% 0, 100% 88%, 93% 100%, 7% 100%, 0 88%);
+}
+
+.city-clock-tower-body {
+  position: absolute;
+  z-index: 1;
+  top: 74px;
+  left: 28px;
+  width: 164px;
+  height: 476px;
+  border: 3px solid var(--ink);
+  background:
+    repeating-linear-gradient(0deg, rgba(43, 43, 43, .1) 0 2px, transparent 2px 24px),
+    linear-gradient(90deg, #b8ae9a, #e1d3b9 48%, #aa9f8b);
+  clip-path: polygon(9% 0, 91% 0, 100% 100%, 0 100%);
+}
+
+.city-clock-tower-body > span {
+  position: absolute;
+  width: 25px;
+  height: 42px;
+  border: 2px solid var(--ink);
+  border-radius: 14px 14px 3px 3px;
+  background: #9cc7d5;
+  box-shadow: inset 0 0 0 5px rgba(245, 226, 154, .26);
+}
+
+.city-clock-tower-body > span:nth-child(1) { top: 128px; left: 32px; }
+.city-clock-tower-body > span:nth-child(2) { top: 128px; right: 32px; }
+.city-clock-tower-body > span:nth-child(3) { top: 220px; left: 38px; }
+.city-clock-tower-body > span:nth-child(4) { top: 220px; right: 38px; }
+
+.city-clock-tower-base {
+  position: absolute;
+  z-index: 2;
+  right: -12px;
+  bottom: 0;
+  left: -12px;
+  height: 30px;
+  border: 3px solid var(--ink);
+  border-radius: 8px 8px 2px 2px;
+  background:
+    repeating-linear-gradient(90deg, rgba(43, 43, 43, .12) 0 3px, transparent 3px 32px),
+    #887d6c;
+  box-shadow: 0 9px 0 rgba(43, 43, 43, .2);
+}
+
+.city-clock-face {
+  position: absolute;
+  z-index: 5;
+  top: 42px;
+  left: 50%;
+  width: 146px;
+  height: 146px;
+  border: 7px solid #534b45;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 48%, #fff8d6 0 61%, #e9d696 62% 100%);
+  box-shadow:
+    inset 0 0 0 3px var(--ink),
+    0 0 24px 6px rgba(255, 226, 130, .25);
+  transform: translateX(-50%);
+}
+
+.city-clock-face > i {
+  position: absolute;
+  inset: 8px;
+  transform: rotate(var(--clock-tick-angle));
+}
+
+.city-clock-face > i::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 13px;
+  border-radius: 999px;
+  background: #403b37;
+  transform: translateX(-50%);
+}
+
+.city-clock-hand {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 50%;
+  width: 6px;
+  border: 1px solid #2b2b2b;
+  border-radius: 999px;
+  background: #413b37;
+  transform-origin: 50% calc(100% - 2px);
+}
+
+.city-clock-hour-hand {
+  height: 38px;
+  transform: translateX(-50%) rotate(var(--clock-hour-angle));
+}
+
+.city-clock-minute-hand {
+  height: 52px;
+  width: 5px;
+  transform: translateX(-50%) rotate(var(--clock-minute-angle));
+}
+
+.city-clock-second-hand {
+  z-index: 4;
+  width: 2px;
+  height: 56px;
+  border: 0;
+  background: #cc4f54;
+  transform: translateX(-50%) rotate(var(--clock-second-angle));
+}
+
+.city-clock-face > b {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: #f4ce69;
+  transform: translate(-50%, -50%);
+}
+
+.phil[data-day-phase='night'] .city-clock-tower {
+  filter: brightness(.72) saturate(.8) drop-shadow(7px 9px 0 rgba(4, 8, 20, .3));
+}
+
+.phil[data-day-phase='night'] .city-clock-face {
+  background:
+    radial-gradient(circle at 50% 48%, #fff4bd 0 61%, #e1c76a 62% 100%);
+  box-shadow:
+    inset 0 0 0 3px var(--ink),
+    0 0 30px 10px rgba(255, 221, 111, .44);
+}
+
 .phil[data-day-phase='night'] .city-depth {
   filter: brightness(.46) saturate(.72) hue-rotate(12deg);
   background-color: rgba(18, 29, 58, .76);
@@ -613,4 +800,5 @@
   .city-pedestrian-five { left: 38%; }
   .city-pedestrian-six { right: 43%; }
   .city-pedestrian-seven { left: 62%; }
+  .city-clock-second-hand { display: none; }
 }

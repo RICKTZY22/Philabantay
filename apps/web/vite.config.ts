@@ -10,20 +10,25 @@ function apiOrigin(value: string | undefined): string | null {
   }
 }
 
-function contentSecurityPolicy(configuredApiOrigin: string | null): string {
+function contentSecurityPolicy(
+  configuredConnectOrigins: Array<string | null>,
+  configuredImageOrigins: Array<string | null>,
+): string {
+  const connectOrigins = [...new Set(configuredConnectOrigins.filter((origin): origin is string => Boolean(origin)))]
+  const imageOrigins = [...new Set(configuredImageOrigins.filter((origin): origin is string => Boolean(origin)))]
   return [
     "default-src 'self'",
     "base-uri 'none'",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
     "script-src-attr 'none'",
     "style-src 'self'",
     "style-src-attr 'unsafe-inline'",
     "font-src 'self'",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
-    `connect-src 'self'${configuredApiOrigin ? ` ${configuredApiOrigin}` : ''}`,
+    `img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org${imageOrigins.length > 0 ? ` ${imageOrigins.join(' ')}` : ''}`,
+    `connect-src 'self'${connectOrigins.length > 0 ? ` ${connectOrigins.join(' ')}` : ''}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ].join('; ')
@@ -40,7 +45,11 @@ const commonSecurityHeaders = {
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, process.cwd(), '')
-  const productionCsp = contentSecurityPolicy(apiOrigin(process.env.VITE_API_BASE_URL ?? environment.VITE_API_BASE_URL))
+  const storageOrigin = apiOrigin(process.env.VITE_STORAGE_ORIGIN ?? environment.VITE_STORAGE_ORIGIN)
+  const productionCsp = contentSecurityPolicy([
+    apiOrigin(process.env.VITE_API_BASE_URL ?? environment.VITE_API_BASE_URL),
+    storageOrigin,
+  ], [storageOrigin])
   return {
     plugins: [react()],
     build: {
@@ -73,7 +82,7 @@ export default defineConfig(({ mode }) => {
       headers: {
         ...commonSecurityHeaders,
         'Content-Security-Policy': productionCsp
-          .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
+          .replace("script-src 'self' 'wasm-unsafe-eval'", "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'")
           .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
           .replace("connect-src 'self'", "connect-src 'self' ws: wss:"),
       },

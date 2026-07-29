@@ -15,7 +15,7 @@
     "@fontsource/gochi-hand": "^5.2.8",
     "@fontsource/kalam": "^5.2.8",
     "@fontsource/patrick-hand": "^5.2.8",
-    "gsap": "^3.13.0",
+    "@rive-app/canvas": "^2.39.1",
     "leaflet": "^1.9.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
