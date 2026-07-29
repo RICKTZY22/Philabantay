@@ -29,42 +29,42 @@ Integration tests are gated behind `RUN_LOCAL_SUPABASE_TESTS=1` so a normal
 `npm test` stays fast and never needs Docker. When the flag is off, those files
 report as **skipped**, not failed.
 
-## Latest authoritative run (2026-07-24)
+## Latest authoritative run (2026-07-28)
 
-Measured this session, on branch `phase-2-shops`:
+Measured after a clean local reset through
+`20260728000600_p2_06_schedule_authority_closeout.sql`:
 
 ```text
-shared   42 passed  (6 files)
-api      25 passed | 29 skipped  (integration gated off)
-web      19 passed  (1 file)
+shared   56 passed  (6 files)
+api      28 passed | 41 skipped  (integration gated off)
+web      32 passed  (2 files)
 -------------------------------------------------
-default unit total            86 passed
+default fast total           116 passed
 
 api with RUN_LOCAL_SUPABASE_TESTS=1 + Docker
-         54 passed  (25 boundary + 29 local-Supabase integration)
+         69 passed  (28 boundary + 41 local-Supabase integration)
 ```
 
-So the full picture with the integration layer enabled is **shared 42 + api 54 +
-web 19 = 115 passing**, zero failing, on a clean local-Supabase reset (migrations
-through `20260722002000`).
+So the full picture with the integration layer enabled is **shared 56 + api 69 +
+web 32 = 157 passing**, zero failing. The API matrix also passed a second
+immediate run without another reset.
 
-### Why "54/54" and "86" both appear
+### Why "69/69" and "116" both appear
 
-- **86** is the everyday unit total (`npm test` with no Docker): 42 + 25 + 19.
-- **54** is the API workspace when the gate is on: the same 25 boundary tests
-  plus the 29 integration tests that are otherwise skipped. That 54 is the
+- **116** is the everyday fast total (`npm test` with no Docker): 56 + 28 + 32.
+- **69** is the API workspace when the gate is on: the same 28 boundary tests
+  plus the 41 integration tests that are otherwise skipped. That 69 is the
   security "matrix" number quoted in the roadmap.
 
 ## Reproducing the full matrix
 
 ```bash
 supabase start
-supabase db reset            # clean migration replay; required for exact-set assertions
+supabase db reset            # proves clean migration replay
 RUN_LOCAL_SUPABASE_TESTS=1 npm run test -w @barbershop/api
+RUN_LOCAL_SUPABASE_TESTS=1 npm run test -w @barbershop/api  # repeatability proof
 ```
 
-A clean reset matters: the integration fixtures create shops in `beforeAll` but
-do not delete them in an `afterAll`, and a few catalogue assertions check the
-**exact set** of public shops. Running the matrix twice without a reset makes
-those exact-set checks see leftover rows and fail. That is a test-hygiene
-artifact, not a product defect (see the findings section of each phase file).
+The matrix archives exact-name fixtures before setup and archives the current
+published fixtures in `afterAll`. This makes an immediate rerun deterministic
+and also recovers from an interrupted previous run.

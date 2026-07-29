@@ -1,18 +1,21 @@
-# V1 roadmap status - 2026-07-24
+# V1 roadmap status - 2026-07-29
 
 Single source of truth for packet-by-packet progress across all five phases.
 Records **verified evidence**, not visual completion. When a claim is only
 partially verified, it says so. Per-test detail lives in
 [`../testing/`](../testing/README.md).
+Model and effort recommendations live in
+[the model routing guide](MODEL-ROUTING-GUIDE.md); they do not change verified
+packet status.
 
 Legend: ✅ done and verified · 🔨 in progress · ⬜ not started · 🧹 needs polish.
 
 ## Progress at a glance
 
 - **Phase 1 (foundation + identity): ✅ complete** — 7/7 packets, automated gate green.
-- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 done; P2-02 slices 1-2 (hours + closures) done.
+- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 through P2-05 verified complete; P2-06 implementation gate green, independent sign-off pending.
 - Phases 3–5: ⬜ not started.
-- **Overall: about 8 of ~39 packets.**
+- **Overall: 12 of ~39 packets.**
 
 ## Phase 1 — foundation and identity ✅
 
@@ -33,11 +36,11 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 | Packet | Status | Detail |
 | --- | --- | --- |
 | P2-01 Shop lifecycle | ✅ | Draft → published → suspended lifecycle, `/owner/shop` version-checked commands, catalogue gated on `published`, Shop Setup UI + no-shop redirect. Matrix 52/52 + browser verified. Committed (`5cc05f3`, `f402624`). |
-| P2-02 Shop facts | 🔨 | Slices 1–2 (operating hours + date closures): full-stack, verified on a clean local-Supabase reset (matrix 54/54, incl. new hours + closures RLS tests), committed (`2df2312`). Remaining slices: media (storage upload), services editor UI, map-pin picker. |
-| P2-03 Hiring state | ⬜ | off / open / full with optional counts. |
-| P2-04 Employment convergence | ⬜ | application / invitation / join-code converge on one owner-approved request. |
-| P2-05 Provider capabilities | ⬜ | owner-as-provider, service qualifications. |
-| P2-06 Schedule authority | ⬜ | owner shifts + barber change requests. |
+| P2-02 Shop facts | ✅ | Clean local reset through `20260726000100`; authenticated verified-owner Shop Setup passed details/map, hours/closures, services, media, publish/unpublish, stale sessions, mobile, keyboard, native date control, reduced motion, and console checks. The 2026-07-28 follow-ups added the strict public-detail projection plus bounded media hardening: content-rejection proof, object-first retryable deletion, resilient previews, stale-upload cleanup, and a 100-row per-shop cap. |
+| P2-03 Hiring state | ✅ | Canonical versioned off/open/full state with optional positive count/note, owner Hiring UI, public published-shop gate, stale-session recovery, and legacy direct-table revocation. Clean reset through `20260727000100`; matrix 57/57; 91 unit tests; typecheck/build/diff and authenticated browser smoke green. |
+| P2-04 Employment convergence | ✅ (reverified after security fix) | Applications, invitations, and join codes converge on locked, versioned requests. The ownerless resolution exploit is repaired by fail-closed SQL, forward hotfix `20260728000100`, and API shop scoping. The bounded hardening follow-up removes retained plaintext legacy codes, enforces invitation creator provenance, uses 80-bit uppercase-hex join codes, and records competing requests as `superseded`. |
+| P2-05 Provider capabilities | ✅ | Explicit shop-scoped owner provider profile without role switching; owner-authoritative per-service barber/owner qualifications, accepting state, barber requests, immutable audit, version/idempotency/race guards, Staff/Professional UI. Clean reset through `20260727000300`; matrix 59/59; 93 fast tests; typecheck/build/diff and authenticated browser smoke green. |
+| P2-06 Schedule authority | 🔨 | Slices 1, 2a, and 2c are implemented and locally verified. Migration `20260728000600` drops legacy self-write RPCs, requires request idempotency keys, and enforces pending/resolved invariants. Canonical owner routes version weekly patterns and exceptions; the barber view is read-only and submits structured change requests; approval applies the exception, links it, advances the revision, and appends an event transactionally. Clean reset through `00600`; matrix 69/69 twice; 116 fast tests; typecheck/lint/build/DB-lint/diff green. Authenticated desktop/mobile smoke passed weekly and exception edits, approval, stale-session refresh, keyboard-native controls, reduced motion, and no console errors. Follow-up `20260728000700` closes the last known gap: the booking-conflict guard now takes the resulting window, so narrowing hours or approving a `different_hours` request is refused when it would leave an active booking outside availability (previously only a full day off was checked, and times were ignored). Regression covers the narrowed-window refusal and a wide window still being accepted. Independent packet sign-off remains pending, so status stays 🔨. |
 | P2-07 Availability engine | ⬜ | combine hours, closures, employment, qualification, shifts, buffers, overlap, chairs. |
 | P2-08 Race gate | ⬜ | concurrent claim / capacity probes. |
 
@@ -66,13 +69,11 @@ and adds the operator tools needed at PH scale:
 
 ## Needs polishing / open items
 
-1. **P2-02 remaining slices** — media upload, services editor UI, and the map-pin picker are still open; a shop cannot publish until the services editor creates an active service. (Slices 1–2 verified and committed.)
-2. **Phase 1 final browser/accessibility smoke** — re-confirm the session-restore no-flash fix (LR-033) and run the accessibility pass; this was the closeout step Codex did not finish.
-3. **Independent adversarial re-scan (P1-07)** — Codex wrote both the code and its tests; a fresh adversarial pass raises confidence before Phase 1 is formally locked.
-4. **Hours `PUT` is delete-then-insert (non-atomic)** — low risk for an owner editing their own shop; consider a single transactional RPC in a later pass.
-5. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
-6. **Integration test hygiene** — the `beforeAll` fixture does not delete its shops, so the exact-set catalogue assertion needs a clean reset before each matrix run (works via reset; could harden with `afterAll` cleanup or non-exact assertions).
-7. **Docs** — keep traceability rows and this status current per packet.
+1. **Phase 1 final browser/accessibility smoke** — re-confirm the session-restore no-flash fix (LR-033) and run the accessibility pass; this was the closeout step Codex did not finish.
+2. **Independent adversarial re-scan (P1-07)** — Codex wrote both the code and its tests; a fresh adversarial pass raises confidence before Phase 1 is formally locked.
+3. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
+4. **Remote rollout (Phase 5)** — the P2-04 hotfix and bounded hardening migrations/API intentionally remain local until the production-rollout phase selects and configures the hosted Supabase/API/web targets.
+5. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07.
 
 ## Verification approach (decided 2026-07-24)
 
@@ -101,34 +102,49 @@ Agreed improvements intentionally postponed so the team can focus on backend and
 security first (decision 2026-07-23). Schedule these in the Phase 4 experience
 pass or a dedicated pre-launch polish slice, not mid-packet.
 
-- **Landing + auth split.** Pull the auth form out of the landing hero. The
-  landing should lead with the value proposition and clear CTAs (Get started /
-  Log in) while keeping the "how it works" and role sections; add real `/login`
-  and `/signup` routes (this also fixes the current deep-link fragility where
-  those paths only redirect to `/` and read mode from router state). Keep the
-  existing notebook + space-station brand: borrow structure, not skin, from
-  marketing references. Touches routing, `AuthSlider`, redirect/`from` logic,
-  and the GSAP scroll, so it is its own slice.
+- **Landing + auth presentation — implemented locally 2026-07-29.** The
+  landing now leads with a large doodle-forward value proposition and four
+  aligned city-space scenes selected from live Philippine time. Morning shows
+  students travelling to school, afternoon shows customers waiting at the
+  barbershop, evening shows workers travelling home, and midnight leaves the
+  sidewalks empty with sparse traffic; jeepneys anchor the Philippine street
+  in every variant. One small sketched seam replaces the former dark portal.
+  The former hero walker and live-city scene are disconnected and archived.
+  Inline SVG laptop/left-side phone chassis hold animated HTML product previews.
+  A unified sticky-index workflow covers lifecycle, customer, shop, and role
+  facts.
+  Guest auth CTAs open the existing real forms in an accessible in-page modal;
+  `/login` and `/signup` remain direct deep-link fallbacks. Latest browser
+  evidence confirms all four time variants load and activate one at a time,
+  the scene and barbershop fit without horizontal overflow from `1440x900`
+  through `320x760`, obsolete hero layers are absent, SVG device frames and
+  internal UI motion are active, and console errors are zero. Reduced-motion
+  CSS disables the crossfade and internal UI animations.
+  This polish does not start P2-07 or change packet counts.
 
-## Latest automated gate (2026-07-24)
+## Latest automated gate (2026-07-28)
 
 Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 42, api 25, web 19 (86 total)
-Build:     web production build passed
-Matrix:    54/54 on a clean local-Supabase reset (migrations through
-           20260722002000; P2-01 lifecycle + P2-02 hours/closures RLS +
-           all Phase 1 RLS/security probes)
+Unit:      shared 56, api 28, web 32 (116 total)
+Build:     API + web production build passed
+DB lint:   no schema errors
+Matrix:    API integration/direct-RLS workspace 69/69 twice
+           after a clean reset through 20260728000600
 ```
 
-The P2-02 migrations (`20260722001900_shop_operating_hours.sql`,
-`20260722002000_shop_closures.sql`) and their hours/closures RLS tests are now
-part of the matrix (54/54). The per-test breakdown lives in
+The expanded matrix includes the P2-02 public shop-detail projection and media
+hardening, P4021 catalogue-invariant checks, P2-04 ownerless-resolution and
+invitation-provenance regressions, and repeat-run fixture cleanup. Anonymous
+clients receive only the published shop's allowlisted public facts, future
+closures without private reasons, active services/prices, and ready+approved
+media through short-lived signed URLs. P2-05 remains the latest completed
+packet. The per-test breakdown lives in
 [`../testing/`](../testing/README.md).
 
 ## Next up
 
-Finish P2-02: verify slices 1–2 (hours + closures) once Docker is up and commit,
-then slices for media, the services editor, and the map-pin picker.
+P2-06 Slice 2c is implemented and its local gate is green. Keep the packet 🔨
+until an independent review/product sign-off is recorded. Do not begin P2-07.

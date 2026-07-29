@@ -88,7 +88,10 @@ It must reduce uncertainty for all three everyday roles:
 5. Barber applications, owner invitations, and join codes all create one kind
    of employment request. A join code never grants immediate employment.
 6. Join codes expire, can be rotated/revoked, have attempt protection, and may
-   have a usage limit.
+   have a usage limit. One use means one successful, non-replayed request
+   creation. That use is not refunded when the request is later declined,
+   withdrawn, expired, or superseded; otherwise a leaked code could create
+   unbounded requests.
 7. The owner is authoritative for assigned shifts. A barber requests a change;
    approval applies the actual exception transactionally rather than only
    changing a request label.

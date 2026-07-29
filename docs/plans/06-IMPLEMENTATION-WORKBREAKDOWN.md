@@ -4,6 +4,9 @@ This document turns the five approved phases into small work packets that can
 be assigned without allowing frontend, API, and database behavior to drift.
 It is a delivery board, not evidence that any packet is complete.
 
+Cost-aware lead-model, support-model, and effort assignments for every packet
+live in [MODEL-ROUTING-GUIDE.md](MODEL-ROUTING-GUIDE.md).
+
 ## 1. Delivery rule for every packet
 
 ```mermaid

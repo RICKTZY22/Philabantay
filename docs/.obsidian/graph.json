@@ -1,0 +1,11 @@
+{
+  "collapse-filter": false,
+  "collapse-color-groups": false,
+  "collapse-display": false,
+  "collapse-forces": true,
+  "search": "-path:templates -path:.obsidian",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true
+}

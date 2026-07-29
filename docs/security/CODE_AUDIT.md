@@ -8,6 +8,66 @@
 
 ---
 
+## 2026-07-28 P2-04 security correction
+
+**Severity: High — confirmed and fixed.** A verified shop owner with no owned
+shop could accept or decline any known employment-request ID through the API's
+service-role command. `private.owner_shop_id` returned NULL, and the command's
+`target_request.shop_id <> NULL` guards evaluated to NULL rather than true, so
+PL/pgSQL did not execute the rejection branch.
+
+The correction is defense in depth:
+
+- `private.owner_shop_id` now raises `42501` unless it can prove the caller owns
+  an eligible shop. The original P2-04 migration is corrected for clean installs
+  and `20260728000100_p2_04_ownerless_resolution_guard.sql` repairs databases
+  that already migrated.
+- Express resolves the caller's owned shop and scopes the request ID to that
+  shop before it invokes the service-role RPC.
+- The local-Supabase regression exercises accept and decline through both HTTP
+  and direct service-role RPC, and proves the request and employment tables are
+  unchanged by all unauthorized attempts.
+
+Re-verification: clean reset through the hotfix, complete API/direct-RLS matrix
+63/63, 97 fast tests, all typechecks, production builds, DB lint, and diff
+validation passed.
+
+---
+
+## 2026-07-28 bounded hardening closeout
+
+The authorized pre-P2-06 packet repaired findings 2-9, 11-13, 19, 21-22,
+24-25 locally:
+
+| Finding | Verified resolution |
+| --- | --- |
+| 2 | `legacy_shop_join_codes` is dropped after hash migration; SQL confirms the table is absent. |
+| 3 | `authenticated` cannot execute `private.assert_published_shop_facts` or `private.is_shop_member`. |
+| 4 | A trigger proves an owner invitation was created by the verified, onboarded owner of that shop; forged service-role insert regression returns `42501`. |
+| 5 | New join codes use ten random bytes rendered as 20 uppercase hexadecimal characters (80 bits). |
+| 6 | Media rows enter `deleting`; storage removal happens before metadata deletion, and the retained row supports retry. |
+| 7 | A bounded worker removes awaiting uploads older than 24 hours after object cleanup; a serialized trigger caps retained media at 100 rows per shop. |
+| 8 | Owner and public media projections isolate signed-preview failures per row. |
+| 9 | Shop Setup distinguishes awaiting, upload rejected, moderation rejected, removing, unavailable preview, review, and approved states. |
+| 11 | Requests closed by a competing hire use `superseded`, with an event-alignment trigger/backfill for migrated databases. |
+| 12-13 | Every canonical appointment state has an explicit presentation and `ApiBackend` normalizes `pending`/`no_show` at the read boundary. |
+| 19 | Test fixtures are archived before/after runs; the 69-test API matrix passes twice without another reset. |
+| 21-22 | P4021 service/hours constraints and false-content media rejection/object cleanup now have exact integration tests; the catalog no longer overstates the valid-upload case. |
+| 24-25 | Root `npm test` exists and roadmap progress is corrected to 12/~39 packets. |
+
+Clean reset through `20260728000300`, API integration/direct-RLS workspace
+69/69 twice, 112 fast tests, typecheck, lint, production builds, database lint,
+SQL privilege/data checks, and `git diff --check` all passed.
+
+Issue 10 was closed immediately afterward: a use is a successful,
+non-idempotent request creation and is never refunded after decline, withdrawal,
+expiry, or supersession. This preserves a real redemption bound if a code
+leaks. The local integration test proves replay consumes no extra use, all
+three resolution paths retain their use, and the configured limit is enforced.
+Remote deployment remains unconfigured and unauthenticated.
+
+---
+
 ## Executive summary
 
 The codebase is in genuinely good shape for a Phase 1 mock-backed app. XSS hygiene is excellent (zero HTML injection sinks, Leaflet labels built with `textContent`), ownership checks exist on every mutating endpoint, password handling is far more careful than a demo needs (PBKDF2 600k iterations, constant-time compare), and React effect cleanup is consistently correct.

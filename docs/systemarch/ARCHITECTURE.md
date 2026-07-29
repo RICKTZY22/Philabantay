@@ -22,7 +22,7 @@ existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](../security/SECURIT
 | Server data | `VITE_DATA_BACKEND` selects the in-app mock or the Express-backed `ApiBackend`; UI components use the same interface for both. |
 | Realtime | Mock: `BroadcastChannel`. API: authenticated HTTP polling behind `chat.subscribe`. |
 | Maps | Leaflet + OpenStreetMap tiles |
-| Animation | GSAP + ScrollTrigger (dynamically imported), plus CSS transitions |
+| Animation | CSS transitions/keyframes only. GSAP was removed with the 2026-07-29 landing redesign; `useJourneyScroll` now just pauses off-screen scenes via `IntersectionObserver`. |
 | Styling | Plain CSS, one colocated stylesheet per component/page, shared tokens in `theme/doodle.css` |
 | Monorepo | npm workspaces: `apps/*` and `packages/*` |
 
@@ -77,7 +77,7 @@ workspaces.
 | `hooks/` | Reusable lifecycle behavior: `useLiveLocation`, `useCurrentTime`. |
 | `lib/` | Pure utilities: `date`, `geo`, `format`, `security`, `profile`. |
 | `config/` | Static metadata: `navigation` and `discovery` (nearby radius). |
-| `theme/` | `doodle.css` (tokens + global styles), `DoodleDefs` (SVG icon sprite + rough filters), GSAP animation runtime + hook. |
+| `theme/` | `doodle.css` (tokens + global styles) and `DoodleDefs` (SVG icon sprite + rough filters). The GSAP runtime and its hook were deleted as dead code on 2026-07-29. |
 
 ---
 
@@ -276,10 +276,7 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
 | `CustomerDashboard` | `shops.list`, `barbers.list`, `barbers.availableNow`, `bookings.listMine`, `chat.listConversations`, `favorites.list`, `services.list`, `favorites.toggle`, `chat.openConversation` | `useLiveLocation`, `useCurrentTime`, `ShopMap` (lazy), `AppointmentCalendar`, `DoodleBoard`, `ModalPortal` |
 | `BarberDashboard` | `employment.getMyShop`, `employment.listHiringShops`, `employment.listMyApplications`, `employment.apply`, `employment.joinWithCode`, `bookings.listMine`, `chat.listConversations`, `availability.getRules` | `useLiveLocation`, `ShopMap` (lazy), `DoodleBoard` |
 | `ShopOwnerDashboard` | `bookings.listForMyShop`, `employment.getMyShopJoinCode`, `employment.rotateMyShopJoinCode`, owner staff/attendance/notes/performance methods | `DoodleBoard`, `OwnerStaffPanel` |
-| `BarberDetailPage` | `barbers.get`, `services.list`, `shops.list`, `favorites.listBarbers`, `availability.getOpenSlots`, `bookings.create`, `bookings.reschedule`, `favorites.toggleBarber` | `useAuth`, `lib/date`, `lib/format`, `lib/security` |
 | `AppointmentsPage` | `bookings.listMine`, `reviews.listMine`, `bookings.cancel`, `reviews.rateAppointment` | `AppointmentCalendar`, `ModalPortal`, `useCurrentTime`, shared appointment rules |
-| `BarbersPage` | `barbers.list`, `shops.list`, `favorites.listBarbers`, `barbers.availableNow`, `favorites.toggleBarber` | `useLiveLocation`, `useCurrentTime`, `useDoodleAnimations` |
-| `ShopProfilePage` | `shops.get`, `barbers.list`, `services.list`, `favorites.list`, `favorites.toggle`, `chat.openConversation` | `useAuth`; queue/hours/gallery are local mock UI |
 | `ChatPage` / `Thread` | `chat.listConversations`, `chat.getMessages`, `chat.markRead`, `chat.sendMessage`, `chat.subscribe` | `useCurrentTime`; memoized `Thread`/`MessageList`/`MessageComposer` |
 | `DashboardPage` (Schedule) | `barbers.get`, `availability.getRules`, `availability.getMyOverrides`, `availability.setRules`, `availability.addOverride`, `availability.removeOverride`, `barbers.setShiftStatus`, `barbers.setAcceptingBookings` | `useAuth` |
 | `AppMenu` | `useAuth` (`signOut`), `config/navigation` | `useCurtain`, `DoodleAvatar`, portal drawer with focus trap |
@@ -388,8 +385,7 @@ derived, never stored.
   tooltips build with `textContent`), IDs are encoded with `routeSegment`, and
   query strings use `URLSearchParams`.
 - **Accessibility + motion:** modals trap focus and lock scroll; animations honor
-  `prefers-reduced-motion`; GSAP is dynamically imported so it never bloats the
-  entry chunk.
+  `prefers-reduced-motion`. Motion is CSS-only; no animation library ships.
 - **One stylesheet per component/page**, using tokens from `theme/doodle.css`.
 - **`DoodleBoard`** is the shared dashboard shell (teal rail + top bar) used by
   the customer, barber, and owner dashboards, so all three share one look.
@@ -415,11 +411,12 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 4. **Two favorite domains.** Shops use `favorites.list` / `favorites.toggle`;
    barbers use `favorites.listBarbers` / `favorites.toggleBarber`. Easy to grab
    the wrong pair.
-5. **Sample-only shop-profile UI.** The shop profile's
-   queue/hours/gallery/latest-review/specialties remain hardcoded. The owner
-   dashboard reservations, metrics, charts, staff, and performance panels now
-   use backend data. See
-   [FEATURES.md](../mdfiles/FEATURES.md#what-is-real-vs-placeholder-so-you-are-not-surprised).
+5. **Resolved.** The shop-profile page that carried hardcoded
+   queue/hours/gallery/specialties was deleted with the unauthenticated discovery
+   pages, and the customer dashboard's fake price bands, service maps, and wait
+   estimates were removed on 2026-07-28. Every customer-facing catalogue fact now
+   comes from `DataBackend`. No queue or wait estimate is shown until Phase 3 has
+   real walk-in facts.
 6. **Notification prefs are device-local** (`localStorage: bsh_prefs`) and never
    reach the backend; the "Email updates" toggle has no downstream effect.
 7. **Shared settings helpers live in a panel.** `SettingsHeading` and
@@ -437,10 +434,12 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 11. **Landing owns auth.** There is no dedicated login/signup page; `/login` and
     `/signup` redirect to `/` and the `AuthSlider` reads the mode from router
     state. Losing that state (deep link) just lands on the default sign-in view.
-12. **Animation-by-attribute contract.** `useJourneyScroll.ts` and
-    `theme/doodleAnimationRuntime.ts` target elements by `data-*` attributes and
-    CSS class names. Renaming a class in the markup silently breaks animations
-    with no TypeScript error (both files warn about this).
+12. **Animation-by-attribute contract (narrowed).** The landing still keys
+    CSS reveals off `data-reveal`, and `useJourneyScroll.ts` toggles
+    `data-animation-paused` on named scene classes. Renaming those classes or
+    that attribute silently disables motion with no TypeScript error. The
+    former `theme/doodleAnimationRuntime.ts` and its six other `data-*`
+    targets were deleted on 2026-07-29.
 
 ---
 

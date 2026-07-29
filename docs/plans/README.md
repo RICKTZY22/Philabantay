@@ -21,11 +21,12 @@ and versioned Supabase migrations.
 8. [Backend, data, and security master specification](BACKEND-DATA-SECURITY-MASTER-SPEC.md)
 9. [QA and traceability matrix](QA-TRACEABILITY-MATRIX.md)
 10. [Implementation work breakdown](06-IMPLEMENTATION-WORKBREAKDOWN.md)
-11. [Latest logic/loophole rescan](LOGIC-LOOPHOLE-RESCAN-2026-07-22.md)
-12. [Agent handoff and collaboration rules](AGENT-HANDOFF.md)
-13. [Clarifications and decision register](OPEN-QUESTIONS.md)
-14. [Current Phase 1 execution status](PHASE-1-STATUS-2026-07-22.md)
-15. [Frozen P1-02/P1-05 verification contract](P1-02-P1-05-VERIFICATION-CONTRACT.md)
+11. [Cost-aware model routing and effort](MODEL-ROUTING-GUIDE.md)
+12. [Latest logic/loophole rescan](LOGIC-LOOPHOLE-RESCAN-2026-07-22.md)
+13. [Agent handoff and collaboration rules](AGENT-HANDOFF.md)
+14. [Clarifications and decision register](OPEN-QUESTIONS.md)
+15. [Current Phase 1 execution status](PHASE-1-STATUS-2026-07-22.md)
+16. [Frozen P1-02/P1-05 verification contract](P1-02-P1-05-VERIFICATION-CONTRACT.md)
 
 ## Five phases at a glance
 

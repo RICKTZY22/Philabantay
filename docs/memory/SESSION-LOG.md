@@ -1,0 +1,595 @@
+---
+tags:
+  - philabantay
+  - session-log
+---
+
+# Session log
+
+## 2026-07-28 - Obsidian project canvas
+
+- Added `PHILABANTAY-PROJECT-MAP.canvas` as a visual command center for the
+  five-phase roadmap, active P2 packet sequence, runtime architecture,
+  repository structure, verification gates, and cost-aware model routing.
+- Added direct canvas file nodes for current state, roadmap, work breakdown,
+  model guide, architecture, security, testing, traceability, and code patterns.
+- Preserved the unrelated empty `Untitled.canvas`; no product status or packet
+  boundary changed.
+
+## 2026-07-28 - cost-aware model routing
+
+- Added one authoritative routing matrix covering all 39 V1 packets.
+- Assigned Terra, Claude Sonnet, Sol, or Claude Opus by work type and risk,
+  with an explicit recommended effort and narrowly scoped support/review lane.
+- Reserved `xhigh` for concurrency, security, durability, and release gates;
+  no packet defaults to `max` or `ultra`.
+- Linked the guide from the project hub, plan read order, work breakdown,
+  roadmap, and agent handoff. Packet status and the P2-06 boundary did not
+  change.
+
+Append concise handoffs here. Detailed evidence remains in the roadmap, test
+catalog, commits, and implementation files.
+
+## 2026-07-28 — P2-06 Slice 2c owner-authority closeout
+
+- Replaced barber self-rewrite schedule paths with canonical, versioned
+  owner-authoritative weekly and exception routes; removed the legacy RPCs and
+  enforced request idempotency/resolution invariants in migration
+  `20260728000600`.
+- Made the barber roster read-only with structured time-off/different-hours
+  requests; owner approval applies the linked exception and revision/event in
+  one transaction. Added stale refresh and P4025 error presentation.
+- Clean reset succeeded; the API integration/direct-RLS matrix passed 69/69
+  twice without another reset. Direct JWT denials, 401/403 boundaries,
+  concurrent 200/409, exact P4025 count, and append-only events are covered.
+- Shared 56, API 28, and web 32 fast tests passed (116 total); typecheck, lint,
+  builds, DB lint, and diff validation passed.
+- Authenticated smoke passed owner weekly/exception edits, barber request and
+  owner approval, stale sessions, exact 390×844 layouts without overflow,
+  keyboard-native controls, reduced motion, and a clean console.
+- A final local-only reset removed the temporary smoke accounts and data while
+  preserving the running API/web processes.
+- P2-06 remains in progress for independent review/product sign-off. P2-07 was
+  not started; no commit, staging, or deployment was performed.
+
+## 2026-07-27 — P2-05 provider capabilities
+
+- Added an explicit shop-scoped owner provider profile/capability with separate
+  accepting-bookings and rating facts; the owner account never changes role.
+- Added versioned owner-authoritative service qualification sets, barber
+  requests, immutable events, idempotent capability/qualification commands,
+  stale decisions, foreign-shop denial, and one-winner concurrent updates.
+- Added owner Staff qualification management and barber Professional
+  read/request UI with authoritative refresh.
+- Clean-reset local Supabase through `20260727000300`, passed database lint and
+  the complete API/direct-RLS matrix 59/59.
+- Passed all workspace typechecks, 93 fast tests, API/web production builds,
+  and `git diff --check`.
+- Authenticated browser smoke passed owner enable/grant/remove, barber
+  request/owner approval, two-session stale recovery, exact 390×844 no-overflow,
+  keyboard-native controls, reduced motion after one focused fix, and clean
+  reload with no console errors.
+- Performed a final local-only reset after browser evidence to remove temporary
+  demo accounts/shop data; API and web remained healthy.
+- P2-06 was not started.
+
+## 2026-07-27 — P2-04 employment convergence
+
+- Converged barber applications, owner invitations, and join-code entry on one
+  pending request/event model; no entry path grants employment.
+- Added opt-in barber job profiles and the owner request/candidate/code
+  workspace plus barber Professional profile.
+- Added hashed expiring codes, rotation/revocation, usage limits, persisted
+  throttling, one-time plaintext reveal, immutable events, and locked
+  acceptance with vacancy/one-employment race handling.
+- Clean-reset local Supabase through `20260727000200`, restarted Kong after the
+  Windows Docker DNS cache changed the storage container address, and passed
+  the full API/direct-RLS matrix 58/58.
+- Passed all typechecks, 92 fast tests, production builds, and diff validation.
+- Authenticated owner/barber browser smoke passed invite/accept, opening
+  decrement, one-time code reveal, profile persistence, desktop/mobile,
+  keyboard semantics, reduced motion, and clean reload.
+- P2-05 was not started.
+
+## 2026-07-27 — P2-03 hiring state
+
+- Added the canonical versioned `off | open | full` shop hiring command,
+  optional positive opening count/note, and the owner Hiring settings page.
+- Gated the barber hiring catalogue on published eligibility plus canonical
+  `open`, and revoked browser access to the legacy hiring-listing table.
+- Clean-reset local Supabase through `20260727000100`, then passed the complete
+  API/direct-RLS matrix 57/57.
+- Passed all workspace typechecks, 91 fast unit tests, API/web production
+  builds, and `git diff --check`.
+- Authenticated owner smoke passed open/full/off persistence and validation,
+  stale two-session reload, private-until-published messaging, narrow viewport,
+  keyboard reachability, and reduced motion.
+- Restarted the stale local API process so `/api/v1/owner/shop/hiring` is now
+  served from the current source. P2-04 was not started.
+
+## 2026-07-27 — P2-02 final-gate continuation
+
+- Confirmed Docker/local Supabase health, completed a clean reset through the
+  P2-02 migration, and passed the full API/direct-RLS matrix 56/56.
+- Passed all workspace typechecks, 88 unit tests, API/web production builds,
+  and diff validation.
+- Exercised authenticated Shop Setup details/map, hours/closures, service
+  lifecycle, media validation/upload, publishing, stale-version, mobile, and
+  reduced-motion behavior. Exact trusted keyboard/native-picker evidence is
+  still required before closing P2-02.
+- Removed the exact local owner smoke shop and its cascading fixture records,
+  leaving the verified local owner account with a clean first-time setup.
+- Added a visible `Shop Setup` destination to the owner navigation menu.
+- Completed the final native Chrome gate: trusted Tab traversal with visible
+  focus and working Enter/Escape, plus native segmented date entry
+  (`2026-08-15`) and keyboard closure submission. No console errors.
+- Removed the temporary native-control test shop and confirmed the local owner
+  again owns zero shops.
+- Marked P2-02 verified complete. P2-03 remains not started.
+
+## 2026-07-26 — P2-02 implementation
+
+- Finished the remaining Shop facts implementation: service editor, signed
+  private media upload, and map-pin picker.
+- Replaced check-then-update publishing and delete-then-insert hours with atomic
+  versioned database commands.
+- Extended public eligibility to require an open-hours block.
+- Added service/media isolation scenarios and a signed-upload adapter test.
+- Passed typecheck, 88 unit tests, production build, and diff validation.
+- Clean Supabase/RLS and owner browser gates remain pending because Docker
+  Desktop's Linux engine was off.
+- Next: execute the P2-02 final gate, then begin P2-03 only after sign-off.
+
+## 2026-07-26 — shared agent memory setup
+
+- Configured `docs/` as the Git-tracked Philabantay Obsidian vault.
+- Added project hub, current-state, decision, session, and handoff templates.
+- Added matching `AGENTS.md` and `CLAUDE.md` entrypoints so Codex and Claude
+  recover the same project context before editing.
+- Selected the optional Local REST API MCP integration for live Obsidian-aware
+  search and focused note operations; its credential must remain local.
+- Obsidian Local REST API is enabled on loopback; Codex now references its
+  private `OBSIDIAN_API_KEY` environment entry and authenticated successfully.
+  Claude-side MCP registration remains separate and user-controlled.
+
+## 2026-07-28 — customer catalogue honesty cleanup (pre-P2-06)
+
+- Removed the hardcoded `PHILA-DEMO-25` referral box, the two placeholder
+  statistic cards, and the `DISCOVERY_META` demo-shop table (fake price bands,
+  fake shop→service mappings, fake wait estimates) from `CustomerDashboard`.
+- Replaced them with real `DataBackend` facts: the public catalogue already
+  returns `PublicService.shop_id`, so shop→services, per-shop prices, and the
+  service filter are now derived from live data. Free-barber counts come from
+  `ShopWithStatus.available_barber_count`. No queue or wait estimate is shown.
+- Kept the `pending`/`no_show` aliases in `AppointmentsPage`: `ApiBackend`
+  does not normalize (`hydrateAppointments` is a pass-through) and
+  `appointmentStatusSchema` still accepts both legacy values on the wire.
+- Contract gap for a later backend slice: `PublicShop` exposes no public
+  operating hours, closures, description, approved photos, specialties, or
+  contact details, so the customer shop detail cannot yet show them.
+- Verified: web typecheck, 19 web unit tests, production build, and
+  `git diff --check` all pass; browser smoke at 1280x720 and 390x844.
+- Phase 2 and P2-06 remain incomplete; no packet status was changed.
+
+## 2026-07-28 — safe public shop-detail projection
+
+- Added a strict shared `PublicShopDetail` contract and anonymous
+  `GET /catalog/shops/:id` API projection for real description/contact,
+  timezone/booking mode, chair capacity/default buffer, weekly hours, future
+  closures, active services/prices, and ready+approved media with 15-minute
+  signed URLs.
+- Kept the response fail-closed with explicit database column allowlists and a
+  strict schema; owner identity, lifecycle/version, closure reasons, raw
+  storage paths, moderation fields, and internal timestamps are not exposed.
+- Added shared adapter, API boundary, and real local-Supabase integration tests.
+  A clean reset applied all migrations through P2-05 and the expanded complete
+  API/direct-RLS matrix passed 62/62.
+- All workspaces typechecked; 97 fast tests, API/web production builds, DB
+  lint, and `git diff --check` passed.
+- P2-06 was not started. Customer UI can consume `backend.shops.get(shopId)`;
+  live availability remains P2-07 and wait estimates remain deferred.
+
+## 2026-07-28 — P2-04 ownerless request-resolution security fix
+
+- Confirmed a high-severity authorization bypass reported by Claude: a verified
+  owner with no shop could accept or decline another shop's employment request
+  by ID. `target_request.shop_id <> private.owner_shop_id(owner_id)` evaluated
+  to NULL when the resolver returned NULL, so PL/pgSQL skipped the denial.
+- Changed the original P2-04 resolver to fail closed with SQLSTATE `42501` and
+  added forward migration
+  `20260728000100_p2_04_ownerless_resolution_guard.sql` for already-migrated
+  databases.
+- Added an independent Express preflight that requires an owned shop and scopes
+  the request ID to that shop before the service-role RPC.
+- Added an end-to-end exploit regression for HTTP accept/decline and direct
+  service-role RPC accept/decline. All four attempts fail, the request remains
+  pending, and no employment is created.
+- Clean reset through the hotfix and complete API/direct-RLS matrix passed
+  63/63. All workspaces typechecked; 97 fast tests, production builds, DB lint,
+  and `git diff --check` passed. P2-06 was not started.
+
+## 2026-07-28 — Claude findings verification
+
+- Rechecked all 26 reported findings against current source and the local
+  database. The ownerless P2-04 exploit and its missing regression are now
+  fixed locally; fake customer data remains removed.
+- Confirmed current security/hardening debt: retained plaintext legacy join
+  codes with renamed policies (authenticated privileges are revoked),
+  unnecessary private-function execution, a weak owner-invitation constraint,
+  and reduced join-code entropy.
+- Confirmed media consistency/resilience issues, employment status semantics,
+  incomplete appointment status styling, and the appointment normalization/doc
+  mismatch. Join-code usage consumption on request creation needs an explicit
+  product decision.
+- Reproduced integration non-idempotence: clean run 63/63, immediate second run
+  62/63 due to leaked published fixture shops. Reset the local database after
+  the diagnostic and restored Auth health.
+- Confirmed missing P4021/media-rejection automation and an overstated media
+  test-catalog claim; root `npm test` documentation and the completed-packet
+  count are stale.
+- P2-06 was not started.
+
+## 2026-07-28 — bounded hardening closeout
+
+- Repaired findings 2-9, 11-13, 19, 21-22, 24-25 without starting P2-06.
+- Removed retained plaintext legacy join codes; revoked private helper
+  execution; enforced owner-invitation provenance; strengthened join-code
+  entropy; and made superseded employment requests truthful.
+- Made media deletion object-first/retryable, added the 24-hour bounded stale
+  upload worker and 100-row cap, isolated preview failures, and exposed
+  accurate rejected/deleting UI states.
+- Normalized legacy appointment status reads and added explicit UI presentation
+  coverage for all canonical statuses.
+- Added P4021, invalid-content cleanup, stale media, cap, preview resilience,
+  provenance, status-normalization, and repeatability regressions.
+- Clean reset through `20260728000300` passed. The API integration/direct-RLS
+  workspace passed 69/69 twice consecutively; 112 fast tests, all typechecks,
+  lint, production builds, database lint, SQL grant/data checks, and
+  `git diff --check` passed.
+- Issue 10 remains a product decision; remote deployment was not authorized.
+  P2-06 was not started.
+
+## 2026-07-28 — remaining-risk follow-up
+
+- Closed issue 10 with the security-preserving product rule that each
+  successful non-replayed join-code request consumes one non-refundable use.
+- Extended the local integration case through decline, withdrawal, expiry,
+  exhausted usage, throttling, and revocation; after a clean reset the API
+  workspace passed 69/69 twice consecutively.
+- Audited remote readiness: GitHub origin is reachable, but the working branch
+  contains shared unrelated dirty work; Supabase CLI has no access token or
+  linked project; and the repository has no API/web production-host
+  configuration. No safe coherent commit or remote rollout was possible
+  without a user-selected scope and deployment credentials. P2-06 was not
+  started.
+
+## 2026-07-28 — remote rollout deferred
+
+- Product owner explicitly deferred Supabase login/linking and remote
+  deployment until Phase 5 production rollout.
+- Local Supabase remains the verification target while Phase 2 and the later
+  feature phases are unfinished. Missing remote credentials/hosting are no
+  longer treated as a current packet blocker.
+- P2-06 was not started.
+
+## 2026-07-28 — bounded hardening review corrections
+
+- Reviewed Codex's bounded hardening packet (issues 2-9, 11-13, 19, 21-22,
+  24-25). All sixteen items verified, including the two traps flagged in the
+  task card: the enum addition was correctly split from its use, and invitation
+  provenance used a trigger rather than an illegal CHECK subquery.
+- Fixed two residual defects found in review:
+  - `media_limit` (P4022) was returned by the API but missing from
+    `DataErrorCode` and `API_ERROR_CODES`, so an owner hitting the 100-photo cap
+    saw a generic error instead of the real reason.
+  - `hydrateAppointments` normalized reads only. Added a single
+    `appointmentRequest` helper so all 15 appointment command responses
+    normalize the legacy `pending`/`no_show` aliases in one place.
+- Added a regression test for each, and confirmed both fail when the fix is
+  reverted rather than passing vacuously.
+- Verified: typecheck clean, 114 fast tests (shared 54, api 28, web 32),
+  API/web production builds, `git diff --check` clean, and the local Supabase
+  matrix at 69/69 run twice consecutively with no reset.
+- Correction to this entry: issue 10 is **closed**, not open. [D-014](DECISIONS.md)
+  (2026-07-28) fixed the rule that a successful non-replayed join-code request
+  consumes one non-refundable use. Phase 1 browser/accessibility smoke and the
+  independent P1-07 adversarial re-scan remain open. P2-06 not started.
+
+## 2026-07-28 — doc corrections + P2-06 schema slice
+
+- Corrected the stale test-count claims: `docs/testing/README.md` said
+  `shared 52` and a full total of 153 while the same block computed the fast
+  total from 54; it now reads shared 54 and **155** (54 + 69 + 32), measured, not
+  assumed. Fast total 114 was already correct in all five places.
+- Corrected this log's own 2026-07-28 review entry: it claimed issue 10 was
+  still an open product decision, which contradicted [D-014](DECISIONS.md) and an
+  earlier entry that already recorded closing it.
+- Surveyed P2-06 against the Phase 2 plan (STAFF-01). Confirmed the real gap is
+  larger than rewiring: barbers self-author patterns and exceptions through
+  `PUT /shifts/patterns`, `POST /shifts/exceptions`, and
+  `DELETE /shifts/exceptions/:id`, and `api_resolve_shift_change_request` does
+  not exist at all — approval is a bare status UPDATE in
+  `apps/api/src/routes/employment.ts` that writes no schedule.
+- Landed P2-06 slice 1: forward migration `20260728000400` with
+  `staff_schedule_revisions`, structured/versioned change-request columns,
+  exception provenance, an append-only `staff_schedule_events` table, and
+  read-only RLS. New enums were created rather than extending existing ones, so
+  the `ALTER TYPE ... ADD VALUE` transaction restriction does not apply.
+- Caught and corrected my own ordering mistake: the first version tightened
+  `idempotency_key` to NOT NULL and added the resolution invariant, which broke
+  two integration tests because the pre-P2-06 write paths violate both. Both
+  tightenings are deferred to slice 2 with the reason recorded in the migration,
+  and the suite returned to 69/69.
+- Verified: matrix 69/69, 114 fast tests, all typechecks, API/web builds, and
+  `git diff --check`.
+- P2-06 behavior slice not started; no barber self-rewrite has been removed yet.
+  P2-07 not started.
+
+## 2026-07-28 — P2-06 slice 2a: schedule commands
+
+- Added `20260728000500_p2_06_schedule_authority_commands.sql`: five
+  owner-authoritative commands plus four raising helpers. Approval writes the
+  shift exception, links it to the request, advances the roster revision, and
+  records the audit event in one transaction; decline touches request state only.
+  Removing availability on a date with active bookings raises `P4025` instead of
+  silently invalidating reservations.
+- Every helper raises rather than returning NULL, deliberately, because P2-04's
+  ownerless-resolution exploit came from a NULL-returning owner lookup feeding a
+  `<>` comparison.
+- Fixed one smell before applying: the approve path read the roster version
+  without a lock, which could surface a concurrent owner edit as a misleading
+  "schedule changed" conflict. It now reads under the same lock the bump takes.
+- Deferred to slice 2b, with the reason recorded in the migration: dropping the
+  four pre-P2-06 RPCs and applying the `idempotency_key NOT NULL` and
+  pending-resolution invariants. Verified that doing it now fails 3 integration
+  tests, because those RPCs are still the live write path for
+  `PUT /shifts/patterns`, `POST /shifts/exceptions`,
+  `DELETE /shifts/exceptions/:id`, and `POST /shift-change-requests`.
+- Ran a clean `supabase db reset` so migrations are the single source of truth,
+  then re-seeded the local accounts the reset removed.
+- Verified: matrix 69/69, 114 fast tests, typecheck, API/web builds,
+  `git diff --check`, and all five commands present after the reset.
+- Behavior has not changed yet: barbers can still self-rewrite. Slice 2b is
+  routes, contract, UI, the five test categories, and smoke. P2-07 not started.
+
+## 2026-07-28 — P2-06 slice 2b (part 1): change-request authority wired
+
+- Replaced the bare status UPDATE with real commands. `POST /shift-change-requests`
+  now calls `api_submit_shift_change_request` (kind, optional time range,
+  idempotency key) and the old `PATCH /shift-change-requests/:id` is gone,
+  replaced by `POST /owner/shift-change-requests/:id/approve|decline` calling
+  `api_resolve_shift_change_request`. Approving writes the shift exception in the
+  same transaction and returns its id as proof.
+- Extended the shared contract: `ShiftChangeRequest` now carries `version`,
+  `requested_kind`, requested times, resolution fields, and
+  `applied_exception_id`; added `StaffSchedule`, owner write inputs, and
+  `ResolveShiftChangeRequestResult`. Updated `ApiBackend`, `OwnerStaffPanel`, and
+  the barber `DashboardPage` request form.
+- Fixed my own bug found by the new test: the route body schema required
+  `decision` even though the decision comes from the URL path, so every resolve
+  returned 400. Split `resolveShiftChangeRequestBodySchema` from the client-facing
+  input.
+- Added integration coverage to the staff-writes case: idempotent replay returns
+  the same request, a foreign owner gets 403, a stale version gets 409, approval
+  produces a linked `source = 'change_request'` exception, and re-resolving an
+  already-resolved request gets 409.
+- Verified: matrix 69/69, 114 fast tests, typecheck, API/web builds,
+  `git diff --check`.
+- Still open in slice 2b: owner shift/exception routes are not wired to the new
+  versioned commands yet, the three barber self-rewrite endpoints
+  (`PUT /shifts/patterns`, `POST /shifts/exceptions`,
+  `DELETE /shifts/exceptions/:id`) still exist, the deferred drops and invariants
+  are still deferred, and no browser smoke has run. P2-07 not started.
+
+## 2026-07-28 — P2-06 independent verification + narrowed-hours guard
+
+- Verified Codex's slice 2c against the handoff. Barber self-rewrite is genuinely
+  gone: routes deleted, contract methods removed, **zero non-SELECT grants** to
+  `authenticated` on all five schedule tables, and the matrix proves 401 anon /
+  403 barber on all four owner routes. Closeout `20260728000600` drops the four
+  legacy RPCs, applies the deferred `idempotency_key NOT NULL` and
+  pending-resolution invariants, and additionally revokes the `update (status)`
+  column grant plus the old owner UPDATE policy that had allowed a direct
+  status-only write around the command. None of the seven handoff traps recurred,
+  and `schedule_has_active_bookings` is plumbed through `errors.ts`,
+  `DataErrorCode`, and `API_ERROR_CODES`.
+- Corrected one of my own review findings: `different_hours` **is** implemented in
+  the barber UI, in `BarberShiftCalendar.tsx` rather than `DashboardPage.tsx`,
+  with a proper submit guard mirroring the zod range rule. My earlier claim that
+  it was missing came from grepping the wrong file.
+- Fixed the one real remaining gap with `20260728000700`: the conflict guard only
+  fired on full unavailability and compared dates while ignoring times, so
+  narrowing a window, or approving a `different_hours` request, could leave a
+  booking outside the barber's own availability. Both the owner upsert and the
+  approval path now pass the resulting window to
+  `private.assert_no_conflicting_bookings_on_date`.
+- Added integration regression: narrowed window is refused with
+  `schedule_has_active_bookings`, and a window that still covers the booking is
+  accepted, so the guard is not simply refusing every edit on a booked date.
+- Verified: clean `supabase db reset` through `20260728000700`, matrix 69/69 twice
+  consecutively, 116 fast tests, shared and api typechecks clean, `git diff --check`
+  clean.
+- Not mine and left untouched: `apps/web` currently fails typecheck because an
+  in-flight landing/auth split deleted `components/AuthSlider.tsx` while the new
+  untracked `pages/AuthPage.tsx` still imports it. Unrelated dirty work, preserved.
+- P2-06 stays 🔨 pending independent sign-off and human browser evidence.
+  P2-07 not started.
+
+## 2026-07-29 — public landing/auth presentation polish
+
+- Preserved the Philabantay space identity and rebuilt the hero composition
+  around a live city split, product-preview laptop, and phone.
+- Refined the city into a full-bleed asymmetric right-side window; the final
+  laptop/phone cluster sits left so the shop and clock landmark remain visible.
+- Reduced the hero crowd to two independently timed passersby plus the
+  shop-specific customer sequence. All feet now stay within 6-12 px of the
+  city street baseline instead of floating above it.
+- Replaced the digital live-city chip with a large analog clock tower driven by
+  `Asia/Manila` time every second; its hour also drives the city phase.
+- Enlarged the laptop and phone, kept the laptop high in the city overlap, and
+  moved the phone to the left side as requested.
+- Kept the bundled workflow bright and phase-independent.
+- Reused the real sign-in/sign-up forms in an accessible route-stable landing
+  dialog, with mode transitions and reduced-motion fallbacks.
+- Browser smoke covered the full-bleed desktop edge, device placement, active
+  pedestrian motion, route-stable auth, keyboard/focus behavior, reduced
+  motion, no horizontal overflow, and a clean console.
+- Follow-up browser geometry grounded the analog tower and its widened stone
+  foundation within 7 px of the city street baseline; the former floating gap
+  is gone.
+- Expanded the left message area with a larger headline, handwritten supporting
+  line, sketched strokes, and irregular doodle CTAs. Desktop browser geometry
+  measured a 445 x 487 px copy block with zero horizontal overflow.
+- Closed the split-scene overflow regression: landing-only containers now clip
+  horizontal artwork, the 861-1120 px range retains the side-by-side city split
+  with a flush right edge, narrower layouts contain the full-width city
+  fallback, and the travelling spaceship fades before the viewport boundary.
+  The 1280 x 720 browser check remained overflow-free; the web production build
+  and targeted `git diff --check` passed.
+- Added the supplied barber-tool illustration as a 390 px repeating workflow
+  wallpaper with a low-opacity multiply treatment (300 px/lighter on narrow
+  screens). Browser inspection confirmed the bundled asset loaded behind the
+  heading and cards without horizontal overflow; the web production build
+  passed.
+- Removed the remaining false right-edge gap by clipping horizontal overflow at
+  the document root and resetting stray horizontal scroll on mount/resize.
+  Browser verification held `scrollX = 0`; the city now ends at the scrollbar.
+- Generated and integrated a cohesive 21:9 hero world from the supplied prompt:
+  night sky, dusk seam, daylight street/barbershop, grounded walker, and a soft
+  empty portal for the live HTML device mockups. The optimized WebP is 83,954
+  bytes (down from the 1.6 MB generation); desktop browser verification showed
+  the asset loaded, `scrollX = 0`, and no duplicated legacy city layer.
+- Removed the static child from a non-destructive v3 background edit and placed
+  the existing SVG figure on the rebuilt sidewalk. Its internal limbs walk
+  while the wrapper travels left at roughly 30 px/s; browser samples confirmed
+  movement, grounded feet, `scrollX = 0`, and the reduced-motion fallback keeps
+  the figure static.
+- Workspace typecheck, 116 fast tests, lint, API/web production builds, and
+  `git diff --check` passed for the landing/auth slice.
+- P2-06 remains pending independent sign-off. P2-07 was not started.
+
+### Hero time variants and retired walker — supersedes the portal notes above
+
+- Replaced the v3 portal artwork with two aligned, built-in ImageGen 21:9
+  variants: `philabantay-hero-morning-v1.webp` (112,038 bytes) and
+  `philabantay-hero-night-v1.webp` (97,124 bytes). Morning retains a night-side
+  blend; night retains a faint warm horizon. Both use one small hand-drawn
+  split crack instead of a black portal.
+- Grounded people are now baked into both scenes: two wait at the shop, one
+  jogs, one walks home, and one stands near the storefront. Removed the hero
+  walker markup/keyframes and the legacy live-city/space render layers.
+- Moved the retired 87,690-byte v3 artwork and the old walker recipe to
+  `docs/design-archive/landing-hero-experiments/`, which has no runtime import.
+- Rebuilt the laptop and phone chassis as inline SVG line art while preserving
+  HTML content inside. Card pulse, list scan, phone-card, and CTA motion are
+  internal to the devices; reduced-motion CSS disables those animations and
+  the phase crossfade.
+- Live browser evidence at 1265 x 712: Philippine time resolved to `02:06`
+  (`night`), the night layer opacity was `1`, both new asset URLs were present
+  in computed styles, laptop SVG count `1`, phone SVG count `1`, legacy hero
+  walker count `0`, legacy city count `0`, and
+  `scrollWidth = clientWidth = 1265`. Timed computed-style samples changed for
+  the laptop cards/list and phone shop UI. Console errors: `0`.
+- Resized the generated scene to use the full desktop width below the
+  navigation, so the complete right-side barbershop and the rest of the 21:9
+  composition are visible rather than cropped.
+- Final gate: all-workspace typecheck passed; 116 fast tests passed
+  (41 skipped); lint passed; API/web production builds passed with both hero
+  assets emitted; `git diff --check` passed with non-failing line-ending
+  warnings only.
+- P2-06 remains pending independent sign-off. P2-07 was not started.
+
+### Four PH-time hero scenes — supersedes the two-variant notes above
+
+- Generated four matched scene edits with built-in ImageGen, then normalized
+  every runtime asset to `1915x821` WebP: morning v2 `97,584` bytes, afternoon
+  v1 `105,860` bytes, evening v1 `83,662` bytes, and midnight v1 `53,954`
+  bytes. The prompts preserved one camera/horizon/street/crack/barbershop
+  geometry while changing only light, people, shop activity, and vehicles.
+- Added the dedicated live `Asia/Manila` hero schedule without changing the
+  wider landing `data-day-phase` contract: midnight `00:00-04:59`, morning
+  `05:00-11:59`, afternoon `12:00-16:59`, evening `17:00-23:59`. Eight boundary
+  unit assertions passed.
+- Scene content is static and phase-specific: students travel to school in the
+  morning; customers wait at the barbershop in the afternoon; workers travel
+  home in the evening; midnight has empty sidewalks and sparse late traffic.
+  Each scene includes a grounded Philippine jeepney, and populated scenes use
+  only pre-drawn figures.
+- Live browser evidence at `1440x900` resolved Philippine time to midnight.
+  Forced morning/afternoon/evening/midnight screenshots each exposed exactly
+  one matching layer, all four computed background URLs loaded, laptop SVG
+  count was `1`, phone SVG count was `1`, runtime hero walker count was `0`,
+  and console warnings/errors were `0`.
+- A 16-case responsive matrix covered every scene at `1440x900`, `1024x768`,
+  `390x844`, and `320x760`. Every final case held
+  `scrollWidth = clientWidth`. The matrix caught a pre-existing 15 px overflow
+  at the narrowest width; landing-specific `min-width: 0` removed the global
+  320 px minimum while a vertical scrollbar is present.
+- Reduced-motion emulation resolved hero crossfade duration to `0s` and the
+  laptop/phone internal animation names to `none`. The page was restored to its
+  live clock and default viewport after forced-state verification.
+- Archived the superseded morning/night two-phase WebPs beside the retired v3
+  portal art; nothing in that archive remains in the runtime asset graph.
+- Final gate: all-workspace typecheck passed; 124 fast tests passed with 41
+  skipped; lint passed; API/web production builds passed; and
+  `git diff --check` passed with non-failing line-ending warnings only.
+- P2-06 remains pending independent sign-off. P2-07 was not started.
+
+## 2026-07-29 — landing-redesign leftovers removed
+
+- Checked the redesigned landing and auth in the browser. Landing renders with
+  19 CSS `data-reveal` nodes, the `IntersectionObserver` scene-pausing is active,
+  no horizontal overflow at 1280, and no console errors. All four nav anchors
+  (`#home`, `#services`, `#contact`, `#how`) resolve to real ids, and both hero
+  CTAs are wired to real actions rather than being dead buttons.
+- Auth verified end to end: owner sign-in routes to `/dashboard/owner/overview`,
+  and a reload keeps the dashboard with no landing flash. `/login` and `/signup`
+  now deep-link to real pages with the correct form, which closes the long-standing
+  fragility where both redirected to `/` and defaulted to sign-in.
+- Removed dead code the redesign orphaned: `theme/useDoodleAnimations.ts` (50
+  lines) and `theme/doodleAnimationRuntime.ts` (156 lines). An import scan across
+  `apps/web/src` confirmed nothing referenced them. Six of the seven `data-*`
+  targets that runtime drove are gone from the codebase; only `data-reveal`
+  survives, now CSS-driven.
+- Dropped the `gsap` dependency, which existed solely for that runtime. Removed
+  from `apps/web/package.json` and the lockfile; the build has no gsap chunk.
+  `useJourneyScroll` never used it and stays.
+- Corrected the docs the removal made stale, plus pre-existing rot found while
+  checking: `ARCHITECTURE.md` tech-stack and `theme/` rows, the animation-by-
+  attribute gotcha, the "sample-only shop-profile UI" gotcha (that page was
+  deleted and the dashboard fakes were removed on 2026-07-28), the component
+  table rows for `BarbersPage`, `BarberDetailPage`, and `ShopProfilePage` (all
+  deleted in `3a983c6`), and the GSAP claim in `FEATURES.md`.
+- Verified: typecheck clean, 125 fast tests (shared 56, api 28, web 40), API/web
+  production builds, matrix 69/69, `git diff --check` clean.
+- Left untouched: `useJourneyScroll`, `WalkFigure`, and all five hero assets are
+  live. No CSS was pruned; unused-rule detection is unreliable by grep and the
+  risk of removing a live rule outweighs the gain.
+
+## 2026-07-29 - auth review + signup form compaction
+
+- Reviewed the auth surface end to end: `routes/auth.ts` (signup/signin/refresh
+  public, rate-limited via `credentialLimiter`; everything else behind
+  `authenticate`), `http/auth.ts` (JWT verified through `getClaims`, then
+  cross-checked against `getUser` before trusting the subject), and
+  `http/authorization.ts` (role/capability/ownership/employment guards, plus
+  `requireOperationalAccess` and `requireAal2`). Route ordering in `app.ts`
+  keeps verification/support reachable for locked accounts while gating
+  everything else. No vulnerabilities found; no backend changes made.
+- The reported "signup form is too large" was real and measurable: at a
+  1280x720 viewport the card rendered 804px tall and the document needed
+  1161px, putting the submit button 176px below the fold.
+- Compacted `AuthSlider.css` only (no TSX/validation changes): tightened
+  `.auth-form-panel` padding, `.auth-form-header` spacing/heading size, form
+  and field gaps, input height (49px to 44px), and the password-toggle
+  button. Changed `.auth-name-grid` from a 2-column layout that forced last
+  name onto its own row to one 3-column row (first/middle/last together).
+- Verified live against a second Vite instance (port 5180, added and then
+  removed from `.claude/launch.json`) so the check didn't depend on another
+  session's dev server: signup card dropped to 684px (document 1041px,
+  submit button only 36px past the fold at 720px tall), sign-in form
+  unaffected structurally, no horizontal overflow or console errors at
+  375px/700px/830px/1280px. Web typecheck passed.
+- Left `.auth-card`'s shared 650px `min-height` alone since sign-in's content
+  is only ~259px tall and depends entirely on it for its current size;
+  lowering it would shrink sign-in too, which wasn't part of the request.

@@ -43,17 +43,36 @@ shape everywhere:
 `details` is optional. Request bodies are parsed with strict shared Zod schemas,
 so unknown fields are rejected before any database query.
 
+## Public catalogue
+
+`GET /catalog/shops` remains the lightweight anonymous shop-summary list.
+`GET /catalog/shops/:id` returns a strict `PublicShopDetail` only when the shop
+is currently eligible and published. The detail includes:
+
+- public shop summary, description, contact phone, timezone, booking mode,
+  chair count, and default cleanup buffer;
+- weekly operating-hour blocks and future date closures, without private
+  closure reasons;
+- active services with their current durations and prices;
+- only media whose upload is ready and moderation is approved, represented by
+  short-lived signed URLs rather than storage paths.
+
+The projection explicitly excludes owner identity, lifecycle/version internals,
+raw media paths, moderation fields, and internal timestamps. A final strict
+schema parse fails closed if an unexpected field reaches the response.
+
 ## Route groups
 
 | Group | Main routes |
 | --- | --- |
 | Auth | `/auth/signup`, `/auth/signin`, `/auth/refresh`, `/auth/me`, `/auth/onboarding`, `/auth/profile`, `/auth/password`, `/auth/signout` |
-| Catalogue | `/shops`, `/barbers`, `/barbers/available`, `/services` |
-| Availability | `/shifts/patterns`, `/shifts/exceptions`, `/availability/slots`, owner staff-pattern route |
+| Public catalogue | `/catalog/shops`, `/catalog/shops/:id`, `/catalog/barbers`, `/catalog/barbers/available`, `/catalog/services` |
+| Authenticated catalogue compatibility | `/shops`, `/barbers`, `/barbers/available`, `/services` |
+| Availability | owner-authoritative `/owner/staff/:barberId/shifts` weekly/exception routes, read-only barber schedule reads, `/availability/slots` |
 | Bookings | `/bookings`, versioned lifecycle commands, timeline, `/shops/:id/bookings` |
 | Owner reporting | `/shops/:id/stats`, `/shops/:id/staff`, `/shops/:id/barbers/performance` |
 | Chat | `/conversations`, `/conversations/staff`, `/conversations/:id/messages`, `/messages`, read action |
-| Employment | hiring shops, applications, join codes, approval, attendance, shift-change requests, staff notes |
+| Employment | hiring shops, applications, join codes, approval, attendance, canonical `/barber/shift-change-requests`, owner approve/decline, staff notes |
 | Account data | favorites, ratings, notification preferences, bug reports |
 
 The `messages` table remains in the Supabase Realtime publication for a future

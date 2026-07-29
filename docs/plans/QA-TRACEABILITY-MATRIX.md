@@ -19,9 +19,9 @@ automated test and the findings behind it.
 | SEC-02 | No direct appointment write bypass | 1 | Negative RLS/concurrency tests |
 | SEC-03 | Former/suspended staff lose access | 1–4 | Chat/command denial tests |
 | SHOP-01 | Owner creates/resumes/edits one private shop draft | 2 | Owner E2E |
-| SHOP-02 | Only valid published shops appear publicly | 2 | RLS/catalogue/browser tests |
-| SHOP-03 | Real location, hours, closures, media, services, policies, chairs | 2 | Setup E2E + schema checks |
-| HIRE-01 | Shop hiring off/open/full with optional count/note | 2 | Race + UI refresh tests |
+| SHOP-02 | Only valid published shops appear publicly | 2 | Passed: published eligibility + strict anonymous summary/detail projection + API/direct-RLS tests |
+| SHOP-03 | Real location, hours, closures, media, services, policies, chairs | 2 | Setup E2E + 2026-07-28 public detail contract/API projection; live availability remains P2-07 |
+| HIRE-01 | Shop hiring off/open/full with optional count/note | 2 | Passed 2026-07-27: version/race + public gate + direct-RLS + authenticated UI refresh/mobile/a11y smoke |
 | HIRE-02 | Application/invitation/join code converge on request | 2 | Employment E2E |
 | HIRE-03 | Final opening and one-active-employment are atomic | 2 | Concurrency tests |
 | STAFF-01 | Owner-assigned shifts and applied change requests | 2 | DB/API/browser tests |
@@ -160,10 +160,20 @@ git diff --check
 | Phase | Product review | Security/data review | Frontend/accessibility review | Automated gate | Status |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Pending | RLS/API matrix green; independent re-scan pending | Pending (browser/a11y smoke) | Passed 2026-07-24 (typecheck, 86 unit, build, matrix 54/54 incl. integration) | Automated gate green; human reviews pending |
-| 2 | Pending | P2-01 + P2-02 hours/closures matrix green (54/54) 2026-07-24 | Pending | P2-01 done; P2-02 slices 1-2 verified and committed (`2df2312`) | In progress (P2-01 done, P2-02 slices 1-2 done) |
+| 2 | Pending | P2-01 through P2-06 local API/direct-RLS workspace green (69/69 twice) after clean reset through `20260728000600` on 2026-07-28; direct schedule revision/event and request-status writes denied; anonymous/foreign owner schedule access denied; concurrent owner writes produce one 200 and one stale 409; P4025 count asserted | P2-02 Shop Setup, P2-03 Hiring, P2-04 employment, P2-05 provider, and P2-06 schedule-authority smoke green; P2-06 covered owner weekly/exception writes, read-only barber request/approval, stale sessions, exact 390×844 owner/barber layouts without overflow, native keyboard controls, reduced motion, and no console errors | All workspaces typecheck; 116 fast tests; API/web production builds; lint, DB lint, and diff validation passed 2026-07-28 | In progress (P2-01 through P2-05 complete; P2-06 implementation gate green but independent sign-off pending; P2-07 not started) |
 | 3 | Pending | Pending | Pending | Pending | Not started |
 | 4 | Pending | Pending | Pending | Pending | Not started |
 | 5 | Pending | Pending | Pending | Pending | Not started |
+
+Pre-P2-07 presentation evidence added 2026-07-29: the public landing/auth slice
+passed 1440/1024/390/320 responsive checks without horizontal overflow,
+route-stable portalled login/signup, field-associated validation with first
+invalid focus, Escape/focus restoration, reduced-motion fallbacks, a bright
+unified workflow chapter, a live `Asia/Manila` analog clock tower and matching
+city phase, and a clean
+browser console. The same run passed all workspace typechecks, 116 fast tests,
+lint, and API/web production builds. This evidence does not mark P2-06 complete
+or start P2-07.
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.

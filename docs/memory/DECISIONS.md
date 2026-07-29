@@ -1,0 +1,37 @@
+---
+tags:
+  - philabantay
+  - decisions
+---
+
+# Decision log
+
+Product-policy decisions belong in the V1 contract or open-question register.
+This log records cross-cutting project and collaboration decisions without
+duplicating those authoritative documents.
+
+| ID | Date | Decision | Reason / consequence | Status |
+| --- | --- | --- | --- | --- |
+| D-001 | 2026-07-26 | Use `docs/` as the Obsidian vault. | All durable memory stays inside the repository and is readable by every agent without an Obsidian dependency. | Active |
+| D-002 | 2026-07-26 | Keep `CURRENT-STATE.md` concise and link to authoritative plans. | Prevents competing roadmaps and stale duplicated requirements. | Active |
+| D-003 | 2026-07-26 | Do not use community plugins as project requirements. | Reduces security, sync, compatibility, and onboarding risk. | Active |
+| D-004 | 2026-07-26 | Never store secrets or private verification evidence in the vault. | Git-tracked documentation is not a secret store. | Active |
+| D-005 | 2026-07-26 | A packet is “complete” only after recorded technical and product evidence. | UI appearance alone does not prove authorization, RLS, race, or accessibility behavior. | Active |
+
+| D-006 | 2026-07-26 | When enabled locally, connect Codex and Claude Code to Obsidian through the loopback-only Local REST API MCP endpoint. | This adds Obsidian-aware search and focused note operations while direct Git-tracked Markdown remains the fallback; the API key stays outside the repository and the plugin remains optional. | Active |
+| D-007 | 2026-07-27 | Encode hiring as `open = is_hiring true + null/positive count`, `full = false + zero`, and `off = false + null`. | This preserves a distinct final-opening-filled state without exposing a second mutable source of truth; P2-04 must use the same locked shop row when filling the final opening. | Active |
+| D-008 | 2026-07-27 | All employment entry paths create one pending request; only the owner acceptance transaction can create active employment. | Hash/expire/limit join codes, serialize by barber before locking a request/shop, close competing requests, and update known vacancies in the same transaction so retries and races cannot create two active stints or overfill the final opening. | Active |
+| D-009 | 2026-07-27 | Model owner-as-provider as an explicit shop-scoped profile/capability, while ordinary barber eligibility continues to derive from active verified employment. | This avoids role switching and fake owner employment. Qualification revisions serialize replace-all grants, barber requests stay advisory until owner approval, and immutable events preserve who changed each capability. | Active |
+| D-010 | 2026-07-28 | Route V1 packets by work risk: Terra for routine/mechanical work, Sonnet for product UI and browser/a11y work, Sol for protected backend and concurrency, and Opus for architecture or independent gates. | One lead model owns each packet; support models are invoked only for named lanes or focused reviews. `xhigh` is reserved for race, security, durability, and release-critical packets, and `max`/`ultra` are not defaults. See the model routing guide. | Active |
+| D-011 | 2026-07-28 | Retain at most 100 shop-media rows and clean incomplete uploads after 24 hours in batches of 100. | The database serializes the cap by shop; the lifecycle worker removes storage before metadata so failures stay visible and retryable. | Active |
+| D-012 | 2026-07-28 | Represent media deletion with a durable `deleting` state and delete the object before its metadata row. | A storage failure cannot create a private orphan with no database record; a retry can resume from retained metadata. | Active |
+| D-013 | 2026-07-28 | Record requests closed by another accepted employment as `superseded`, not `expired`. | User-visible status now matches the immutable `request_superseded` event and distinguishes business convergence from time expiry. | Active |
+| D-014 | 2026-07-28 | Count a join-code use when it successfully creates a new request, and never refund that use after decline, withdrawal, expiry, or supersession. | The usage limit bounds redemptions of a shared secret. Refunding resolved requests would let a leaked code produce unlimited requests; idempotent replay does not consume another use. | Active |
+| D-015 | 2026-07-28 | Defer Supabase project linking and all remote deployment until the Phase 5 production-rollout work. | Phase 2 is still in progress and Phases 3-5 remain; local Supabase is the authoritative verification environment until production configuration, credentials, hosting, and release controls are intentionally selected. | Active |
+| D-016 | 2026-07-29 | Keep the public landing page's city/space identity while presenting guest authentication in an accessible in-page modal; retain `/login` and `/signup` as direct deep-link fallbacks. | Marketing CTAs no longer navigate away before showing the existing real forms. The city follows `Asia/Manila` morning/afternoon/dusk/night time through an analog clock-tower landmark instead of a digital chip, the workflow stays bright and readable, and all motion has a reduced-motion fallback. | Active |
+
+## Adding a decision
+
+Copy [Decision template](../templates/DECISION-TEMPLATE.md), assign the next
+`D-###` identifier, and link any contract, migration, test, or superseded
+decision affected by it.

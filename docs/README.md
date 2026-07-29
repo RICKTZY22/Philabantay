@@ -19,6 +19,10 @@ read that plan first. The numbered documents here explain the system and record
 its evolution; older phase names are historical when they conflict with the
 five-phase plan.
 
+For the shortest session entrypoint, open
+[Philabantay project hub](PROJECT-HUB.md). This `docs/` directory is also the
+Obsidian vault; Obsidian is optional, and every note remains ordinary Markdown.
+
 ## Status legend
 
 Every new design document uses these labels:

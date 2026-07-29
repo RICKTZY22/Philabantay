@@ -31,7 +31,7 @@ current local frontend configuration uses that real API path. See
 Some screens are ahead of their durable backend contract, so the
 current-versus-planned notes below remain important.
 
-The look is a hand-drawn "doodle" theme with GSAP animations and a barber-curtain
+The look is a hand-drawn "doodle" theme with CSS-only motion and a barber-curtain
 transition between routes.
 
 ---
