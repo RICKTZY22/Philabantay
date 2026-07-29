@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => {
               '/node_modules/scheduler/',
             ]
             // React/router lang ang pinaghihiwalay para stable ang cache. Huwag
-            // isama ang GSAP dito; intentionally post-paint async chunk iyon.
+            // isama ang Rive dito; intentionally post-paint async chunk iyon.
             if (stableReactPackages.some((segment) => path.includes(segment))) {
               return 'react-vendor'
             }
