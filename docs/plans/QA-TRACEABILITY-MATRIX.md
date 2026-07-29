@@ -160,7 +160,7 @@ git diff --check
 | Phase | Product review | Security/data review | Frontend/accessibility review | Automated gate | Status |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Pending | RLS/API matrix green; independent re-scan pending | Pending (browser/a11y smoke) | Passed 2026-07-24 (typecheck, 86 unit, build, matrix 54/54 incl. integration) | Automated gate green; human reviews pending |
-| 2 | Pending | P2-01 through P2-06 local API/direct-RLS workspace green (69/69 twice) after clean reset through `20260728000600` on 2026-07-28; direct schedule revision/event and request-status writes denied; anonymous/foreign owner schedule access denied; concurrent owner writes produce one 200 and one stale 409; P4025 count asserted | P2-02 Shop Setup, P2-03 Hiring, P2-04 employment, P2-05 provider, and P2-06 schedule-authority smoke green; P2-06 covered owner weekly/exception writes, read-only barber request/approval, stale sessions, exact 390×844 owner/barber layouts without overflow, native keyboard controls, reduced motion, and no console errors | All workspaces typecheck; 116 fast tests; API/web production builds; lint, DB lint, and diff validation passed 2026-07-28 | In progress (P2-01 through P2-05 complete; P2-06 implementation gate green but independent sign-off pending; P2-07 not started) |
+| 2 | Pending | P2-01 through P2-06 local API/direct-RLS workspace green (69/69 twice) after clean reset through `20260728000600` on 2026-07-28; direct schedule revision/event and request-status writes denied; anonymous/foreign owner schedule access denied; concurrent owner writes produce one 200 and one stale 409; P4025 count asserted | P2-02 Shop Setup, P2-03 Hiring, P2-04 employment, P2-05 provider, and P2-06 schedule-authority smoke green; P2-06 covered owner weekly/exception writes, read-only barber request/approval, stale sessions, exact 390×844 owner/barber layouts without overflow, native keyboard controls, reduced motion, and no console errors | All workspaces typecheck; 124 fast tests (shared 56, api 28, web 40); API/web production builds; lint, DB lint, and diff validation passed 2026-07-29. Matrix re-run 69/69 twice back to back on 2026-07-29 with no reset, against every migration through `20260728000700`. Clean-reset replay proof still stops at `20260728000600` | In progress (P2-01 through P2-05 complete; P2-06 implementation gate green but independent sign-off pending; P2-07 not started) |
 | 3 | Pending | Pending | Pending | Pending | Not started |
 | 4 | Pending | Pending | Pending | Pending | Not started |
 | 5 | Pending | Pending | Pending | Pending | Not started |
@@ -171,9 +171,32 @@ route-stable portalled login/signup, field-associated validation with first
 invalid focus, Escape/focus restoration, reduced-motion fallbacks, a bright
 unified workflow chapter, a live `Asia/Manila` analog clock tower and matching
 city phase, and a clean
-browser console. The same run passed all workspace typechecks, 116 fast tests,
+browser console. The same run passed all workspace typechecks, 124 fast tests,
 lint, and API/web production builds. This evidence does not mark P2-06 complete
 or start P2-07.
+
+### P2-06 sign-off still outstanding (2026-07-29)
+
+Every automated gate for P2-06 is green and an independent code review already
+found and fixed one real gap (the narrowed-hours booking conflict, migration
+`20260728000700`, with a regression test). What is missing is human evidence
+that only the product owner can supply, so the packet stays 🔨:
+
+1. Owner edits a barber's weekly shifts while a second, stale tab is open. The
+   stale tab must receive a conflict and must not overwrite the first save.
+2. Barber submits both a time-off request and a different-hours request, and can
+   edit nothing on their own schedule.
+3. Owner approves one request. The exception must appear on the barber's
+   calendar without any separate shift edit.
+4. Owner removes availability on a date that already has a booking. The refusal
+   must name the exact conflicting-booking count (P4025). This scenario needs a
+   published shop with an active service and one real customer booking made
+   through the UI, not inserted by SQL.
+5. Trusted keyboard traversal and reduced-motion evidence captured by a person,
+   not emulated.
+
+Scenarios 1-3 work against the existing draft dev shop; the schedule commands do
+not require publication. Only scenario 4 needs the shop published first.
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.

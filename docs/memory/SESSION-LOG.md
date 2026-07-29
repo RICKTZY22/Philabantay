@@ -593,3 +593,56 @@ catalog, commits, and implementation files.
 - Left `.auth-card`'s shared 650px `min-height` alone since sign-in's content
   is only ~259px tall and depends entirely on it for its current size;
   lowering it would shrink sign-in too, which wasn't part of the request.
+
+## 2026-07-29 — committed five days of Phase 2 work; matrix restored
+
+- **Committed the backlog.** 115 uncommitted files had accumulated since
+  `a281fb3` (2026-07-24), including all 11 P2-02..P2-06 migrations and the
+  P2-04 security fix, with nothing staged and nothing pushed. Split into ten
+  commits: local port move, P2-02..P2-05 migrations, the P2-04
+  ownerless-resolution fix on its own so it stays visible in history, bounded
+  hardening, P2-06 schedule authority, shared+API contracts, Phase 2 web
+  surfaces, the landing/Rive redesign with the dead animation runtime removed,
+  docs and the memory vault, and an env port fix.
+- The shared contract and Express route changes for P2-02 through P2-06 had to
+  land in one commit: five packets were built against a single working tree and
+  their hunks interleave in the same files. The migrations are still committed
+  per packet, so each packet's database truth is independently reviewable.
+- Left `docs/2026-07-26.md` and `docs/Untitled.canvas` untracked; both are empty
+  stubs, not work.
+- Confirmed `docs/.obsidian/.gitignore` keeps `plugins/` and `workspace.json`
+  out of the repository, so the Local REST API key, certificate, and private key
+  in the plugin's `data.json` were never staged. Only the eight shareable vault
+  settings files are tracked.
+- **Restored the test environment.** Docker was already back up (server 29.6.1)
+  and the stack was healthy on the moved ports. Every migration through
+  `20260728000700` was already applied, so no reset was needed for the standing
+  gate: the API integration/direct-RLS matrix passed **69/69 twice back to back
+  with no reset**.
+- Measured the rest of the gate: all workspaces typecheck, **124 fast tests**
+  (shared 56, api 28 with 41 gated, web 40), lint, API and web production
+  builds, and `supabase db lint` with no schema errors.
+- **Fixed the recorded test-count drift.** Docs said 116 fast / 157 full; web
+  moved 32 → 40 with the landing suite, so the real numbers are **124 fast /
+  165 full**. Updated the current gate blocks in `testing/README.md`,
+  `ROADMAP-STATUS.md`, and `QA-TRACEABILITY-MATRIX.md`. Dated historical
+  evidence blocks and earlier session-log entries were left as written.
+- **Found and fixed a live port drift.** The local stack moved to `54521`, but
+  both `.env.example` files still advertised `54321`. In the web app that is not
+  cosmetic: `vite.config.ts` derives `connect-src` and `img-src` from
+  `VITE_STORAGE_ORIGIN`, so a fresh checkout would have signed shop-photo
+  uploads and private previews blocked by CSP and pointed at a dead port. Fixed
+  both examples and the local `apps/web/.env`.
+- **New known gap:** the clean-reset replay proof still stops at
+  `20260728000600`. `20260728000700` is applied locally but has never replayed
+  from an empty database. The reset was deliberately skipped so the seeded
+  accounts and dev shop needed for the pending P2-06 product pass survive.
+- P2-06 stays 🔨. The five outstanding product-owner scenarios are recorded in
+  `QA-TRACEABILITY-MATRIX.md`; scenarios 1-3 are ready against the existing
+  draft dev shop, scenario 4 needs the shop published and one real booking, and
+  the keyboard/reduced-motion evidence needs a person. P2-07 not started.
+- The web dev server could not be started from this session: port `5174` is
+  registered to another chat's server, and `5174` is required because
+  `vite.config.ts` uses `strictPort` and the API's `WEB_ORIGIN` allowlist trusts
+  only that port. Set `"autoPort": false` on the web entry in
+  `.claude/launch.json` to document that constraint.

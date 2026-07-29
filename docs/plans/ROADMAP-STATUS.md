@@ -122,18 +122,31 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   CSS disables the crossfade and internal UI animations.
   This polish does not start P2-07 or change packet counts.
 
-## Latest automated gate (2026-07-28)
+## Latest automated gate (2026-07-29)
 
 Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 56, api 28, web 32 (116 total)
+Unit:      shared 56, api 28, web 40 (124 total; 41 integration skipped)
+Lint:      passed
 Build:     API + web production build passed
 DB lint:   no schema errors
-Matrix:    API integration/direct-RLS workspace 69/69 twice
-           after a clean reset through 20260728000600
+Matrix:    API integration/direct-RLS workspace 69/69 twice back to back,
+           no reset between runs, against a database carrying every
+           migration through 20260728000700
+Tree:      all Phase 2 work committed; working tree clean
 ```
+
+Two caveats recorded honestly:
+
+- the last **clean-reset** replay proof is still 2026-07-28 through
+  `20260728000600`. `20260728000700` is applied locally but has not been proven
+  to replay from an empty database. A reset was skipped on purpose so the
+  seeded accounts and dev shop needed for the pending P2-06 product pass
+  survive;
+- web unit tests moved 32 → 40 with the landing work, so the older 116 / 157
+  totals in dated blocks are historical, not current.
 
 The expanded matrix includes the P2-02 public shop-detail projection and media
 hardening, P4021 catalogue-invariant checks, P2-04 ownerless-resolution and

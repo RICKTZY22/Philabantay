@@ -11,7 +11,9 @@
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@barbershop/web"],
-      "port": 5174
+      "port": 5174,
+      "// autoPort": "Must stay 5174: vite.config.ts uses strictPort and the API's WEB_ORIGIN allowlist only trusts localhost/127.0.0.1:5174, so any other port fails CORS.",
+      "autoPort": false
     }
   ]
 }

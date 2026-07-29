@@ -29,32 +29,47 @@ Integration tests are gated behind `RUN_LOCAL_SUPABASE_TESTS=1` so a normal
 `npm test` stays fast and never needs Docker. When the flag is off, those files
 report as **skipped**, not failed.
 
-## Latest authoritative run (2026-07-28)
+## Latest authoritative run (2026-07-29)
 
-Measured after a clean local reset through
-`20260728000600_p2_06_schedule_authority_closeout.sql`:
+Measured this session against a local database carrying every migration
+through `20260728000700_p2_06_narrowed_hours_conflict_guard.sql`:
 
 ```text
 shared   56 passed  (6 files)
 api      28 passed | 41 skipped  (integration gated off)
-web      32 passed  (2 files)
+web      40 passed  (3 files)
 -------------------------------------------------
-default fast total           116 passed
+default fast total           124 passed
 
 api with RUN_LOCAL_SUPABASE_TESTS=1 + Docker
          69 passed  (28 boundary + 41 local-Supabase integration)
+         run twice back to back, no reset between runs
 ```
 
 So the full picture with the integration layer enabled is **shared 56 + api 69 +
-web 32 = 157 passing**, zero failing. The API matrix also passed a second
-immediate run without another reset.
+web 40 = 165 passing**, zero failing. Typecheck, lint, API/web production
+builds, and `supabase db lint` (no schema errors) passed in the same session.
 
-### Why "69/69" and "116" both appear
+Web moved from 32 to 40 with the 2026-07-29 landing work: the
+`philippineHeroTime` schedule gained its own suite. The older 116 / 157 totals
+still appear in dated evidence blocks below and in the session log, which are
+historical records and are left as written.
 
-- **116** is the everyday fast total (`npm test` with no Docker): 56 + 28 + 32.
+### Why "69/69" and "124" both appear
+
+- **124** is the everyday fast total (`npm test` with no Docker): 56 + 28 + 40.
 - **69** is the API workspace when the gate is on: the same 28 boundary tests
   plus the 41 integration tests that are otherwise skipped. That 69 is the
   security "matrix" number quoted in the roadmap.
+
+### Open gap: clean-replay proof stops at `20260728000600`
+
+The last recorded clean `supabase db reset` was on 2026-07-28 through
+`20260728000600`. `20260728000700` arrived afterwards and is applied locally,
+but no run has yet proven the full chain replays from an empty database through
+it. Close this with a reset before P2-07 is called done. It was deliberately
+not run on 2026-07-29 because a reset would destroy the seeded owner/barber
+accounts and the dev shop that the pending P2-06 product-owner pass needs.
 
 ## Reproducing the full matrix
 

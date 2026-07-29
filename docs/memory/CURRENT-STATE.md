@@ -226,9 +226,41 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-Independently review the P2-06 Slice 2c owner-authority diff and evidence, then
-decide whether the packet can be signed off. Keep P2-06 in progress until that
-review is recorded. Do not begin P2-07.
+Run the P2-06 product-owner pass. The independent code review is done and
+already fixed one real gap (narrowed-hours booking conflict, migration
+`20260728000700`, with a regression test). The five remaining scenarios and
+their setup notes are listed under "P2-06 sign-off still outstanding" in
+[QA traceability matrix](../plans/QA-TRACEABILITY-MATRIX.md). Keep P2-06 at 🔨
+until that pass is recorded, then update ROADMAP-STATUS,
+QA-TRACEABILITY-MATRIX, docs/testing, this file, and the session log together.
+Do not begin P2-07 before then.
+
+Environment as left on 2026-07-29:
+
+- Docker and the local Supabase stack are healthy on the moved ports
+  (API/storage `54521`, database `54522`, studio `54523`);
+- every migration through `20260728000700` is applied;
+- the API dev server runs on `4000`; the web dev server could not be started
+  from this session because port `5174` is registered to another chat's server.
+  `5174` is not optional: `vite.config.ts` uses `strictPort` and the API's
+  `WEB_ORIGIN` allowlist only trusts that port, so any other port fails CORS;
+- `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` exist.
+  The owner owns "Philabantay · Dev Shop" (draft, 1 chair) and the barber has
+  active employment there, so scenarios 1-3 are ready. Passwords are generated
+  and never stored; re-run `npm run seed:accounts -w @barbershop/api` to reset
+  and print them.
+
+## Known gaps carried forward
+
+- **Clean-replay proof stops at `20260728000600`.** `20260728000700` is applied
+  locally but has never been replayed from an empty database. A reset was
+  skipped on 2026-07-29 on purpose, because it would destroy the accounts and
+  dev shop the pending product pass needs. Run
+  `npx supabase db reset` followed by the matrix twice and
+  `npm run seed:accounts -w @barbershop/api` once that pass is done.
+- The 26 archived and 1 draft shop rows in the local database are matrix
+  fixtures; the suite archives published test shops so repeat runs stay
+  deterministic.
 
 ## Coordination warning
 
