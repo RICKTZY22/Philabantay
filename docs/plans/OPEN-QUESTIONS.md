@@ -61,6 +61,36 @@ shop publish automatically, or does an admin review every new shop/location?
 control/address/location. Later ordinary content/price/hour edits publish
 immediately; ownership or major location changes return to review.
 
+**Decision (2026-07-22):** Accepted as recommended.
+
+**Decision (2026-07-30) — reversed for V1.** Self-service publication. A verified
+owner publishes directly once the readiness checklist passes; no admin review
+gates first publication.
+
+Reason: the accepted 2026-07-22 answer was never implemented.
+`api_publish_owner_shop` has always set `lifecycle_status = 'published'`
+directly, so the register and the code disagreed for eight days without anyone
+noticing. Rather than build a queue to match the document, V1 matches the code,
+because there are no admin staff to work the queue, nothing is deployed, and an
+unstaffed gate would block the project's own testing before it ever protected a
+real customer. This is the same trade already taken for professional
+verification on 2026-07-24: keep the mechanism, defer the enforcement.
+
+What holds the line in the meantime: publication still requires verified owner
+identity, valid shop identity/address/map pin/timezone, at least one
+operating-hours block, `chair_count >= 1`, and at least one active service, all
+rechecked inside the transactional publish command. Only `published` shops are
+publicly visible.
+
+Cost to switch back on: `pending_review` stays in the `shops` lifecycle enum
+from `20260722001800` and stays in the shared types, so re-enabling means one
+lifecycle branch in the publish command, one admin route, and one queue screen.
+Do it when there is someone to staff it, and schedule it with the Phase 4 staff
+admin console.
+
+Trigger to revisit, whichever comes first: the first real (non-test) shop
+publishes, or the staff admin console lands in Phase 4.
+
 ### Q5 — preferred-barber substitution after confirmation
 
 **Question:** If a preferred barber becomes unavailable after confirmation,
@@ -222,6 +252,7 @@ protection review signs off; support legal hold and configurable retention.
 | Q3 | Accepted: admins provisioned server-side only; MFA before evidence view; all access/decisions audited. | 2026-07-19 | Product owner | OPEN-QUESTIONS.md |
 | Q9 | Accepted: narrow `record_offline_payment` shop capability for an active barber; refunds/corrections stay with owner. | 2026-07-19 | Product owner | OPEN-QUESTIONS.md |
 | Q4–Q8, Q10–Q19 | Accepted all recommended defaults; Q17 procurement and Q19 legal/privacy approval remain Phase 5 release gates. | 2026-07-22 | Product owner | OPEN-QUESTIONS.md, phase plans, work breakdown |
+| Q4 | **Reversed for V1:** self-service publication, no admin review gate on first publication. Supersedes the 2026-07-22 acceptance. `pending_review` is retained in the enum and shared types so the gate is cheap to enable with the Phase 4 staff admin console. Revisit when the first real shop publishes or that console lands. | 2026-07-30 | Product owner | OPEN-QUESTIONS.md, ROADMAP-STATUS.md, DECISIONS.md (D-019), CURRENT-STATE.md |
 
 Future policy changes must add a dated decision row and update the product
 contract, relevant phase, contracts, tests, and UI copy together.

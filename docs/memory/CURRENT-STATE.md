@@ -2,7 +2,7 @@
 tags:
   - philabantay
   - current-state
-updated: 2026-07-29
+updated: 2026-07-30
 ---
 
 # Current state
@@ -67,7 +67,7 @@ Verified on 2026-07-29:
   no longer inherits the global `320px` minimum through the browser scrollbar;
 - hero DOM contains zero legacy hero walkers and zero legacy live-city layers.
   Reduced-motion emulation resolved the scene transition to `0s`. **Corrected
-  2026-07-29:** an earlier version of this entry claimed the hero contained one
+  2026-07-30:** an earlier version of this entry claimed the hero contained one
   laptop SVG and one phone SVG. It does not, and no commit ever contained them.
   The hero holds only the copy column over the scene art. Re-measured at
   `1440x900`: hero grid `442px 636px`, one child, section background
@@ -242,7 +242,7 @@ until that pass is recorded, then update ROADMAP-STATUS,
 QA-TRACEABILITY-MATRIX, docs/testing, this file, and the session log together.
 Do not begin P2-07 before then.
 
-Environment as left on 2026-07-29:
+Environment as left on 2026-07-30:
 
 - Docker and the local Supabase stack are healthy on the moved ports
   (API/storage `54521`, database `54522`, studio `54523`);
@@ -262,14 +262,12 @@ Environment as left on 2026-07-29:
 
 ## Known gaps carried forward
 
-- **Q4 first-publication admin review is not implemented.** Found 2026-07-29.
-  The accepted 2026-07-22 decision requires a lightweight admin review before a
-  shop's first publication; `api_publish_owner_shop` publishes directly instead.
-  `pending_review` exists in the enum but nothing sets it and no admin
-  shop-review route exists. Needs an implementation packet or a dated decision
-  reversing Q4. Phase 2 is not closeable while this is open. See open item 6 in
-  [Roadmap status](../plans/ROADMAP-STATUS.md).
-- Clean-replay proof is **closed** as of 2026-07-29: a full `supabase db reset`
+- Q4 first-publication admin review: **resolved 2026-07-30** by reversing the
+  decision (D-019). V1 publication is self-service for a verified owner who
+  passes the readiness checklist. `pending_review` stays in the enum and shared
+  types so the gate is cheap to enable with the Phase 4 staff admin console.
+  No longer blocks closing Phase 2.
+- Clean-replay proof is **closed** as of 2026-07-30: a full `supabase db reset`
   replayed every migration through `20260728000700` and the matrix then passed
   69/69 twice.
 - Shop/employment/appointment rows above the seeded three accounts are matrix

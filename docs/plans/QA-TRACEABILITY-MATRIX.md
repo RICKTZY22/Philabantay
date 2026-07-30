@@ -175,7 +175,7 @@ browser console. The same run passed all workspace typechecks, 124 fast tests,
 lint, and API/web production builds. This evidence does not mark P2-06 complete
 or start P2-07.
 
-### P2-06 sign-off still outstanding (2026-07-29)
+### P2-06 sign-off still outstanding (2026-07-30)
 
 Every automated gate for P2-06 is green and an independent code review already
 found and fixed one real gap (the narrowed-hours booking conflict, migration

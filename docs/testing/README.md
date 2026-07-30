@@ -29,7 +29,7 @@ Integration tests are gated behind `RUN_LOCAL_SUPABASE_TESTS=1` so a normal
 `npm test` stays fast and never needs Docker. When the flag is off, those files
 report as **skipped**, not failed.
 
-## Latest authoritative run (2026-07-29)
+## Latest authoritative run (2026-07-30)
 
 Measured this session against a local database carrying every migration
 through `20260728000700_p2_06_narrowed_hours_conflict_guard.sql`:
@@ -62,7 +62,7 @@ historical records and are left as written.
   plus the 41 integration tests that are otherwise skipped. That 69 is the
   security "matrix" number quoted in the roadmap.
 
-### Clean-replay gap: closed 2026-07-29
+### Clean-replay gap: closed 2026-07-30
 
 `supabase db reset` replayed the whole chain from an empty database through
 `20260728000700_p2_06_narrowed_hours_conflict_guard.sql`, then the matrix

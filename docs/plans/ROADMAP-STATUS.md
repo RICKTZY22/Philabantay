@@ -1,4 +1,4 @@
-# V1 roadmap status - 2026-07-29
+# V1 roadmap status - 2026-07-30
 
 Single source of truth for packet-by-packet progress across all five phases.
 Records **verified evidence**, not visual completion. When a claim is only
@@ -74,7 +74,7 @@ and adds the operator tools needed at PH scale:
 3. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
 4. **Remote rollout (Phase 5)** — the P2-04 hotfix and bounded hardening migrations/API intentionally remain local until the production-rollout phase selects and configures the hosted Supabase/API/web targets.
 5. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07.
-6. **Q4 first-publication admin review is not implemented (found 2026-07-29).** The product owner accepted on 2026-07-22 that "first publication requires a lightweight admin review of shop control/address/location," with later ordinary edits publishing immediately. `api_publish_owner_shop` in `20260726000100` instead sets `lifecycle_status = 'published'` directly, so first publication is self-service. The `pending_review` enum value exists from `20260722001800` and is referenced in `types.ts` and `ShopSetupPage.tsx`, but **nothing ever sets it** and no admin shop-review route exists (the admin surface covers verifications only). This is an accepted decision the implementation silently bypasses. It needs either an implementation packet or a dated decision reversing Q4. Do not treat Phase 2 as closed while it is open.
+6. **Q4 first-publication admin review — resolved 2026-07-30 by reversing the decision, not by building the queue.** Found the same day: the 2026-07-22 acceptance ("first publication requires a lightweight admin review of shop control/address/location") was never implemented. `api_publish_owner_shop` in `20260726000100` has always set `lifecycle_status = 'published'` directly, and although `pending_review` exists in the enum from `20260722001800` and is referenced in `types.ts` and `ShopSetupPage.tsx`, nothing ever set it and no admin shop-review route existed. V1 now matches the code: **publication is self-service** for a verified owner whose readiness checklist passes. See D-019 and the dated Q4 reversal in [Open questions](OPEN-QUESTIONS.md). The transactional publish command still rechecks verified ownership, identity/address/pin/timezone, one operating-hours block, `chair_count >= 1`, and one active service, and only `published` shops are publicly visible. `pending_review` is retained so re-enabling costs one lifecycle branch, one admin route, and one queue screen; schedule that with the Phase 4 staff admin console. Revisit when the first real shop publishes or that console lands. **This no longer blocks closing Phase 2.**
 
 ## Verification approach (decided 2026-07-24)
 
@@ -113,7 +113,7 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   The former hero walker and live-city scene are disconnected and archived.
   The hero is art-only: the copy takes the left grid track and the right track
   stays empty so the scene's barbershop shows through the transparent section.
-  (Corrected 2026-07-29: this line previously described inline SVG laptop and
+  (Corrected 2026-07-30: this line previously described inline SVG laptop and
   phone chassis holding animated product previews. They do not exist in any
   commit.)
   A unified sticky-index workflow covers lifecycle, customer, shop, and role
@@ -127,7 +127,7 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   CSS disables the crossfade and internal UI animations.
   This polish does not start P2-07 or change packet counts.
 
-## Latest automated gate (2026-07-29)
+## Latest automated gate (2026-07-30)
 
 Re-measured this session:
 

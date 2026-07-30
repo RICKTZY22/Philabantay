@@ -647,7 +647,7 @@ catalog, commits, and implementation files.
   only that port. Set `"autoPort": false` on the web entry in
   `.claude/launch.json` to document that constraint.
 
-## 2026-07-29 — landing dead-code sweep; hero "defect" retracted
+## 2026-07-30 — landing dead-code sweep; hero "defect" retracted
 
 - Started the web dev server on 5174 once the port was freed and verified the
   earlier `VITE_STORAGE_ORIGIN` fix live: the served CSP now carries
@@ -697,7 +697,7 @@ catalog, commits, and implementation files.
   hidden. Escape and the `inert` toggle are synchronous and both worked. Treat
   initial focus and focus return as unverified rather than broken.
 
-## 2026-07-29 — clean replay proved, merged to main, Q4 gap found
+## 2026-07-30 — clean replay proved, merged to main, Q4 gap found
 
 - **Closed the clean-replay gap.** `supabase db reset` replayed every migration
   from an empty database through `20260728000700`. Every `NOTICE` was a benign
@@ -730,3 +730,42 @@ catalog, commits, and implementation files.
   until it is implemented or Q4 is reversed by a dated decision.
 - Reviewed `OPEN-QUESTIONS.md` end to end: Q1 through Q19 are all answered, so
   no product decision is blocking. Q4 is a delivery gap, not an open question.
+
+## 2026-07-30 — Q4 reversed; date stamps corrected
+
+- **Q4 reversed by product-owner decision (D-019).** V1 shop publication is
+  self-service: a verified owner publishes directly once the readiness checklist
+  passes, and no admin review gates first publication. Recorded as a dated
+  reversal under Q4 in `OPEN-QUESTIONS.md`, a new decision-log row, D-019 in
+  `DECISIONS.md`, and a resolution note on open item 6 in `ROADMAP-STATUS.md`.
+  No code changed, because the code already behaved this way; the documents were
+  what disagreed.
+- Reason on record: no admin staff, nothing deployed, and an unstaffed queue
+  would block the project's own testing before protecting a real customer. Same
+  trade as the 2026-07-24 verification simplification. `pending_review` is
+  retained in the enum and shared types so re-enabling costs one lifecycle
+  branch, one admin route, and one queue screen. Revisit trigger: first real
+  shop publishes, or the Phase 4 staff admin console lands.
+- Confirmed the guard rails that remain: the transactional publish command
+  rechecks verified ownership, identity/address/pin/timezone, one
+  operating-hours block, `chair_count >= 1`, and one active service, and only
+  `published` shops are publicly visible.
+- **Corrected date stamps.** This session crossed midnight. The first eleven
+  commits were genuinely 2026-07-29 (17:26-17:39), but the dead-code sweep, hero
+  retraction, clean replay, merge, and Q4 work all happened on 2026-07-30
+  (12:53-13:14) and had been stamped 07-29. Fixed the headings, "corrected on"
+  markers, the roadmap title, the latest-gate and latest-run headings, the QA
+  matrix sign-off heading, and `CURRENT-STATE.md` frontmatter. Genuinely 07-29
+  entries were left alone.
+- Answered an infrastructure question with evidence rather than assumption:
+  **there is no Redis anywhere in this project**, and none is planned. Rate
+  limiting is `express-rate-limit` ^7.5.1 in `apps/api/src/app.ts` with four
+  limiters on the default per-process MemoryStore. The security-critical
+  throttle is not in memory at all: `employment_join_attempts` is a Postgres
+  table, so join-code brute-force protection is already correct across
+  instances and across restarts. Combined with the documented outbox pattern in
+  Phases 3-5, the architecture already treats Postgres as the coordination
+  substrate, so Redis may never be needed. Two real gaps to carry into Phase 5:
+  `app.set('trust proxy', ...)` is described in a code comment but not set, and
+  the MemoryStore limiters would multiply if the API ever runs more than one
+  instance.
