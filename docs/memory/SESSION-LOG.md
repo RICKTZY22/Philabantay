@@ -987,3 +987,14 @@ so the packet is not being marked complete on the strength of it.
   does not add image requests or layout elements. Web typecheck, 40 web tests,
   root lint, production build, and diff validation passed; visual smoke remains
   with the product owner.
+
+## 2026-07-30 — Auth card wordmark emphasized
+
+- Removed the redundant in-card Log in heading shown in the product-owner
+  screenshot while retaining the primary Log in submit control.
+- Increased the Philabantay Gochi Hand wordmark from 22px to 34px and scaled
+  the barber pole with it; short desktop viewports use a 30px wordmark.
+- Signup retains its useful Your details heading and all auth behavior is
+  unchanged.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed; no browser smoke ran.

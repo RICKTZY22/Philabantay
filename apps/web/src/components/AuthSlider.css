@@ -182,14 +182,14 @@
   border: 1px solid rgba(45, 53, 64, .45);
   border-radius: 3px 4px 3px 5px;
   background: #fffaf2;
-  box-shadow: 3px 3px 0 rgba(45, 53, 64, .1);
-  font: 400 22px/1 "Gochi Hand", cursive;
+  box-shadow: 4px 4px 0 rgba(45, 53, 64, .1);
+  font: 400 34px/1 "Gochi Hand", cursive;
   transform: rotate(-.5deg);
 }
 
 .auth-form-brand .brand-pole {
-  width: 8px;
-  height: 23px;
+  width: 12px;
+  height: 36px;
 }
 
 .auth-form-header h2 {
@@ -521,7 +521,12 @@
   }
 
   .auth-form-brand {
-    font-size: 20px;
+    font-size: 30px;
+  }
+
+  .auth-form-brand .brand-pole {
+    width: 10px;
+    height: 31px;
   }
 
   .auth-form {

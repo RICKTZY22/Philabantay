@@ -136,7 +136,7 @@ export function AuthSlider({
             <span className="brand-pole" aria-hidden="true" />
             {SHOP_NAME}
           </span>
-          <h2>{mode === 'signin' ? 'Log in' : 'Your details'}</h2>
+          {mode === 'signup' && <h2>Your details</h2>}
         </header>
 
         {mode === 'signin' ? (

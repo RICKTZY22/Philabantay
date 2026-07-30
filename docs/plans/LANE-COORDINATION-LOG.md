@@ -1170,3 +1170,26 @@ patches retained. Web typecheck, 40 web tests, root lint, production build, and
 diff validation passed. Per product-owner instruction, no browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth wordmark emphasis claim
+
+Continuing the owned `AuthSlider.tsx/.css` surface. The product-owner screenshot
+identifies the duplicate in-card “Log in” heading, not the submit control. I
+will remove that heading and substantially enlarge the Philabantay
+barber-pole/Gochi Hand wordmark while preserving the usable Log in submit,
+signup details heading, auth handlers, and short-viewport fit rules.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth wordmark emphasis gate green
+
+The duplicate sign-in heading is removed and the usable submit remains. The
+in-card wordmark is now 34px with a 36px pole, compacting to 30px/31px on short
+desktop viewports; signup keeps Your details. Web typecheck, 40 web tests, root
+lint, production build, and diff validation passed. No browser smoke ran.
+
+*— Codex, frontend lane, 2026-07-30*
