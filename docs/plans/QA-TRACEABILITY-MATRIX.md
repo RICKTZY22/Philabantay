@@ -175,28 +175,44 @@ browser console. The same run passed all workspace typechecks, 124 fast tests,
 lint, and API/web production builds. This evidence does not mark P2-06 complete
 or start P2-07.
 
-### P2-06 sign-off still outstanding (2026-07-30)
+### P2-06 workflow scenarios: functionally verified 2026-07-30
 
-Every automated gate for P2-06 is green and an independent code review already
-found and fixed one real gap (the narrowed-hours booking conflict, migration
-`20260728000700`, with a regression test). What is missing is human evidence
-that only the product owner can supply, so the packet stays 🔨:
+Scenarios 1 to 4 were executed on the product owner's request (they were mid
+UI-redesign) against the running local stack, through the real HTTP API and the
+real browser UI, with no SQL shortcuts. Every one passed.
 
-1. Owner edits a barber's weekly shifts while a second, stale tab is open. The
-   stale tab must receive a conflict and must not overwrite the first save.
-2. Barber submits both a time-off request and a different-hours request, and can
-   edit nothing on their own schedule.
-3. Owner approves one request. The exception must appear on the barber's
-   calendar without any separate shift edit.
-4. Owner removes availability on a date that already has a booking. The refusal
-   must name the exact conflicting-booking count (P4025). This scenario needs a
-   published shop with an active service and one real customer booking made
-   through the UI, not inserted by SQL.
-5. Trusted keyboard traversal and reduced-motion evidence captured by a person,
-   not emulated.
+| # | Scenario | Result |
+| --- | --- | --- |
+| 1 | Two concurrent owner writes claiming the same schedule version | One `200`, one `409 conflict`. An explicitly stale `expected_version: 1` also returned `409 conflict`. |
+| 2 | Barber cannot write their own schedule | `PUT /owner/staff/:id/shifts` with the barber's token returned `403 forbidden`. The `/schedule` screen rendered **0** time inputs, editable or otherwise. |
+| 2 | Barber submits both request kinds | `time_off` and `different_hours` both returned `201`. |
+| 3 | Approval alone writes the exception | Approve returned `200` with `exception_id` and `schedule_version: 3`; the barber's own `/shifts/exceptions/me` then contained the date with `is_available: false`, with no separate shift edit. Revision advanced 2 → 3. |
+| 4 | Removing availability on a booked date | `409 schedule_has_active_bookings`: "This change would leave 1 active booking(s) outside the barber's availability on 2026-08-05. Resolve them first." |
+| 4 | Narrowing hours so the booking falls outside (the `20260728000700` fix) | Same `409` and message for a 14:00-18:00 window against a 10:00 booking. |
+| 4 | Negative control: a window that still covers the booking | `201`, accepted. Proves the guard is not simply refusing every exception. |
+| — | Owner write path through the browser UI | Changed a weekday end time to 20:15 in the staff panel and saved; the database showed `20:15:00` and `schedule_version` advanced to 5. |
 
-Scenarios 1-3 work against the existing draft dev shop; the schedule commands do
-not require publication. Only scenario 4 needs the shop published first.
+Scenario 4 setup was performed through the API the UI calls: weekly operating
+hours set, shop published (`lifecycle_status: published`), and a real customer
+booking created by `customer@phila.test` for `2026-08-05` 10:00 Manila.
+
+One suspicion investigated and dismissed: `OwnerStaffPanel` seeds form state
+straight from the API, which returns `HH:MM:SS`, while the write contract is
+`HH:MM`, so an unchanged save looked like it should fail validation. It does
+not. The rendered `input[type="time"]` values are all clean `HH:MM` with none
+empty, so the browser normalises before React ever sends them.
+
+**Still outstanding, and the reason the packet stays 🔨.** These need a person
+and cannot be produced by an agent:
+
+1. Keyboard-only traversal of the owner staff panel and barber schedule, with
+   focus visible throughout.
+2. Reduced-motion behavior confirmed on a real OS setting rather than emulation.
+3. `ModalPortal` initial focus and focus return. It moves focus inside a
+   `requestAnimationFrame`, which does not fire in a headless pane, so this is
+   **unverified rather than broken**. Escape and the `inert` toggle are
+   synchronous and both work.
+4. Product judgment on the visible workflow.
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.

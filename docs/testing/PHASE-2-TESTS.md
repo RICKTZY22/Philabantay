@@ -281,6 +281,27 @@ Verified on 2026-07-28 without marking the packet complete:
 
 Independent review/product sign-off remains pending. P2-07 was not started.
 
+### Workflow scenarios executed 2026-07-30 ✅ (functional half)
+
+Run against the live local stack at the product owner's request, through the
+real API and browser UI, no SQL shortcuts. Full table with exact responses in
+[the QA traceability matrix](../plans/QA-TRACEABILITY-MATRIX.md).
+
+| Gate | Exact evidence |
+| --- | --- |
+| Stale-tab conflict | Two concurrent owner `PUT /owner/staff/:id/shifts` on the same version returned one `200` and one `409 conflict`; an explicitly stale `expected_version: 1` also returned `409 conflict`. |
+| Barber authority | `PUT /owner/staff/:id/shifts` with a barber token returned `403 forbidden`; `/schedule` rendered 0 time inputs. Both `time_off` and `different_hours` requests returned `201`. |
+| Transactional approval | Approve returned `200` with `exception_id` and `schedule_version: 3`; `/shifts/exceptions/me` then held the date with `is_available: false` and the revision advanced 2 → 3, with no separate shift edit. |
+| Booking conflict (P4025) | Removing availability on a booked date and narrowing hours to exclude a 10:00 booking both returned `409 schedule_has_active_bookings` naming exactly 1 booking and the date. A 09:00-20:00 window that still covers the booking returned `201`, so the guard is not blanket-refusing. |
+| Owner UI round-trip | A weekday end time changed to 20:15 in the staff panel and saved persisted as `20:15:00` with `schedule_version` 5. |
+| Wall-clock asymmetry | Reads return `HH:MM:SS`, writes require `HH:MM`. Investigated as a suspected unchanged-save failure and dismissed: rendered time inputs are clean `HH:MM` with none empty. |
+
+Not covered by this run, and still requiring a person: keyboard-only traversal
+with visible focus, reduced motion on a real OS setting, `ModalPortal` initial
+focus and focus return (it uses `requestAnimationFrame`, which does not fire in
+a headless pane, so it is unverified rather than broken), and product judgment
+on the visible workflow.
+
 ### Pre-P2-07 public landing/auth presentation smoke
 
 Verified locally on 2026-07-29 without changing P2-06/P2-07 status.

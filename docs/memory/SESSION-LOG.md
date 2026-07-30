@@ -731,6 +731,55 @@ catalog, commits, and implementation files.
 - Reviewed `OPEN-QUESTIONS.md` end to end: Q1 through Q19 are all answered, so
   no product decision is blocking. Q4 is a delivery gap, not an open question.
 
+## 2026-07-30 — P2-06 workflow scenarios 1-4 executed and passed
+
+Run on the product owner's request, since they were mid UI-redesign. Driven
+through the real HTTP API and the real browser UI, no SQL shortcuts. Full table
+in `QA-TRACEABILITY-MATRIX.md`; headline results:
+
+- concurrent owner writes on one version: one `200`, one `409 conflict`; an
+  explicitly stale `expected_version: 1` also `409`;
+- barber token on `PUT /owner/staff/:id/shifts`: `403 forbidden`, and
+  `/schedule` rendered **0** time inputs, so the roster really is read-only;
+  both `time_off` and `different_hours` requests returned `201`;
+- approval returned `200` with an `exception_id`, the barber's own
+  `/shifts/exceptions/me` then held the date at `is_available: false`, and the
+  revision advanced 2 → 3, with no separate shift edit;
+- removing availability on a booked date **and** narrowing hours to exclude a
+  10:00 booking both returned `409 schedule_has_active_bookings`: "This change
+  would leave 1 active booking(s) outside the barber's availability on
+  2026-08-05." A 09:00-20:00 window that still covers the booking returned
+  `201`, which is the negative control proving the guard is not blanket-refusing;
+- owner UI round-trip: a weekday end time changed to 20:15 in the staff panel
+  and saved persisted as `20:15:00` with `schedule_version` 5.
+
+Two false alarms worth recording so nobody re-chases them:
+
+- **Wall-clock asymmetry is not a bug.** Reads return `HH:MM:SS` and writes
+  require `HH:MM`, and `OwnerStaffPanel` seeds form state straight from the API,
+  so an unchanged save looked like it must fail validation. The rendered
+  `input[type="time"]` values are all clean `HH:MM` with none empty, because the
+  browser normalises before React sends anything. Checked rather than assumed.
+- **Sign-in was never broken.** It looked broken twice: once because
+  `seed:accounts` had rotated the password out from under the printed value
+  (fixed by pinning `SEED_PASSWORD`), and once because setting an input's
+  `value` programmatically does not register with React, so my own harness
+  submitted an empty form. Driving it properly landed on
+  `/dashboard/owner/overview` with a stored session.
+
+Local state deliberately left in place so the conflict guard stays
+reproducible: the dev shop is now published with 08:00-21:00 Mon-Sat hours, a
+customer booking sits on `2026-08-05` 10:00 Manila, `2026-08-05` carries an
+owner exception of 09:00-20:00, and `2026-08-10` has a pending
+`different_hours` request.
+
+P2-06 stays 🔨. Only the human half is left: keyboard-only traversal with
+visible focus, reduced motion on a real OS setting, `ModalPortal` initial focus
+and focus return (unverified rather than broken, since it moves focus inside a
+`requestAnimationFrame` that a headless pane never fires), and product judgment
+on the visible workflow. An agent-run functional pass is not product sign-off,
+so the packet is not being marked complete on the strength of it.
+
 ## 2026-07-30 — Q4 reversed; date stamps corrected
 
 - **Q4 reversed by product-owner decision (D-019).** V1 shop publication is

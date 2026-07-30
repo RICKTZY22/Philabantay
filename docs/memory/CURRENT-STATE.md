@@ -233,14 +233,22 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-Run the P2-06 product-owner pass. The independent code review is done and
-already fixed one real gap (narrowed-hours booking conflict, migration
-`20260728000700`, with a regression test). The five remaining scenarios and
-their setup notes are listed under "P2-06 sign-off still outstanding" in
-[QA traceability matrix](../plans/QA-TRACEABILITY-MATRIX.md). Keep P2-06 at 🔨
-until that pass is recorded, then update ROADMAP-STATUS,
-QA-TRACEABILITY-MATRIX, docs/testing, this file, and the session log together.
-Do not begin P2-07 before then.
+P2-06's workflow scenarios 1 to 4 are **functionally verified** as of
+2026-07-30 (executed on the product owner's request while they were mid
+UI-redesign). Exact responses are tabled in
+[QA traceability matrix](../plans/QA-TRACEABILITY-MATRIX.md).
+
+What remains before P2-06 can go ✅ is only the part an agent cannot produce:
+
+1. keyboard-only traversal of the owner staff panel and barber schedule with
+   focus visible throughout;
+2. reduced motion confirmed on a real OS setting, not emulation;
+3. `ModalPortal` initial focus and focus return, currently **unverified rather
+   than broken** because it moves focus inside a `requestAnimationFrame` that
+   does not fire in a headless pane;
+4. product judgment on the visible workflow.
+
+Keep P2-06 at 🔨 until those are recorded. P2-07 has not started.
 
 Environment as left on 2026-07-30:
 
@@ -253,9 +261,12 @@ Environment as left on 2026-07-30:
   allowlist only trusts that port, so any other port fails CORS;
 - `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` were
   re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
-  services) and the barber has active employment there, so P2-06 scenarios 1-3
-  are ready. The shop has **zero open operating-hours days**, so scenario 4
-  needs hours added, then publish, then one customer booking;
+  services) and the barber has active employment there. The 2026-07-30 scenario
+  run then moved that shop forward: weekly hours 08:00-21:00 Mon-Sat are set,
+  the shop is **published**, and `customer@phila.test` holds a real booking on
+  `2026-08-05` at 10:00 Manila, kept deliberately so the P4025 conflict guard
+  stays reproducible. `2026-08-05` also carries an owner exception of
+  09:00-20:00 and `2026-08-10` a pending `different_hours` request;
 - the test-account password is now **pinned** via `SEED_PASSWORD` in the
   gitignored `apps/api/.env`, so `npm run seed:accounts -w @barbershop/api` no
   longer regenerates it. Before this, every seed run silently invalidated the
