@@ -55,8 +55,9 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   400–500px minimum protects short desktop fit. Signup mirrors the inline
   account switch and keeps two desktop contact columns to reduce vertical
   height. The former dark split panel and duplicate landing dialog are absent.
-  Mobile remains one column and keeps necessary natural scrolling. The product
-  owner retained the next visual smoke.
+  On desktop, both cards are centered against the full available viewport while
+  Back to home remains independently pinned at the auth canvas's top-left.
+  Mobile remains one column and keeps necessary natural scrolling.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.

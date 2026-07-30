@@ -1047,3 +1047,20 @@ so the packet is not being marked complete on the strength of it.
 - Source search found no requested text, selector, or ARIA remnants. Web
   typecheck, 40 web tests, root lint, production build, and diff validation
   passed; no browser smoke ran.
+
+## 2026-07-30 — Auth cards centered from browser measurements
+
+- At `1280×720`, browser measurements found both cards horizontally centered
+  but starting at `y=52`; calculated vertical-center targets were approximately
+  `y=158` for login and `y=134` for signup.
+- Desktop auth now uses a symmetric full-available-height centering grid.
+  Back to home is absolutely pinned at the auth canvas's top-left so it does
+  not influence card placement. Mobile retains its natural document flow.
+- Browser remeasurement at `1280×720` placed login/signup at `y=158.4/134.2`;
+  both centers were exactly `360px`, with zero page overflow.
+- At the product screenshot's `1918×927` dimensions, both modes centered at
+  `x=959.2`, `y=463.6` against viewport midpoints `959/463.5`, again with zero
+  overflow. Console output contained only API-unreachable errors because the
+  local API was offline.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed.

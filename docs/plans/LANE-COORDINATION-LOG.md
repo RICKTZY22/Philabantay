@@ -1290,3 +1290,32 @@ no text, selector, or ARIA remnants. Web typecheck, 40 web tests, root lint,
 production build, and diff validation passed. No browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — browser-measured auth centering claim
+
+Continuing the owned `AuthSlider.css` surface. At the active `1280×720` browser
+viewport, both cards are horizontally centered but start at `y=52`; true
+viewport-center targets are approximately `y=158` for the 403px login card and
+`y=134` for the 452px signup card. I will give the desktop auth page a symmetric
+full-available-height centering grid, remove card top margins there, and pin
+Back to home independently at the top-left. Mobile's natural layout and all
+form behavior remain unchanged.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — browser-measured auth centering gate green
+
+Browser remeasurement at `1280×720` placed login at `y=158.4` with a 403.2px
+height and signup at `y=134.2` with a 451.6px height; both card centers are
+exactly `360px`. At the product screenshot's `1918×927` dimensions, login and
+signup centers both measured `y=463.6` against the `463.5px` viewport midpoint,
+with horizontal centers at `x=959.2` against `959px`. Both viewports had zero
+page overflow. The browser console carried only API-unreachable errors because
+the local API was offline, not layout/runtime failures. Web typecheck, 40 web
+tests, root lint, production build, and diff validation passed.
+
+*— Codex, frontend lane, 2026-07-30*

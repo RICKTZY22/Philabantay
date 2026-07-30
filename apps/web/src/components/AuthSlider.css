@@ -386,7 +386,21 @@
 
 @media (min-width: 721px) {
   .app-shell.is-public:has(.auth-page) main.page {
-    padding-block: 16px 24px;
+    padding-block: 16px;
+  }
+
+  .auth-page {
+    display: grid;
+    min-height: calc(100dvh - 32px);
+    padding-block: 0;
+    place-items: center;
+  }
+
+  .auth-page-back {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    z-index: 2;
   }
 
   .auth-card.is-signin .auth-form-panel {
@@ -404,26 +418,18 @@
     gap: 20px;
   }
 
-  .auth-page {
-    padding-block: 8px 20px;
-  }
-
   .auth-card {
-    margin-top: 22px;
+    margin-block: 0;
   }
 }
 
 @media (min-width: 721px) and (max-height: 900px) {
   .app-shell.is-public:has(.auth-page) main.page {
-    padding-block: 10px 0;
+    padding-block: 10px;
   }
 
   .auth-page {
-    padding-block: 6px 10px;
-  }
-
-  .auth-card {
-    margin-top: 12px;
+    min-height: calc(100dvh - 20px);
   }
 
   .auth-form-panel {
