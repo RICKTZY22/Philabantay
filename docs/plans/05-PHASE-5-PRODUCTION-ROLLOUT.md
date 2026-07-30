@@ -77,6 +77,50 @@ than represented by a placeholder.
 - Penetration test or structured security review covers IDOR, tenant crossing,
   file upload, OTP abuse, join-code brute force, spam, and command replay.
 
+### P5-RL-01 — set `trust proxy` to the real hop count
+
+Raised 2026-07-30. `apps/api/src/app.ts` rate-limits on the client IP, and the
+comment above the limiters already describes this, but `app.set('trust proxy',
+...)` is **not** set. Deploy behind a load balancer, CDN, or ingress without it
+and `req.ip` becomes the proxy's address, so every request shares one bucket:
+one abusive client can exhaust the limit for all real users, and per-IP limits
+stop meaning anything.
+
+- Set the numeric hop count for the chosen topology. Never `true`, which trusts
+  any client-supplied `X-Forwarded-For`.
+- Add an assertion to the release gate that a spoofed `X-Forwarded-For` cannot
+  change the bucket a request lands in.
+- Verify the four limiters (general 120/min, credential 20 per 15 min counting
+  failures only, catalogue 90/min, availability 60/min) still trigger correctly
+  once the real client IP is in use.
+
+### P5-RL-02 — decide the rate-limit store before running more than one instance
+
+Raised 2026-07-30. `express-rate-limit` currently uses its default in-process
+`MemoryStore`. That is correct for a single instance and resets on restart, but
+N instances means roughly N times the intended limit, because each process
+counts separately.
+
+The security-critical throttle is **not** affected: join-code brute-force
+protection lives in the `employment_join_attempts` Postgres table, so it is
+already shared across instances and survives restarts. Only the coarse HTTP
+flood limiters are per-process.
+
+Decide in this order, and record the choice as a dated decision:
+
+1. Pin the API to one instance for the pilot and keep `MemoryStore`. Cheapest,
+   and adequate at pilot volume.
+2. Rate limit at the edge (CDN or WAF) for volumetric abuse. Usually free,
+   stops floods before they reach the app, and stronger than app-level limits
+   for this purpose.
+3. Keep anything security-critical in Postgres, which is already the pattern
+   here alongside the outbox and transactional row locks.
+4. Add a shared store (Redis or Valkey) only if multiple instances are running
+   **and** precise app-level limits are needed that the edge cannot express.
+   Note that this is the first piece of infrastructure outside Postgres, so it
+   brings its own availability, cost, and operational burden. Nothing in the
+   project needs it today.
+
 ## 4. Data, migration, backup, and recovery
 
 - Rehearse every migration from a production-like snapshot in staging.
