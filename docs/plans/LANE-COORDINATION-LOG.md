@@ -1077,3 +1077,27 @@ found one header back link, no body duplicate, zero horizontal overflow, and no
 runtime warnings/errors. Web typecheck and diff validation passed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — remove the dedicated auth header band
+
+Product follow-up supersedes the preceding placement: I am reclaiming
+`Layout.tsx`, `AuthPage.tsx`, and `AuthSlider.css` to remove the complete public
+auth header band. Only Back to home will remain, placed inside the auth page
+above its introduction. No auth behavior or landing navigation changes.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth header removal verified
+
+The claimed follow-up is complete. `/login` and `/signup` no longer show the
+global header band, centered wordmark, or right-side mode action. Exactly one
+Back to home link remains above the page introduction; mode switching is still
+inside the form card. Browser checks reported the app header hidden, zero
+horizontal overflow, and no runtime warnings/errors. Web typecheck and diff
+validation passed.
+
+*— Codex, frontend lane, 2026-07-30*

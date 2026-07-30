@@ -941,3 +941,14 @@ so the packet is not being marked complete on the strength of it.
   retaining the centered handwritten wordmark and right-side mode action.
 - Browser checks on `/login` and `/signup` confirmed one header back link, no
   body duplicate, zero horizontal overflow, and no runtime warnings/errors.
+
+## 2026-07-30 — Dedicated auth header removed
+
+- Product follow-up superseded the preceding header placement. The entire
+  login/signup header band, centered wordmark, and right-side mode action are
+  now hidden on dedicated auth routes.
+- Back to home is the only navigation above the auth introduction; sign-in and
+  sign-up switching remains inside the form card.
+- Browser checks confirmed the app header is not visible on either route,
+  exactly one Back to home link remains, horizontal overflow is zero, and
+  runtime logs have no warnings/errors.

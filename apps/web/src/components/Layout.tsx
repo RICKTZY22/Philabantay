@@ -127,12 +127,6 @@ export function Layout() {
         onFocusCapture={() => setHeaderVisible(true)}
       >
         <nav className="site-nav">
-          {onAuth && !profile && (
-            <Link to="/" className="auth-header-back" aria-label="Back to home">
-              <span aria-hidden="true">←</span>
-              <span className="auth-header-back-label">Back to home</span>
-            </Link>
-          )}
           {hideBrand ? (
             // Spacer keeps the hamburger right-aligned (space-between layout).
             <span aria-hidden="true" />

@@ -43,9 +43,10 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   transaction. Route content enters with a short transform/opacity animation,
   while reduced motion bypasses the curtain and disables the route animation.
 - Guest auth now has one dedicated surface: `/login` and `/signup` use a
-  centered light form card, the signature wordmark, warm cream space, copper
-  actions, and three restrained pastel role accents. The former dark split
-  panel and duplicate landing dialog are absent.
+  centered light form card, warm cream space, copper actions, and three
+  restrained pastel role accents. These routes intentionally have no global
+  header band; only Back to home sits above the introduction. The former dark
+  split panel and duplicate landing dialog are absent.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.
