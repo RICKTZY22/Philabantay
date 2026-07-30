@@ -998,3 +998,14 @@ so the packet is not being marked complete on the strength of it.
   unchanged.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed; no browser smoke ran.
+
+## 2026-07-30 — Auth cards widened for desktop fit
+
+- Increased the centered login card maximum from 570px to 720px and signup from
+  720px to 940px, with the auth-page canvas widened to 1120px.
+- Grouped signup email and phone into a two-column desktop row, reducing form
+  height without shrinking fields. At 720px and below the group returns to one
+  column, preserving the mobile flow.
+- Authentication, validation, field semantics, and action order are unchanged.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed; no browser smoke ran.

@@ -47,7 +47,7 @@
   --auth-copper-dark: #8e3e22;
   position: relative;
   isolation: isolate;
-  width: min(980px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto;
   padding: clamp(18px, 2.6vw, 32px) 0 42px;
   color: var(--auth-ink);
@@ -110,13 +110,13 @@
 .auth-card {
   position: relative;
   isolation: isolate;
-  width: min(570px, calc(100% - 32px));
+  width: min(720px, calc(100% - 32px));
   margin: clamp(27px, 3.5vw, 38px) auto 0;
   animation: authCardIn .36s cubic-bezier(.22, 1, .36, 1) both;
 }
 
 .auth-card.is-signup {
-  width: min(720px, calc(100% - 32px));
+  width: min(940px, calc(100% - 32px));
 }
 
 .auth-blob {
@@ -222,6 +222,12 @@
 .auth-name-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.auth-signup-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 11px;
 }
 
@@ -594,6 +600,10 @@
 
   .auth-name-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .auth-signup-contact-grid {
+    grid-template-columns: 1fr;
   }
 
   .auth-name-last {

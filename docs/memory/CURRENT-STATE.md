@@ -50,9 +50,11 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   duplicate Log in heading. Large soft orange gradient patches are distributed
   behind both modes, and the mode-switch button follows the primary submit. The
   former dark split panel and duplicate landing dialog are absent.
-  Short desktop CSS still compacts spacing and hides only decorative
-  role/footer notes; mobile keeps necessary natural scrolling. The product
-  owner retained the next visual smoke after this card-content change.
+  Wider desktop cards use two columns for signup contact fields to reduce
+  vertical height; short desktop CSS still compacts spacing and hides only
+  decorative role/footer notes. Mobile remains one column and keeps necessary
+  natural scrolling. The product owner retained the next visual smoke after
+  this card-content change.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.

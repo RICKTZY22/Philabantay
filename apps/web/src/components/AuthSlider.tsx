@@ -222,36 +222,38 @@ export function AuthSlider({
                 required
               />
             </div>
-            <AuthTextField
-              label="Email"
-              type="email"
-              value={suEmail}
-              onChange={(value) => {
-                setSuEmail(value)
-                setSuFieldErrors((errors) => ({ ...errors, email: undefined }))
-              }}
-              placeholder="you@email.com"
-              autoComplete="email"
-              maxLength={MAX_EMAIL_LENGTH}
-              error={suFieldErrors.email}
-              errorId="signup-email-error"
-              required
-            />
-            <AuthTextField
-              label="Phone"
-              optional
-              value={phone}
-              onChange={(value) => {
-                setPhone(value)
-                setSuFieldErrors((errors) => ({ ...errors, phone: undefined }))
-              }}
-              placeholder="+63 917 000 0000"
-              autoComplete="tel"
-              inputMode="tel"
-              maxLength={MAX_PHONE_LENGTH + 6}
-              error={suFieldErrors.phone}
-              errorId="signup-phone-error"
-            />
+            <div className="auth-signup-contact-grid">
+              <AuthTextField
+                label="Email"
+                type="email"
+                value={suEmail}
+                onChange={(value) => {
+                  setSuEmail(value)
+                  setSuFieldErrors((errors) => ({ ...errors, email: undefined }))
+                }}
+                placeholder="you@email.com"
+                autoComplete="email"
+                maxLength={MAX_EMAIL_LENGTH}
+                error={suFieldErrors.email}
+                errorId="signup-email-error"
+                required
+              />
+              <AuthTextField
+                label="Phone"
+                optional
+                value={phone}
+                onChange={(value) => {
+                  setPhone(value)
+                  setSuFieldErrors((errors) => ({ ...errors, phone: undefined }))
+                }}
+                placeholder="+63 917 000 0000"
+                autoComplete="tel"
+                inputMode="tel"
+                maxLength={MAX_PHONE_LENGTH + 6}
+                error={suFieldErrors.phone}
+                errorId="signup-phone-error"
+              />
+            </div>
             <PasswordField
               value={suPassword}
               onChange={(value) => {

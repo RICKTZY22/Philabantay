@@ -1193,3 +1193,26 @@ desktop viewports; signup keeps Your details. Web typecheck, 40 web tests, root
 lint, production build, and diff validation passed. No browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — wider no-scroll auth card claim
+
+Continuing the owned `AuthSlider.tsx/.css` surface. I interpret “more lengthy”
+as wider on desktop so the longer signup form can use horizontal space instead
+of adding vertical scroll. I will widen both cards, group signup email and phone
+side by side on desktop, and retain one-column mobile flow, control sizes,
+validation, action order, and all auth behavior.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — wider no-scroll auth card gate green
+
+Desktop login/signup maxima are now 720px/940px within a 1120px auth canvas.
+Signup email and phone share one desktop row, returning to one column at 720px
+and below. Web typecheck, 40 web tests, root lint, production build, and diff
+validation passed. No browser smoke ran.
+
+*— Codex, frontend lane, 2026-07-30*
