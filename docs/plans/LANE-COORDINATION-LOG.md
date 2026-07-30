@@ -613,3 +613,106 @@ price of the dual-layer decision you recorded, and it is a good trade.
 6. handoff report per Agent handoff §8.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — logic-regression audit of the redesign
+
+The product owner asked me to hunt for broken or bugged features before P2-07
+starts. I read every non-CSS diff line and then exercised the app. **Result: one
+bug, the one already reported. No logic regressions anywhere else.**
+
+### The one bug, now with an exact stack
+
+```text
+ReferenceError: barberAvatarId is not defined
+    at EmployedBarberHome (BarberDashboard.tsx:777)
+    at BarberDashboard (BarberDashboard.tsx:32)
+    at AppDashboardPage → RequireAuth → RouteErrorBoundary
+```
+
+It is the only runtime error in the console. `RouteErrorBoundary` catches it, so
+the failure is contained to the barber home rather than taking the app down.
+
+### Logic I specifically tried to break and could not
+
+Each of these was a plausible regression site, so I checked rather than assumed.
+
+**1. The `avatarRole` consolidation is behaviourally identical.** This was my main
+suspicion, because you merged four implementations that had *different*
+signatures. Three of them returned `requested` on any truthy value, but
+`SettingsPage`'s validated it against the three known roles first:
+
+```ts
+if (requested === 'barber' || requested === 'shop_owner' || requested === 'customer') return requested
+```
+
+That looked like lost defensive behaviour. It is not: `Profile.requested_role` is
+typed `OnboardingRole | null` and `OnboardingRole` is exactly those three values,
+so the extra check was redundant. `profileAvatarRole` is a faithful merge. Also
+confirmed live: the owner sees the three `shop_owner` avatars marked "Suggested",
+so role resolution is correct in practice, not just on paper.
+
+**2. The P1-02 verification lock is intact.** `Layout.tsx` is where the owner lock
+is repeated for otherwise-public routes, so a restructure there could have
+weakened a security boundary. `verificationLocked` is computed unchanged, the
+`Navigate to="/verification"` guard is unchanged, and your new avatar link sits
+**inside** the `profile && !verificationLocked` branch, so a locked professional
+gets neither the avatar nor the menu. Correct.
+
+**3. Navigation is unaffected.** `CurtainProvider` gained `studio = false`, and it
+is used for exactly one thing: adding `is-studio` to the curtain div's className.
+`go()`, the phase state, the timers, and the `navigate()` call are untouched. All
+navigation still works.
+
+**4. Role routing is unchanged.** `AppDashboardPage`'s conditionals are identical;
+the diff is pure prop threading. The owner-section guard, the barber
+`requested_role || isBarber` branch, and the no-shop redirect all behave the same.
+
+**5. `DoodleBoard` losing `initials()` is safe at every call site.** You replaced
+the initials chip with a real `DoodleAvatar`, and `userAvatarId` is optional, so a
+caller that forgot it would silently render the wrong avatar. I checked all three:
+`BarberDashboard` passes both with `role="barber"`, `ShopOwnerDashboard` passes
+both with `role="shop_owner"`, and `CustomerDashboard` passes
+`showUserChip={false}` so it renders no chip at all. No gap.
+
+**6. The avatar save path was not touched.** Zero changes to `completedCuts`,
+`unlockAt`, or the save handler in `AvatarSettingsPanel`. Only the `avatarRole`
+call swapped.
+
+### Functional pass — 10 of 11 surfaces work
+
+Signed in as `owner@phila.test` and walked every route:
+
+| Surface | Result |
+| --- | --- |
+| `/dashboard/owner/overview`, `/reservations`, `/staff`, `/hiring`, `/barbers`, `/shop` | all render |
+| `/appointments`, `/chat`, `/settings`, `/settings/avatar` | all render |
+| `/dashboard` as barber | **error boundary** (the bug above) |
+
+**Avatar save verified end to end**, since it is the feature you rebuilt: selected
+"Shop captain", saved, got "Your doodle avatar is now live.", and the database now
+holds `doodle:owner-2` where it previously held `doodle:owner-1`. The save button
+also disabled itself during the write, so the duplicate-submit guard that code
+patterns requires is working.
+
+Side effect you should know about: **I changed the owner test account's avatar
+from `doodle:owner-1` to `doodle:owner-2`** as part of that test. Harmless, but it
+is a real state change and not something I want you discovering later.
+
+### Two false alarms I chased and dismissed
+
+Recording these so nobody re-chases them:
+
+- A regex scan flagged `/settings` and `/settings/avatar` as broken. It was
+  matching the **"Report a bug — Tell us what went wrong"** navigation label.
+  No error boundary present; both pages render fully.
+- `CustomerDashboard` not passing the new avatar props looks like a gap but is
+  not, because it sets `showUserChip={false}`.
+
+### Verdict
+
+The redesign has not broken any feature logic. Fix `BarberDashboard.tsx` and the
+frontend lane is functionally clean as far as I can measure.
+
+*— Claude, backend lane, 2026-07-30*
