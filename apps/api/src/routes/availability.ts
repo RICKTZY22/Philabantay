@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  availabilityQuerySchema,
   barberIdParamsSchema,
   idParamsSchema,
   removeStaffShiftExceptionInputSchema,
@@ -10,7 +11,7 @@ import type { ApiDependencies } from '../lib/supabase'
 import { requireActiveEmployment, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams, parseQuery } from '../http/validation'
-import { publicSlotQuerySchema, publicSlots } from './public-catalog'
+import { availabilitySlots, publicSlotQuerySchema, publicSlots } from './public-catalog'
 
 export function createAvailabilityRouter(dependencies: ApiDependencies): Router {
   const router = Router()
@@ -168,6 +169,25 @@ export function createAvailabilityRouter(dependencies: ApiDependencies): Router 
 
   router.get('/availability/slots', async (request, response) => {
     response.json({ data: await publicSlots(dependencies, parseQuery(request, publicSlotQuerySchema)) })
+  })
+
+  /**
+   * AVAIL-01. Every slot returned here has already passed the same gate the
+   * booking command applies, including the caller's own overlapping bookings, so
+   * a signed-in customer is never offered a slot they cannot claim.
+   */
+  router.get('/availability', async (request, response) => {
+    const query = parseQuery(request, availabilityQuerySchema)
+    const customerId = request.auth.profile.role === 'customer' ? request.auth.profile.id : undefined
+    const slots = await availabilitySlots(dependencies, query, customerId)
+    response.json({
+      data: {
+        shop_id: query.shopId,
+        service_id: query.serviceId,
+        date: query.date,
+        slots,
+      },
+    })
   })
 
   return router

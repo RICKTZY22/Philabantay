@@ -174,6 +174,8 @@ export const publicShopDetailSchema: z.ZodType<PublicShopDetail> = z.strictObjec
   booking_mode: z.enum(['manual', 'instant']),
   chair_count: z.number().int().min(1).max(200),
   default_buffer_min: z.number().int().min(0).max(120),
+  min_lead_minutes: z.number().int().min(0).max(10080),
+  max_advance_days: z.number().int().min(1).max(365).nullable(),
   operating_hours: z.array(publicShopHoursBlockSchema).max(64),
   closures: z.array(publicShopClosureSchema).max(366),
   services: z.array(publicServiceSchema),
@@ -275,10 +277,30 @@ export const availabilityOverrideInputSchema: z.ZodType<AvailabilityOverrideInpu
 })
 
 export const createAppointmentInputSchema: z.ZodType<CreateAppointmentInput> = z.strictObject({
-  barber_id: uuidSchema,
+  barber_id: uuidSchema.optional(),
   service_id: uuidSchema,
   starts_at: isoTimestampSchema,
   notes: z.string().trim().max(1000).optional(),
+  barber_preference: z.enum(['exact', 'preferred', 'any']).optional(),
+}).refine(
+  // Omitting the preference keeps the pre-P2-07 contract, where naming a barber
+  // was mandatory. Only `any` may leave it out.
+  (body) => body.barber_preference === 'any' || Boolean(body.barber_id),
+  { message: 'A barber is required unless barber_preference is "any".', path: ['barber_id'] },
+)
+
+export const availabilityQuerySchema = z.strictObject({
+  shopId: uuidSchema,
+  serviceId: uuidSchema,
+  date: dateKeySchema,
+  barberId: uuidSchema.optional(),
+})
+
+export const availabilitySlotSchema = z.strictObject({
+  provider_user_id: uuidSchema,
+  starts_at: isoTimestampSchema,
+  ends_at: isoTimestampSchema,
+  buffer_min: z.number().int().min(0).max(120),
 })
 
 export const rateAppointmentInputSchema: z.ZodType<RateAppointmentInput> = z.strictObject({
@@ -537,6 +559,13 @@ const ownerShopWritableSchema = z.strictObject({
   booking_mode: z.enum(['manual', 'instant']).optional(),
   chair_count: z.number().int().min(1).max(200).optional(),
   default_buffer_min: z.number().int().min(0).max(120).optional(),
+  // Booking window. Ranges mirror the shops_min_lead_range and
+  // shops_max_advance_range check constraints so a bad value is rejected at the
+  // contract boundary rather than as a database error.
+  min_lead_minutes: z.number().int().min(0).max(10080).optional(),
+  // Null clears the horizon back to "no limit"; the column is nullable for
+  // exactly that reason.
+  max_advance_days: z.number().int().min(1).max(365).nullable().optional(),
 })
 
 export const createOwnerShopInputSchema: z.ZodType<CreateOwnerShopInput> = ownerShopWritableSchema

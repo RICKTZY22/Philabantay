@@ -34,6 +34,14 @@ export function fromDatabaseError(error: PostgrestError): ApiError {
   if (error.code === 'P4023') return new ApiError(409, 'request_already_resolved', error.message)
   if (error.code === 'P4024') return new ApiError(409, 'hiring_full', error.message)
   if (error.code === 'P4025') return new ApiError(409, 'schedule_has_active_bookings', error.message)
+  // P2-07 availability engine. Each one names a specific reason a slot is not
+  // bookable, so the customer sees why instead of a generic conflict.
+  if (error.code === 'P4026') return new ApiError(409, 'chairs_unavailable', error.message)
+  if (error.code === 'P4027') return new ApiError(409, 'shop_not_bookable', error.message)
+  if (error.code === 'P4028') return new ApiError(409, 'outside_shop_hours', error.message)
+  if (error.code === 'P4029') return new ApiError(409, 'outside_booking_window', error.message)
+  if (error.code === 'P4030') return new ApiError(409, 'provider_not_qualified', error.message)
+  if (error.code === 'P4033') return new ApiError(409, 'no_provider_available', error.message)
   if (error.code === 'P4041') return new ApiError(404, 'invalid_code', error.message)
   if (error.code === '23505') return new ApiError(409, 'conflict', 'That record already exists.')
   if (error.code === '23P01') return new ApiError(409, 'slot_taken', 'That appointment slot is already taken.')

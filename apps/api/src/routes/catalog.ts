@@ -34,7 +34,8 @@ const privateServiceColumns = `${PUBLIC_SERVICE_COLUMNS},active,created_at,updat
 const OWNER_SHOP_COLUMNS = [
   'id', 'name', 'address', 'city', 'lat', 'lng', 'rating', 'rating_count',
   'owner_id', 'lifecycle_status', 'timezone', 'booking_mode', 'chair_count',
-  'default_buffer_min', 'description', 'public_contact_phone', 'published_at',
+  'default_buffer_min', 'min_lead_minutes', 'max_advance_days',
+  'description', 'public_contact_phone', 'published_at',
   'is_hiring', 'hiring_open_positions', 'hiring_note',
   'version', 'created_at', 'updated_at',
 ].join(',')

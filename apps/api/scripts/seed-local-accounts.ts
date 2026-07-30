@@ -215,6 +215,33 @@ async function ensureActiveEmployment(barberId: string, shopId: string): Promise
   return data.id as string
 }
 
+/**
+ * Since P2-07 the availability engine treats the shop's own opening hours as a
+ * booking input, so a shop with none is closed every day. Without this the
+ * seeded environment would sign in fine and then refuse every slot, which reads
+ * as a bug rather than as missing setup. Mirrors the barber's Mon-Sat pattern so
+ * the shop is open exactly when the demo barber works.
+ */
+async function ensureOperatingHours(shopId: string): Promise<void> {
+  const { data: existing, error: findError } = await db
+    .from('shop_operating_hours')
+    .select('id')
+    .eq('shop_id', shopId)
+    .limit(1)
+  if (findError) throw new Error(`shop_operating_hours lookup failed: ${findError.message}`)
+  if (existing && existing.length > 0) return
+  const rows = [1, 2, 3, 4, 5, 6].map((weekday) => ({
+    shop_id: shopId,
+    weekday,
+    open_time: '09:00',
+    close_time: '18:00',
+    closed: false,
+    block_order: 0,
+  }))
+  const { error } = await db.from('shop_operating_hours').insert(rows)
+  if (error) throw new Error(`shop_operating_hours insert failed: ${error.message}`)
+}
+
 async function ensureShiftPatterns(employmentId: string, barberId: string, shopId: string): Promise<void> {
   const { data: existing, error: findError } = await db
     .from('shift_patterns')
@@ -262,6 +289,11 @@ async function main(): Promise<void> {
   await ensureService(shopId, { name: 'Classic cut', duration_min: 30, price_cents: 28000 })
   await ensureService(shopId, { name: 'Skin fade + beard', duration_min: 45, price_cents: 38000 })
 
+  await ensureOperatingHours(shopId)
+
+  // Ordered after the services above: the employment trigger from
+  // 20260730000300 grants the new hire the shop's already-active services, which
+  // is what makes them bookable at all.
   const employmentId = await ensureActiveEmployment(byKey.barber.id, shopId)
   await ensureShiftPatterns(employmentId, byKey.barber.id, shopId)
 

@@ -272,7 +272,29 @@ export interface Appointment {
   booked_service_name?: string
   booked_duration_min?: number
   booked_price_cents?: number
+  /**
+   * Cleanup minutes snapshotted with the booking. The buffer never extends
+   * `ends_at`; the availability engine adds it on top when testing conflicts and
+   * chair occupancy.
+   */
+  booked_buffer_min?: number
+  /** What the customer asked for, kept even when someone else was assigned. */
+  barber_preference?: AppointmentBarberPreference
+  requested_barber_id?: string | null
+  assignment_source?: AppointmentAssignmentSource
+  /** Why the assigned provider differs from the requested one, when it does. */
+  assignment_reason?: string | null
 }
+
+/**
+ * How firmly the customer is tied to one provider. `exact` is surfaced as a
+ * refusal when that provider is unavailable; `preferred` and `any` may be
+ * substituted, visibly and at no cost to the customer.
+ */
+export type AppointmentBarberPreference = 'exact' | 'preferred' | 'any'
+
+/** Who chose the assigned provider. */
+export type AppointmentAssignmentSource = 'customer' | 'owner' | 'automatic'
 
 export interface AppointmentEvent {
   id: string
@@ -380,6 +402,10 @@ export interface PublicShopDetail extends ShopWithStatus {
   booking_mode: ShopBookingMode
   chair_count: number
   default_buffer_min: number
+  /** Notice the shop requires before a slot may be claimed. */
+  min_lead_minutes: number
+  /** How far ahead the shop takes bookings, in local days. Null means no limit. */
+  max_advance_days: number | null
   operating_hours: PublicShopHoursBlock[]
   closures: PublicShopClosure[]
   services: PublicService[]
@@ -422,6 +448,8 @@ export interface OwnerShop extends PublicShop {
   booking_mode: ShopBookingMode
   chair_count: number
   default_buffer_min: number
+  min_lead_minutes: number
+  max_advance_days: number | null
   description: string | null
   public_contact_phone: string | null
   published_at: string | null
@@ -736,6 +764,30 @@ export interface Slot {
   starts_at: string
   /** ISO timestamp */
   ends_at: string
+}
+
+/**
+ * One slot the availability engine has confirmed is claimable, attributed to the
+ * provider who would take it. Every slot here passed the same gate the booking
+ * command applies, so an offered slot is a bookable slot.
+ */
+export interface AvailabilitySlot extends Slot {
+  provider_user_id: string
+  /** Cleanup minutes the shop reserves after this slot. */
+  buffer_min: number
+}
+
+/**
+ * The engine's answer for one shop, service, and local date. `slots` is already
+ * filtered to what the caller could claim, so an empty list means the day is
+ * genuinely unavailable rather than unknown.
+ */
+export interface AvailabilityDay {
+  shop_id: string
+  service_id: string
+  /** Local date in the shop's own timezone, not the caller's. */
+  date: string
+  slots: AvailabilitySlot[]
 }
 
 /** One customer's rating for one completed appointment. */

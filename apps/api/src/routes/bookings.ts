@@ -325,16 +325,43 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
   router.post('/bookings', async (request, response) => {
     requireEligibleBookingCustomer(request)
     const input = parseBody(request, createAppointmentInputSchema)
+    // The command resolves `preferred` and `any` itself, inside the same
+    // transaction that claims the slot. Resolving out here would let the chosen
+    // provider be taken between the decision and the write.
     const { data, error } = await dependencies.database.rpc('api_create_appointment', {
       p_customer_id: request.auth.profile.id,
-      p_barber_id: input.barber_id,
+      p_barber_id: input.barber_id ?? null,
       p_service_id: input.service_id,
       p_starts_at: input.starts_at,
       p_notes: input.notes ?? null,
+      p_barber_preference: input.barber_preference ?? 'exact',
+      p_requested_barber_id: input.barber_id ?? null,
+      p_assignment_source: 'customer',
+      p_assignment_reason: null,
     })
     if (error) throw fromDatabaseError(error)
     if (!data) throw new ApiError(500, 'database_error', 'Appointment creation returned no record.')
     response.status(201).json({ data: safeAppointmentRecord(data) })
+  })
+
+  /**
+   * BOOK-02 quote. Answers "could I claim this, and who would I get" without
+   * writing anything, using the same gate as the claim. A quote is advisory: the
+   * slot can still be taken before the customer confirms, which is exactly why
+   * the claim re-checks rather than trusting this answer.
+   */
+  router.post('/bookings/quote', async (request, response) => {
+    requireEligibleBookingCustomer(request)
+    const input = parseBody(request, createAppointmentInputSchema)
+    const { data, error } = await dependencies.database.rpc('api_quote_appointment', {
+      p_customer_id: request.auth.profile.id,
+      p_barber_id: input.barber_id ?? null,
+      p_service_id: input.service_id,
+      p_starts_at: input.starts_at,
+      p_barber_preference: input.barber_preference ?? 'exact',
+    })
+    if (error) throw fromDatabaseError(error)
+    response.json({ data })
   })
 
   router.patch('/bookings/:id', async (request, response) => {

@@ -77,11 +77,26 @@ export interface AvailabilityOverrideInput {
 }
 
 export interface CreateAppointmentInput {
-  barber_id: string
+  /**
+   * Required unless `barber_preference` is `any`, where the engine picks the
+   * provider with the lightest local-date load.
+   */
+  barber_id?: string
   service_id: string
   /** ISO timestamp of the chosen slot start */
   starts_at: string
   notes?: string
+  /** Defaults to `exact`, which preserves the pre-P2-07 behaviour. */
+  barber_preference?: 'exact' | 'preferred' | 'any'
+}
+
+/** Query for the availability engine. `date` is a local date at the shop. */
+export interface AvailabilityQueryInput {
+  shop_id: string
+  service_id: string
+  date: string
+  /** Narrow to one provider; omitted means every qualified provider. */
+  barber_id?: string
 }
 
 export interface RateAppointmentInput {
@@ -316,6 +331,9 @@ export interface CreateOwnerShopInput {
   booking_mode?: 'manual' | 'instant'
   chair_count?: number
   default_buffer_min?: number
+  min_lead_minutes?: number
+  /** Null means no booking horizon. */
+  max_advance_days?: number | null
 }
 
 /** Editable fields plus the version the client believes it is changing. */

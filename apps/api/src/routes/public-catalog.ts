@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { CAPACITY_BLOCKING_APPOINTMENT_STATUSES } from '@barbershop/shared'
+import type { AvailabilitySlot } from '@barbershop/shared'
 import {
+  availabilitySlotSchema,
   barberIdParamsSchema,
   dateKeySchema,
   idParamsSchema,
@@ -13,14 +14,17 @@ import {
   uuidSchema,
 } from '@barbershop/shared/schemas'
 import type { ApiDependencies } from '../lib/supabase'
-import { manilaMoment, manilaNow, wallMinute } from '../lib/manila-time'
+import { manilaNow, wallMinute } from '../lib/manila-time'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseParams, parseQuery } from '../http/validation'
 import { issueShopMediaPreview } from '../lib/shop-media'
 
 export const PUBLIC_SHOP_COLUMNS = 'id,name,address,city,lat,lng,rating,rating_count'
+// The booking window is public on purpose: a customer needs to know why a slot
+// is missing, and "this shop needs 48 hours' notice" is only explainable if the
+// number crosses the seam. It reveals nothing private.
 export const PUBLIC_SHOP_DETAIL_COLUMNS =
-  'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min'
+  'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min,min_lead_minutes,max_advance_days'
 export const PUBLIC_BARBER_COLUMNS = 'id,bio,rating,rating_count,shift_status,accepting_bookings'
 export const PUBLIC_SERVICE_COLUMNS = 'id,shop_id,name,duration_min,price_cents'
 const PUBLIC_HOURS_COLUMNS = 'weekday,open_time,close_time,closed,block_order'
@@ -288,66 +292,64 @@ export async function publicShopDetail(dependencies: ApiDependencies, shopId: st
   })
 }
 
+/**
+ * Bookable slots straight from the availability engine.
+ *
+ * This used to be computed here from shift patterns and barber overlap alone,
+ * which meant a shown slot could still be refused on submit for publication,
+ * opening hours, a date closure, qualification, or chair capacity. The engine now
+ * decides, so the offered slots and the claimable slots are the same set by
+ * construction rather than by two implementations agreeing.
+ *
+ * `customerId` is optional because the public route is anonymous. When present,
+ * the engine also excludes slots that clash with that customer's own bookings.
+ */
+export async function availabilitySlots(
+  dependencies: ApiDependencies,
+  input: { shopId: string; serviceId: string; date: string; barberId?: string },
+  customerId?: string,
+): Promise<AvailabilitySlot[]> {
+  const { data, error } = await dependencies.database.rpc('api_availability_slots', {
+    p_shop_id: input.shopId,
+    p_service_id: input.serviceId,
+    p_date: input.date,
+    p_customer_id: customerId ?? null,
+    p_barber_id: input.barberId ?? null,
+  })
+  if (error) throw fromDatabaseError(error)
+  return availabilitySlotSchema.array().parse(data ?? [])
+}
+
+/**
+ * Legacy per-barber slot shape, kept so existing clients of
+ * `/catalog/availability/slots` keep working while the customer UI moves to the
+ * richer contract. It resolves the barber's shop itself and then defers to the
+ * engine, so it can no longer offer a slot the booking command would reject.
+ */
 export async function publicSlots(
   dependencies: ApiDependencies,
   input: z.infer<typeof publicSlotQuerySchema>,
 ) {
-  const snapshot = await publicCatalogueSnapshot(dependencies)
-  const barber = snapshot.barbers.find((candidate) => candidate.id === input.barberId)
-  const employment = snapshot.employmentByBarberId.get(input.barberId)
-  if (!barber || !employment || !barber.accepting_bookings) {
-    throw new ApiError(404, 'not_found', 'Bookable service/barber combination not found.')
-  }
-
   const { data: service, error: serviceError } = await dependencies.database
     .from('services')
-    .select('id,shop_id,duration_min')
+    .select('id,shop_id')
     .eq('id', input.serviceId)
     .eq('active', true)
     .maybeSingle()
   if (serviceError) throw fromDatabaseError(serviceError)
-  if (!service || service.shop_id !== employment.shop_id) {
+  if (!service) {
     throw new ApiError(404, 'not_found', 'Bookable service/barber combination not found.')
   }
 
-  const [{ data: overrides, error: overrideError }, { data: rules, error: ruleError }, { data: appointments, error: appointmentError }] = await Promise.all([
-    dependencies.database.from('shift_exceptions').select('is_available,start_time,end_time').eq('employment_id', employment.id).eq('date', input.date),
-    dependencies.database.from('shift_patterns').select('weekday,start_time,end_time').eq('employment_id', employment.id),
-    dependencies.database
-      .from('appointments')
-      .select('starts_at,ends_at')
-      .eq('barber_id', input.barberId)
-      .in('status', CAPACITY_BLOCKING_APPOINTMENT_STATUSES)
-      .gte('starts_at', `${input.date}T00:00:00+08:00`)
-      .lt('starts_at', `${input.date}T23:59:59+08:00`),
-  ])
-  if (overrideError) throw fromDatabaseError(overrideError)
-  if (ruleError) throw fromDatabaseError(ruleError)
-  if (appointmentError) throw fromDatabaseError(appointmentError)
-
-  const exception = overrides?.[0]
-  const weekday = new Date(`${input.date}T00:00:00Z`).getUTCDay()
-  const blocks = exception
-    ? exception.is_available ? [{ start_time: exception.start_time as string, end_time: exception.end_time as string }] : []
-    : (rules ?? []).filter((rule) => rule.weekday === weekday)
-  const durationMs = Number(service.duration_min) * 60_000
-  const now = Date.now()
-  const slots: Array<{ starts_at: string; ends_at: string }> = []
-
-  for (const block of blocks) {
-    const blockEnd = manilaMoment(input.date, block.end_time as string).getTime()
-    for (let start = manilaMoment(input.date, block.start_time as string).getTime(); start + durationMs <= blockEnd; start += 15 * 60_000) {
-      const end = start + durationMs
-      if (start <= now) continue
-      const overlaps = (appointments ?? []).some((appointment) => {
-        const bookedStart = Date.parse(appointment.starts_at as string)
-        const bookedEnd = Date.parse(appointment.ends_at as string)
-        return start < bookedEnd && end > bookedStart
-      })
-      if (!overlaps) slots.push({ starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() })
-    }
-  }
-  return publicSlotSchema.array().parse(slots)
+  const slots = await availabilitySlots(dependencies, {
+    shopId: service.shop_id as string,
+    serviceId: input.serviceId,
+    date: input.date,
+    barberId: input.barberId,
+  })
+  return publicSlotSchema.array().parse(
+    slots.map((slot) => ({ starts_at: slot.starts_at, ends_at: slot.ends_at })),
+  )
 }
 
 export function createPublicCatalogRouter(dependencies: ApiDependencies): Router {
