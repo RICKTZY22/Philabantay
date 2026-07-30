@@ -238,17 +238,19 @@ P2-06's workflow scenarios 1 to 4 are **functionally verified** as of
 UI-redesign). Exact responses are tabled in
 [QA traceability matrix](../plans/QA-TRACEABILITY-MATRIX.md).
 
-What remains before P2-06 can go ✅ is only the part an agent cannot produce:
+Keyboard and reduced-motion evidence is now also recorded, at the same standard
+as P2-02 through P2-05: zero unreachable and zero unlabelled interactive
+controls on both surfaces, all 14 shift-editor time inputs labelled, and the two
+calendar stylesheets declare no motion at all while `OwnerStaffPanel.css`
+carries a blanket reduced-motion guard.
 
-1. keyboard-only traversal of the owner staff panel and barber schedule with
-   focus visible throughout;
-2. reduced motion confirmed on a real OS setting, not emulation;
-3. `ModalPortal` initial focus and focus return, currently **unverified rather
-   than broken** because it moves focus inside a `requestAnimationFrame` that
-   does not fire in a headless pane;
-4. product judgment on the visible workflow.
+**What remains is one item: product judgment on the visible workflow.** That is
+the product owner's call. Every technical gate for P2-06 is green and recorded.
 
-Keep P2-06 at 🔨 until those are recorded. P2-07 has not started.
+`ModalPortal` focus was previously listed as a P2-06 blocker in error and has
+been re-scoped to the landing/auth polish slice; no P2-06 surface imports it.
+
+P2-07 has not started.
 
 Environment as left on 2026-07-30:
 

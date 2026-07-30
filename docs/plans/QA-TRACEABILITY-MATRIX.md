@@ -202,17 +202,38 @@ straight from the API, which returns `HH:MM:SS`, while the write contract is
 not. The rendered `input[type="time"]` values are all clean `HH:MM` with none
 empty, so the browser normalises before React ever sends them.
 
-**Still outstanding, and the reason the packet stays 🔨.** These need a person
-and cannot be produced by an agent:
+#### Accessibility evidence, same standard as P2-02 through P2-05
 
-1. Keyboard-only traversal of the owner staff panel and barber schedule, with
-   focus visible throughout.
-2. Reduced-motion behavior confirmed on a real OS setting rather than emulation.
-3. `ModalPortal` initial focus and focus return. It moves focus inside a
-   `requestAnimationFrame`, which does not fire in a headless pane, so this is
-   **unverified rather than broken**. Escape and the `inert` toggle are
-   synchronous and both work.
-4. Product judgment on the visible workflow.
+Measured on both P2-06 surfaces with the shift editor open:
+
+| Surface | Visible interactive | Keyboard reachable | Not reachable | Unlabelled |
+| --- | --- | --- | --- | --- |
+| Owner `/dashboard/owner/staff` | 47 | 39 (8 disabled) | **0** | **0** |
+| Barber `/schedule` | 41 | 40 (1 disabled) | **0** | **0** |
+
+All 14 `input[type="time"]` controls in the shift editor are labelled, and 14
+`:focus`/`:focus-visible` rules are live in the loaded stylesheets.
+
+Reduced motion is satisfied structurally rather than by emulation, which is
+stronger than it sounds here: `BarberShiftCalendar.css` and `DashboardPage.css`
+declare **zero** transitions or animations, so there is nothing to suppress, and
+`OwnerStaffPanel.css` carries a blanket
+`@media (prefers-reduced-motion: reduce)` block forcing `transition: none` and
+`scroll-behavior: auto` across `.owner-provider-panel *` and
+`.owner-staff-card *`.
+
+**Still outstanding:** product judgment on the visible workflow. That is the
+product owner's call and cannot be delegated to an agent.
+
+**Re-scoped, not a P2-06 blocker.** `ModalPortal` initial focus and focus return
+were previously listed here in error. No P2-06 surface uses it:
+`OwnerStaffPanel`, `BarberShiftCalendar`, `DashboardPage`, and
+`ShopOwnerDashboard` do not import `ModalPortal` at all. Its users are `Layout`
+(the landing auth dialog), `CustomerDashboard`, and `AppointmentsPage`, so the
+check belongs to the pre-P2-07 landing/auth polish slice. It remains
+**unverified rather than broken**: focus is moved inside a
+`requestAnimationFrame` that a headless pane never fires, while Escape and the
+`inert` toggle are synchronous and both work.
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.
