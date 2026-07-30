@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Link, useOutletContext } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Building } from '../components/Storefront'
 import { RiveScene } from '../components/RiveScene'
-import type { LandingOutletContext } from '../components/Layout'
 import { heroSceneForHour } from '../lib/philippineHeroTime'
 import { useJourneyScroll } from './useJourneyScroll'
 import './LandingPage.css'
@@ -267,7 +266,6 @@ const BARBER_STEPS: Step[] = [
 export function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null)
   const [clockNow, setClockNow] = useState(() => new Date())
-  const { openLandingAuth } = useOutletContext<LandingOutletContext>()
   const manilaClock = philippineClock(clockNow)
   const dayPhase = manilaClock.phase
   const heroScene = manilaClock.heroScene
@@ -320,14 +318,9 @@ export function LandingPage() {
               day, and owners to keep the shop moving.
             </p>
             <div className="phil-hero-actions">
-              <button
-                className="phil-hero-primary"
-                type="button"
-                aria-haspopup="dialog"
-                onClick={() => openLandingAuth('signup')}
-              >
+              <Link className="phil-hero-primary" to="/signup">
                 Request a Demo
-              </button>
+              </Link>
               <a
                 className="phil-hero-secondary"
                 href="#how"
@@ -338,13 +331,7 @@ export function LandingPage() {
             </div>
             <p className="phil-hero-login">
               May account ka na?{' '}
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                onClick={() => openLandingAuth('signin')}
-              >
-                Log in
-              </button>
+              <Link to="/login">Log in</Link>
             </p>
           </div>
 
@@ -524,14 +511,12 @@ export function LandingPage() {
               <div className="phil-feature-copy">
                 <h3>{feature.title}</h3>
                 <p>{feature.body}</p>
-                <button
-                  type="button"
+                <Link
                   className="phil-feature-cta"
-                  aria-haspopup="dialog"
-                  onClick={() => openLandingAuth(feature.mode)}
+                  to={feature.mode === 'signup' ? '/signup' : '/login'}
                 >
                   {feature.cta}
-                </button>
+                </Link>
               </div>
               <div className="phil-feature-art">
                 <RiveScene
@@ -554,19 +539,12 @@ export function LandingPage() {
             <p>
               Set up your shop, or log in to pick up where your last cut left off.
             </p>
-            <button
-              type="button"
-              className="phil-cta-button"
-              aria-haspopup="dialog"
-              onClick={() => openLandingAuth('signup')}
-            >
+            <Link className="phil-cta-button" to="/signup">
               Create your shop account
-            </button>
+            </Link>
             <p className="phil-cta-alt">
               May account ka na?{' '}
-              <button type="button" aria-haspopup="dialog" onClick={() => openLandingAuth('signin')}>
-                Log in
-              </button>
+              <Link to="/login">Log in</Link>
             </p>
           </div>
           <div className="phil-cta-scene">

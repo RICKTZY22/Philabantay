@@ -798,3 +798,73 @@ gate passed: typecheck, lint, production build, and 124 fast tests with 41
 expected integration skips.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — motion polish gate green
+
+**Q7 status.** No answer was required to proceed: the three transition-handler
+hunks do not overlap the concurrent auth-mode link change, which remains
+preserved. I am staging only my `AuthSlider.tsx` hunks; the concurrent
+`AuthSlider.css` and `LandingPage.tsx/.css` work stays unstaged and uncommitted
+by me.
+
+**Outcome.** Sign-in/sign-up execute after curtain close and navigate behind
+it; sign-out navigates to `/` and clears the session behind the same closed
+curtain. Section links use the shorter wipe, and every route receives one
+transform/opacity entrance. Reduced motion reports a matching media query,
+`0s` curtain transition, and `animation-name: none` on the route stage.
+
+**Requested removals.** The customer home no longer renders
+`.cd-profile-avatar`; the header/settings profile picture and complete creator
+remain. The drawer no longer renders `.app-menu-context`, leaving its canonical
+navigation links. The signed-in brand computes to `"Gochi Hand", cursive` at
+28 px desktop on the paper label.
+
+**Performance and gate.** A profiled owner section change produced 3 layouts
+(about 4.9 ms), 11 style recalculations (about 20.2 ms), and 288 ms aggregate
+task time across the complete observation window. No horizontal overflow at
+1440, 390, or 320; a fresh browser tab logged zero warnings/errors. Typecheck,
+lint, production build, and all 124 fast tests passed; 41 integration tests
+remained expected-gated.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — claim and overlap check for motion polish
+
+**Claim.** I am editing `CurtainTransition.tsx` plus a new colocated stylesheet,
+`Layout.tsx`, `AppMenu.tsx/.css`, `CustomerDashboard.tsx/.css`, and the
+Premium Studio overrides in `studio.css` for the product owner's requested
+auth/section motion, signed-in wordmark, dashboard-avatar removal, and drawer
+shortcut removal.
+
+**Q7 — AuthSlider overlap.** While my browser pass was running,
+`AuthSlider.tsx/.css` and `LandingPage.tsx/.css` changed in the shared worktree.
+The landing changes are not mine and I will not stage them. I need three small
+`AuthSlider.tsx` hunks so successful sign-in/sign-up can run inside the unified
+curtain transaction. I have preserved the concurrent route-link change in that
+file. Please do not edit the transition submit handlers until this UI commit
+lands; if your current work requires those exact handlers, answer Q7 here and I
+will hand over the patch instead.
+
+**Evidence already green.** Sign-in, sign-out, and owner section changes were
+observed through the real curtain; the shortcut card and customer dashboard
+avatar are absent; the header uses the Gochi Hand wordmark; reduced motion
+resolves curtain/route animation to `0s`/`none`; 1440, 390, and 320 widths have
+zero horizontal overflow. A clean browser reload has zero warnings/errors.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — Q7 closeout pointer
+
+**Q7 answer.** Closed without overlap. The measured gate and exact staging
+boundary are recorded in the immediately preceding “motion polish gate green”
+entry (written above the claim because both entries were appended during the
+same shared-worktree update). Claude's landing/auth presentation files remain
+preserved outside my staged set.
+
+*— Codex, frontend lane, 2026-07-30*

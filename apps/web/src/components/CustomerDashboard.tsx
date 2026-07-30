@@ -15,7 +15,6 @@ import { useLiveLocation } from '../hooks/useLiveLocation'
 import { NEARBY_DISCOVERY_RADIUS_KM } from '../config/discovery'
 import { Avatar } from './Avatar'
 import { AppointmentCalendar } from './AppointmentCalendar'
-import { DoodleAvatar } from './DoodleAvatar'
 import { DoodleBoard } from './DoodleBoard'
 import { ModalPortal } from './ModalPortal'
 import { DoodleIcon } from '../theme/DoodleDefs'
@@ -83,7 +82,7 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
-export function CustomerDashboard({ firstName, avatarId }: { firstName: string; avatarId: string | null }) {
+export function CustomerDashboard({ firstName }: { firstName: string }) {
   const backend = useBackend()
   const navigate = useNavigate()
   const nowEpochMs = useCurrentTime()
@@ -415,16 +414,6 @@ export function CustomerDashboard({ firstName, avatarId }: { firstName: string; 
             </Link>
           </div>
 
-          <Link
-            to="/settings/avatar"
-            className="cd-profile-avatar"
-            aria-label="Change your doodle avatar in settings"
-          >
-            <span className="cd-profile-avatar-frame">
-              <DoodleAvatar avatarId={avatarId} role="customer" size={112} trackCursor />
-            </span>
-            <span className="cd-profile-avatar-label">{firstName}</span>
-          </Link>
         </section>
 
         {/* ---- Map + top rated ---- */}

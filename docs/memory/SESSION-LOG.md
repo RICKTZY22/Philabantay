@@ -890,3 +890,25 @@ so the packet is not being marked complete on the strength of it.
   and keeps its static fallback visible.
 - Verification passed: typecheck, lint, production build, 124 fast tests with
   41 expected integration skips, and diff validation.
+
+## 2026-07-30 — Auth and section motion polish
+
+- Unified successful sign-in, sign-up, sign-out, and drawer section navigation
+  under one curtain transaction. Auth/session mutations now occur only after
+  the curtain closes, and failed auth reopens to the same form.
+- Added one keyed route-stage entrance using transform and opacity only.
+  Reduced motion bypasses curtain work and disables the route animation.
+- Shortened the visual handoff to 420 ms close, a 90 ms paint hold, and 420 ms
+  open. The curtain blocks interactions for the full handoff and stays above
+  the portalled auth dialog without changing global layer tokens.
+- Restored the signed-in Gochi Hand wordmark on a small paper label, removed
+  the oversized customer-home avatar, and removed the drawer context-shortcut
+  card. The actual header/settings avatar and full creator remain.
+- Browser verification covered customer sign-in, owner sign-out, an owner
+  section change, clean reload, reduced motion, and 1440/390/320 widths.
+  Performance sampling across a section transition measured about 5 ms layout,
+  20 ms style recalculation, and 288 ms total task time across the complete
+  multi-second observation window; the clean reload logged zero warnings or
+  errors.
+- Full gate passed: typecheck, lint, production build, 124 fast tests, 41
+  expected integration skips, and diff validation.

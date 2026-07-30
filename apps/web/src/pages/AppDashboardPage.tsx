@@ -47,7 +47,7 @@ export function AppDashboardPage() {
   }
 
   // Customer home: sidebar shell + live map + favorites, walang extra hero.
-  return <CustomerDashboard firstName={firstName} avatarId={profile.avatar_url} />
+  return <CustomerDashboard firstName={firstName} />
 }
 
 /**

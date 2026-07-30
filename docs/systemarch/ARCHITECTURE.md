@@ -260,8 +260,12 @@ subscription on unmount.
   ([ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md)).
 - Navigation between routes usually goes through the barber-curtain transition
   (`useCurtain().go(to)`), which closes a curtain, navigates behind it, and
-  reopens. Redirect targets from query/state are sanitized with
-  `safeInternalPath` (`lib/security.ts`) to prevent open redirects.
+  reopens. Auth mutations use `useCurtain().transition(task)` so the session
+  change and destination swap happen only after the curtain closes; failures
+  reopen to the same form. A keyed `.route-stage` supplies the lightweight
+  transform/opacity entrance for every route. Redirect targets from query/state
+  are sanitized with `safeInternalPath` (`lib/security.ts`) to prevent open
+  redirects.
 
 ---
 
@@ -283,7 +287,7 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
 | `DashboardPage` (Schedule) | `barbers.get`, `availability.getRules`, `availability.getMyOverrides`, `availability.setRules`, `availability.addOverride`, `availability.removeOverride`, `barbers.setShiftStatus`, `barbers.setAcceptingBookings` | `useAuth` |
 | `AppMenu` | `useAuth` (`signOut`), `config/navigation` | `useCurtain`, `DoodleAvatar`, portal drawer with focus trap |
 | `ShopMap` | none (presentational) | Leaflet; `React.lazy`-loaded to keep Leaflet out of the entry chunk |
-| `CurtainTransition` | none | Provider behind `useCurtain()`; `go()` drives the wipe + navigation |
+| `CurtainTransition` | none | Provider behind `useCurtain()`; `go()` drives route wipes and `transition(task)` keeps auth/session work behind the closed curtain |
 | `ModalPortal` | none | `createPortal` to `document.body`, focus trap, scroll lock, `inert` background |
 | settings panels | `updateProfile` / `changePassword` (auth) and `support.reportBug`; notifications is local only | Share `SettingsHeading`/`SettingsActionRow` (see gotchas) |
 

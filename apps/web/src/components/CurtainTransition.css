@@ -1,0 +1,72 @@
+/*
+ * One motion contract for auth and route handoffs. Only compositor-friendly
+ * transform/opacity properties move; no layout or paint-heavy filters animate.
+ */
+
+.curtain {
+  contain: strict;
+}
+
+.curtain.closing,
+.curtain.holding,
+.curtain.opening {
+  z-index: calc(var(--layer-modal) + 10);
+  pointer-events: auto;
+}
+
+.curtain-panel {
+  will-change: transform;
+  transition-duration: 420ms;
+  transition-timing-function: cubic-bezier(.64, 0, .22, 1);
+}
+
+.curtain-badge {
+  will-change: transform, opacity;
+  opacity: 0;
+  transition:
+    transform 240ms cubic-bezier(.2, .9, .25, 1.18) 150ms,
+    opacity 160ms ease 130ms;
+}
+
+.curtain.closing .curtain-badge,
+.curtain.holding .curtain-badge {
+  opacity: 1;
+}
+
+.curtain.opening .curtain-badge {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+
+.curtain.idle .curtain-panel,
+.curtain.idle .curtain-badge {
+  will-change: auto;
+}
+
+.route-stage {
+  min-width: 0;
+  animation: route-stage-enter 360ms cubic-bezier(.2, .75, .25, 1) both;
+  backface-visibility: hidden;
+}
+
+@keyframes route-stage-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curtain-panel,
+  .curtain-badge {
+    transition: none !important;
+  }
+
+  .route-stage {
+    animation: none;
+  }
+}

@@ -22,14 +22,12 @@ type AuthMode = 'signin' | 'signup'
 export function AuthSlider({
   mode,
   from = '/dashboard',
-  onModeChange,
 }: {
   mode: AuthMode
   from?: string
-  onModeChange?: (mode: AuthMode) => void
 }) {
   const { signIn, signUp } = useAuth()
-  const { go } = useCurtain()
+  const { transition } = useCurtain()
   const safeFrom = safeInternalPath(from)
   const [showPassword, setShowPassword] = useState(false)
   const signupFormRef = useRef<HTMLFormElement>(null)
@@ -70,8 +68,13 @@ export function AuthSlider({
     setSiError('')
     setSiBusy(true)
     try {
-      const profile = await signIn({ email: siEmail, password: siPassword })
-      go(profile.onboarding_completed ? safeFrom : roleOnboardingPath(safeFrom))
+      await transition(async () => {
+        const profile = await signIn({ email: siEmail, password: siPassword })
+        return {
+          to: profile.onboarding_completed ? safeFrom : roleOnboardingPath(safeFrom),
+          replace: true,
+        }
+      })
     } catch (error) {
       setSiError(error instanceof DataError ? error.message : 'Something went wrong.')
       setSiBusy(false)
@@ -108,13 +111,15 @@ export function AuthSlider({
 
     setSuBusy(true)
     try {
-      await signUp({
-        email: suEmail,
-        password: suPassword,
-        full_name: composedName,
-        phone: phone.trim() || undefined,
+      await transition(async () => {
+        await signUp({
+          email: suEmail,
+          password: suPassword,
+          full_name: composedName,
+          phone: phone.trim() || undefined,
+        })
+        return { to: roleOnboardingPath(safeFrom), replace: true }
       })
-      go(roleOnboardingPath(safeFrom))
     } catch (error) {
       setSuError(error instanceof DataError ? error.message : 'Something went wrong.')
       setSuBusy(false)
@@ -162,19 +167,11 @@ export function AuthSlider({
           <h2>{mode === 'signin' ? 'Log in to Philabantay' : 'Create your account'}</h2>
           <p>
             {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
-            {onModeChange ? (
-              <button
-                type="button"
-                className="auth-mode-switch"
-                onClick={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
-              >
-                {mode === 'signin' ? 'Create an account' : 'Log in'}
-              </button>
-            ) : (
-              <Link to={mode === 'signin' ? '/signup' : '/login'} state={{ from: safeFrom }}>
-                {mode === 'signin' ? 'Create an account' : 'Log in'}
-              </Link>
-            )}
+            {/* `from` rides along so switching between sign-in and sign-up keeps
+                the destination RequireAuth was trying to reach. */}
+            <Link to={mode === 'signin' ? '/signup' : '/login'} state={{ from: safeFrom }}>
+              {mode === 'signin' ? 'Create an account' : 'Log in'}
+            </Link>
           </p>
         </header>
 

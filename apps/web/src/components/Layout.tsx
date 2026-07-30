@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { isProfessionalLocked } from '../lib/access'
@@ -6,23 +6,16 @@ import { profileAvatarRole } from '../lib/profile'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
-import { AuthSlider } from './AuthSlider'
 import { CurtainProvider } from './CurtainTransition'
 import { DoodleAvatar } from './DoodleAvatar'
 import { Loading } from './Loading'
-import { ModalPortal } from './ModalPortal'
 import { RouteErrorBoundary } from './RouteErrorBoundary'
-
-export type LandingOutletContext = {
-  openLandingAuth: (mode: 'signin' | 'signup') => void
-}
 
 export function Layout() {
   const { profile, loading } = useAuth()
   const location = useLocation()
   const [headerVisible, setHeaderVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [landingAuthMode, setLandingAuthMode] = useState<'signin' | 'signup' | null>(null)
   const verificationLocked = Boolean(profile && isProfessionalLocked(profile))
 
   // Route changes should open at the top instead of inheriting the scroll
@@ -57,16 +50,6 @@ export function Layout() {
     && profile.requested_role !== 'barber'
     && profile.requested_role !== 'shop_owner'
   const hideBrand = isCustomerRole && location.pathname.startsWith('/chat')
-  const openLandingAuth = useCallback((mode: 'signin' | 'signup') => {
-    setLandingAuthMode(mode)
-  }, [])
-  const closeLandingAuth = useCallback(() => {
-    setLandingAuthMode(null)
-  }, [])
-
-  useEffect(() => {
-    if (!onLanding) setLandingAuthMode(null)
-  }, [onLanding])
 
   useEffect(() => {
     setHeaderVisible(true)
@@ -182,22 +165,11 @@ export function Layout() {
                   <a href="#home" className="nav-link">Home</a>
                   <a href="#services" className="nav-link">Services</a>
                   <a href="#contact" className="nav-link">Contact Us</a>
-                  <button
-                    type="button"
-                    className="nav-link landing-auth-trigger"
-                    aria-haspopup="dialog"
-                    onClick={() => openLandingAuth('signin')}
-                  >
-                    Log in
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary landing-auth-trigger"
-                    aria-haspopup="dialog"
-                    onClick={() => openLandingAuth('signup')}
-                  >
-                    Sign up
-                  </button>
+                  {/* Auth lives at /login and /signup only. Those routes are also
+                      where RequireAuth sends a signed-out visitor, so keeping one
+                      surface means the `from` round-trip has a single code path. */}
+                  <NavLink to="/login" className="nav-link">Log in</NavLink>
+                  <Link to="/signup" className="btn btn-sm btn-primary">Sign up</Link>
                 </>
               ) : (
                 onAuth ? (
@@ -229,35 +201,15 @@ export function Layout() {
             kapag pending pa lang. Magkaiba sila at parehong kailangan.
           */}
           <RouteErrorBoundary key={location.key}>
-            <Suspense fallback={<Loading label="Sandali, binubuksan ang page..." />}>
-              <Outlet context={{ openLandingAuth } satisfies LandingOutletContext} />
-            </Suspense>
+            <div className="route-stage" key={location.key}>
+              <Suspense fallback={<Loading label="Sandali, binubuksan ang page..." />}>
+                <Outlet />
+              </Suspense>
+            </div>
           </RouteErrorBoundary>
         </div>
       </main>
     </div>
-    {onLanding && landingAuthMode && (
-      <ModalPortal
-        backdropClassName="landing-auth-backdrop"
-        dialogClassName="landing-auth-dialog"
-        labelledBy="auth-page-title"
-        onClose={closeLandingAuth}
-      >
-        <button
-          type="button"
-          className="landing-auth-close"
-          aria-label="Close account form"
-          data-dialog-initial-focus
-          onClick={closeLandingAuth}
-        >
-          <span aria-hidden="true">×</span>
-        </button>
-        <AuthSlider
-          mode={landingAuthMode}
-          onModeChange={setLandingAuthMode}
-        />
-      </ModalPortal>
-    )}
     </CurtainProvider>
   )
 }

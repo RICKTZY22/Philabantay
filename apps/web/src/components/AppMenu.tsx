@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { profileAvatarRole, profileRoleLabel } from '../lib/profile'
 import { DoodleAvatar } from './DoodleAvatar'
 import { useCurtain } from './CurtainTransition'
 import { DoodleIcon } from '../theme/DoodleDefs'
-import { getMainMenuItems, getMenuContext } from '../config/navigation'
+import { getMainMenuItems } from '../config/navigation'
 import './AppMenu.css'
 
 type AppMenuProps = {
@@ -19,10 +19,10 @@ type AppMenuProps = {
  * drawer para CSS transition (hindi mount/unmount) ang animation.
  */
 export function AppMenu({ onOpenChange }: AppMenuProps) {
-  const { profile, isBarber, isShopOwner, signOut } = useAuth()
+  const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { go } = useCurtain()
+  const { go, transition } = useCurtain()
   const [open, setOpen] = useState(false)
   const burgerRef = useRef<HTMLButtonElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
@@ -84,23 +84,17 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
   if (!profile) return null
 
   const pending = profile.verification_status === 'pending'
-  const ownerWorkspace = isShopOwner
-  const menuContext = getMenuContext(
-    location.pathname,
-    isBarber,
-    profile.requested_role === 'barber' && !isBarber,
-    ownerWorkspace,
-  )
   const menuItems = getMainMenuItems(profile)
 
   async function handleSignOut() {
     setOpen(false)
-    // Leave the guarded route BEFORE clearing the session. Signing out first
-    // makes `profile` null while RequireAuth is still mounted, and its
-    // `Navigate to="/login"` wins the race, so the user lands on the login page
-    // instead of the public landing page they asked for.
-    navigate('/', { replace: true })
-    await signOut()
+    await transition(async () => {
+      // Leave the guarded route behind the closed curtain before clearing the
+      // session, so RequireAuth never races the intended landing destination.
+      navigate('/', { replace: true })
+      await signOut()
+      return null
+    })
   }
 
   // Pareho ang barbershop-curtain handoff dito gaya ng ginagamit pagkatapos
@@ -163,19 +157,6 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
               <span>{profileRoleLabel(profile)}</span>
             </div>
           </div>
-
-          <section className="app-menu-context" aria-labelledby="app-menu-context-title">
-            <div className="app-menu-context-head">
-              <span className="app-menu-context-icon" aria-hidden="true">
-                <DoodleIcon name={menuContext.icon} size={14} />
-              </span>
-              <span className="eyebrow">{menuContext.eyebrow}</span>
-            </div>
-            <h2 id="app-menu-context-title">{menuContext.title}</h2>
-            <Link className="btn btn-sm btn-primary" to={menuContext.actionTo} onClick={navWithCurtain(menuContext.actionTo)}>
-              {menuContext.actionLabel}
-            </Link>
-          </section>
 
           <nav className="app-menu-links" aria-label="Main">
             {menuItems.map((item) => (

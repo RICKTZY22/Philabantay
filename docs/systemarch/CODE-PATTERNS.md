@@ -190,6 +190,10 @@ export function ExamplePage() {
   rules unless they are true design-system primitives.
 - Prefer CSS layout and responsive media queries over viewport checks in React.
 - Animate `transform` and `opacity`; provide a `prefers-reduced-motion` path.
+- Route and auth handoffs use `useCurtain()`: `go(to)` for ordinary section
+  navigation and `transition(task)` when async auth/session work must complete
+  behind the closed curtain. Do not add separate route-animation state to
+  pages. Keep curtain timers synchronized with `CurtainTransition.css`.
 
 ## Security boundaries
 

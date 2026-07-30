@@ -33,8 +33,15 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   doodles. Charcoal is limited to the global header/drawer and transient route
   curtain so dark content blocks do not fight legacy page CSS.
 - The existing avatar creator is preserved. Its saved allowlisted avatar is
-  now the user's profile picture in the signed-in header, drawer, settings, and
-  barber/owner dashboard profile chip.
+  the user's profile picture in the signed-in header, drawer, settings, and
+  barber/owner dashboard profile chip. The oversized duplicate customer-home
+  avatar is removed.
+- The signed-in header keeps the handwritten Philabantay wordmark on its paper
+  label. The drawer contains the canonical navigation only; the redundant
+  context-shortcut card is removed.
+- Sign-in, sign-up, sign-out, and drawer section changes share one curtain
+  transaction. Route content enters with a short transform/opacity animation,
+  while reduced motion bypasses the curtain and disables the route animation.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.
