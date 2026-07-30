@@ -23,6 +23,13 @@ const LANDING_FEATURES: Array<{
   sceneLabel: string
   /** Optional .riv in `public/rive`. Without it the static glyph is used. */
   riveSrc?: string
+  /**
+   * State machine to run. Required for any .riv whose motion lives in a state
+   * machine rather than a plain timeline: without it Rive plays the first
+   * timeline, and the pointer listeners the state machine declares are never
+   * attached, so the artwork loads and then sits perfectly still.
+   */
+  riveStateMachine?: string
 }> = [
   {
     id: 'booking',
@@ -32,6 +39,10 @@ const LANDING_FEATURES: Array<{
     mode: 'signup',
     sceneLabel: 'One booking request advancing through its stages',
     riveSrc: '/rive/character-follow.riv',
+    // Names read out of the file itself. Its motion (Blinking, Head rotation)
+    // and its Head enter/exit and Left/Right pointer listeners all live on this
+    // state machine, so naming it is what makes the character animate at all.
+    riveStateMachine: 'State Machine 1',
   },
   {
     id: 'schedule',
@@ -520,6 +531,7 @@ export function LandingPage() {
               <div className="phil-feature-art">
                 <RiveScene
                   src={feature.riveSrc}
+                  stateMachine={feature.riveStateMachine}
                   label={feature.sceneLabel}
                   fallback={<FeatureGlyph kind={feature.id} />}
                 />

@@ -6,7 +6,7 @@
   place-items: center;
   width: 100%;
   aspect-ratio: 1 / 1;
-  max-width: 300px;
+  max-width: 420px;
   margin-inline: auto;
 }
 
@@ -15,6 +15,19 @@
   grid-area: 1 / 1;
   width: 100%;
   height: 100%;
+}
+
+/* `character-follow.riv` carries an opaque near-white card shape behind the
+   figure, inside the artboard. Its three image assets are 88.6% transparent, so
+   the card is authored art, not a stray asset background, and no CSS above the
+   canvas paints it. Multiplying against the section's cream paper drops that
+   white to nothing while the dark line work survives.
+
+   Known trade-off: the figure's own white face fill also becomes cream. That
+   reads as paper and suits the doodle style, but if it ever needs to stay pure
+   white, delete the card shape in the Rive editor and re-export instead. */
+.rive-scene-canvas {
+  mix-blend-mode: multiply;
 }
 
 .rive-scene-fallback {

@@ -3546,7 +3546,7 @@ body:has(.app-shell.is-landing) {
      heading below a large illustration. */
   .phil-feature-row.is-reversed .phil-feature-copy,
   .phil-feature-row.is-reversed .phil-feature-art { order: unset; }
-  .phil-feature-art { max-width: 240px; margin-inline: auto; }
+  .phil-feature-art { max-width: 320px; margin-inline: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
