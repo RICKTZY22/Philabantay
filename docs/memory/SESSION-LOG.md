@@ -1009,3 +1009,15 @@ so the packet is not being marked complete on the strength of it.
 - Authentication, validation, field semantics, and action order are unchanged.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed; no browser smoke ran.
+
+## 2026-07-30 — Approved compact auth wireframe implemented
+
+- Applied the approved reference format to login: a centered 460px desktop
+  card, large Philabantay wordmark, stacked existing fields, one primary Log in
+  action, and an inline “New here? Create account” row.
+- Signup mirrors the inline account-switch treatment with “Already have an
+  account? Log in” while retaining its existing fields and validation.
+- Removed “Your role, messages, and bookings stay connected to this account.”
+  from the login card. No auth contracts or routing behavior changed.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed; no browser smoke ran.

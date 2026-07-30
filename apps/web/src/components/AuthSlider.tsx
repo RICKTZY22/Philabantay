@@ -166,11 +166,11 @@ export function AuthSlider({
             </button>
             {/* `from` rides along so switching modes keeps the destination
                 RequireAuth was trying to reach. */}
-            <Link className="auth-mode-action" to="/signup" state={{ from: safeFrom }}>
-              Create account
-            </Link>
-            <p className="auth-form-note">
-              Your role, messages, and bookings stay connected to this account.
+            <p className="auth-mode-switch">
+              <span>New here?</span>{' '}
+              <Link className="auth-mode-action" to="/signup" state={{ from: safeFrom }}>
+                Create account
+              </Link>
             </p>
           </form>
         ) : (
@@ -272,9 +272,12 @@ export function AuthSlider({
             <button className="auth-submit" type="submit" disabled={suBusy}>
               {suBusy ? 'Creating account…' : 'Continue to account type'}
             </button>
-            <Link className="auth-mode-action" to="/login" state={{ from: safeFrom }}>
-              Log in instead
-            </Link>
+            <p className="auth-mode-switch">
+              <span>Already have an account?</span>{' '}
+              <Link className="auth-mode-action" to="/login" state={{ from: safeFrom }}>
+                Log in
+              </Link>
+            </p>
             <p className="auth-form-note">
               You’ll choose how you use Philabantay on the next step.
             </p>

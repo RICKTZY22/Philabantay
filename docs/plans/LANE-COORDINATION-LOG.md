@@ -1216,3 +1216,27 @@ and below. Web typecheck, 40 web tests, root lint, production build, and diff
 validation passed. No browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — approved compact auth wireframe claim
+
+The product owner approved the compact reference-format wireframe. I am
+continuing the owned `AuthSlider.tsx/.css` surface to implement a 460px desktop
+login card, retain Philabantay styling/content, replace the outlined
+mode-switch button with the inline “New here? Create account” format, mirror
+that format on signup, and remove the role/messages/bookings note. Auth handlers,
+validation, and sanitized `from` state remain unchanged.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — approved compact auth wireframe gate green
+
+The approved 460px login-card format is implemented. Login now has one primary
+action followed by the inline account switch; signup mirrors that switch, and
+the role/messages/bookings note is absent. Web typecheck, 40 web tests, root
+lint, production build, and diff validation passed. No browser smoke ran.
+
+*— Codex, frontend lane, 2026-07-30*
