@@ -49,6 +49,8 @@ function publicDetailDependencies(options?: {
       booking_mode: 'manual',
       chair_count: 3,
       default_buffer_min: 10,
+      min_lead_minutes: 0,
+      max_advance_days: null,
       ...(options?.includePrivateField ? { owner_id: crypto.randomUUID() } : {}),
     },
     error: null,
@@ -124,13 +126,19 @@ function publicDetailDependencies(options?: {
 function anonymousDependencies(options?: {
   eligibleShopIds?: string[]
   shops?: Array<Record<string, unknown>>
+  service?: Record<string, unknown> | null
 }) {
   const getUser = vi.fn()
   const shops = chain({ data: options?.shops ?? [], error: null })
   const profiles = chain({ data: [], error: null })
+  // P2-07: the slot route resolves the service's shop before asking the
+  // availability engine, so an anonymous fixture needs a services table. No row
+  // means the route answers 404, which is what the rate-limit probe expects.
+  const services = chain({ data: options?.service ?? null, error: null })
   const from = vi.fn((table: string) => {
     if (table === 'shops') return shops
     if (table === 'users') return profiles
+    if (table === 'services') return services
     throw new Error(`Unexpected table: ${table}`)
   })
   const database = {
@@ -144,7 +152,7 @@ function anonymousDependencies(options?: {
     auth: { auth: { getUser } },
     database,
   } as unknown as ApiDependencies
-  return { dependencies, getUser, from, shops }
+  return { dependencies, getUser, from, shops, services }
 }
 
 function authenticatedDependencies() {
@@ -252,6 +260,8 @@ describe('public catalogue API boundary', () => {
       booking_mode: 'manual',
       chair_count: 3,
       default_buffer_min: 10,
+      min_lead_minutes: 0,
+      max_advance_days: null,
       operating_hours: [{
         weekday: 1,
         open_time: '09:00',
@@ -281,7 +291,7 @@ describe('public catalogue API boundary', () => {
     expect(response.body.data.closures[0]).not.toHaveProperty('reason')
     expect(response.body.data.media[0]).not.toHaveProperty('storage_path')
     expect(fixture.detail.select).toHaveBeenCalledWith(
-      'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min',
+      'description,public_contact_phone,timezone,booking_mode,chair_count,default_buffer_min,min_lead_minutes,max_advance_days',
     )
     expect(fixture.hours.select).toHaveBeenCalledWith('weekday,open_time,close_time,closed,block_order')
     expect(fixture.closures.select).toHaveBeenCalledWith('local_date,closed,replacement_open_time,replacement_close_time')

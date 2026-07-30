@@ -91,50 +91,41 @@ function profile(overrides: Partial<Profile>): Profile {
 }
 
 describe('canonical appointment status routes', () => {
-  it('filters availability with every capacity-blocking lifecycle state', async () => {
+  // P2-07 moved slot computation out of Express and into the availability
+  // engine, so this route no longer reads the appointments table itself and there
+  // is no status filter here to assert. The capacity-blocking status list is now
+  // enforced inside private.require_provider_gap and
+  // private.require_chair_capacity, and is covered against a real database by the
+  // integration matrix rather than against a fake query builder — which is the
+  // stronger check, since the old assertion could pass while the SQL disagreed.
+  it('serves the availability engine slots for the legacy per-barber route', async () => {
     const barberId = crypto.randomUUID()
     const serviceId = crypto.randomUUID()
     const shopId = crypto.randomUUID()
-    const employmentId = crypto.randomUUID()
     const date = '2099-01-05'
-    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
-    const appointmentLog: FakeQueryLog = { inFilters: [] }
-    const appointmentQuery = fakeQuery([
+    const engineSlots = [
       {
-        starts_at: new Date(`${date}T09:00:00+08:00`).toISOString(),
-        ends_at: new Date(`${date}T09:30:00+08:00`).toISOString(),
+        provider_user_id: barberId,
+        starts_at: new Date(`${date}T09:30:00+08:00`).toISOString(),
+        ends_at: new Date(`${date}T10:00:00+08:00`).toISOString(),
+        buffer_min: 0,
       },
-    ], appointmentLog)
+    ]
     const account = profile({ id: barberId })
     const dependencies = authenticatedDependencies(account, {
-      users: fakeQuery([{ id: barberId, full_name: 'Slot Barber', avatar_url: null }]),
-      shops: fakeQuery([{ id: shopId, name: 'Slot Shop', address: '1 Test Street', city: 'Manila', lat: 14.6, lng: 120.98, rating: 0, rating_count: 0 }]),
-      services: fakeQuery({ shop_id: shopId, duration_min: 30, active: true }),
-      barber_employment: fakeQuery([{ id: employmentId, shop_id: shopId, barber_id: barberId, hired_at: '2090-01-01' }]),
-      barbers: fakeQuery([{ id: barberId, bio: null, rating: 0, rating_count: 0, shift_status: 'off', accepting_bookings: true }]),
-      shift_exceptions: fakeQuery([]),
-      shift_patterns: fakeQuery([{ employment_id: employmentId, weekday, start_time: '09:00', end_time: '10:00' }]),
-      appointments: appointmentQuery,
-    }, { api_catalogue_shop_ids: [{ shop_id: shopId }] })
+      services: fakeQuery({ id: serviceId, shop_id: shopId }),
+    }, { api_availability_slots: engineSlots })
 
     const response = await request(createApp(dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
       .get('/api/v1/catalog/availability/slots')
       .query({ barberId, serviceId, date })
 
     expect(response.status).toBe(200)
-    expect(appointmentLog.inFilters).toEqual([{
-      column: 'status',
-      values: [
-        'requested',
-        'confirmed',
-        'checked_in',
-        'in_progress',
-        'awaiting_confirmation',
-      ],
-    }])
+    // The legacy shape stays a bare start/end pair; the provider and buffer the
+    // engine reports are only exposed through the richer /availability contract.
     expect(response.body.data).toEqual([{
-      starts_at: new Date(`${date}T09:30:00+08:00`).toISOString(),
-      ends_at: new Date(`${date}T10:00:00+08:00`).toISOString(),
+      starts_at: engineSlots[0].starts_at,
+      ends_at: engineSlots[0].ends_at,
     }])
   })
 

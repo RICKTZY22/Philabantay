@@ -271,6 +271,8 @@ describe('ApiBackend', () => {
       booking_mode: 'manual',
       chair_count: 3,
       default_buffer_min: 10,
+      min_lead_minutes: 120,
+      max_advance_days: 30,
       operating_hours: [{
         weekday: 1,
         open_time: '09:00',
@@ -327,6 +329,8 @@ describe('ApiBackend', () => {
       booking_mode: 'manual',
       chair_count: 1,
       default_buffer_min: 0,
+      min_lead_minutes: 0,
+      max_advance_days: null,
       operating_hours: [],
       closures: [],
       services: [],

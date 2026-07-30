@@ -380,6 +380,13 @@ describe('Express API boundary', () => {
       p_service_id: fixture.serviceId,
       p_starts_at: fixture.startsAt,
       p_notes: 'Low fade.',
+      // P2-07 assignment intent. Naming a barber without a preference is `exact`,
+      // which is the pre-P2-07 behaviour, and the request is recorded so a later
+      // owner substitution can still show who the customer asked for.
+      p_barber_preference: 'exact',
+      p_requested_barber_id: fixture.barberId,
+      p_assignment_source: 'customer',
+      p_assignment_reason: null,
     })
   })
 

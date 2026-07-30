@@ -101,6 +101,32 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     return data as Record<string, unknown>
   }
 
+  /**
+   * P2-07: a provider must hold an active service_qualifications row before the
+   * claim gate will book them. A new hire is granted the shop's existing
+   * services automatically, but a service added later is deliberately not
+   * granted to anyone, because that is the gap P2-05's owner-grant and
+   * barber-request flows exist to fill. Tests that mint a service mid-run
+   * therefore have to qualify a provider for it, exactly as a real owner would.
+   */
+  async function qualifyProvider(input: {
+    shopId: string
+    serviceId: string
+    providerId: string
+    grantedBy: string
+  }): Promise<void> {
+    const { error } = await service.from('service_qualifications').upsert({
+      shop_id: input.shopId,
+      service_id: input.serviceId,
+      provider_user_id: input.providerId,
+      active: true,
+      granted_by: input.grantedBy,
+      revoked_by: null,
+      revoked_at: null,
+    }, { onConflict: 'shop_id,service_id,provider_user_id' })
+    if (error) throw error
+  }
+
   async function acceptAppointment(
     appointment: Record<string, unknown>,
     ownerId: string,
@@ -1660,6 +1686,18 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       .update({ reason: 'Attempted audit rewrite.' })
       .eq('id', events?.[0]?.id)
     expect(eventMutation.error?.code).toBe('42501')
+
+    // The race above intentionally ends on whichever concurrent set won, so the
+    // fixture barber may be left revoked for the primary service. That was
+    // invisible before P2-07 because nothing in the booking path read
+    // qualifications; now it decides whether they can be booked at all. Restore a
+    // deterministic state so the later booking tests are not order-dependent.
+    await qualifyProvider({
+      shopId: fixtures.primaryShopId,
+      serviceId: fixtures.primaryServiceId,
+      providerId: barber.id,
+      grantedBy: owner.id,
+    })
   })
 
   it('customer RLS and Express routes expose only the customer booking/messages', async () => {
@@ -2734,6 +2772,16 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(snapshotServiceError).toBeNull()
     if (!snapshotService) throw new Error('Snapshot reassignment service was not created.')
 
+    // The fixture barber was hired before this service existed, so nothing has
+    // granted it to them. The candidate barbers below are employed after it and
+    // are auto-granted on hire.
+    await qualifyProvider({
+      shopId: fixtures.primaryShopId,
+      serviceId: snapshotService.id,
+      providerId: barber.id,
+      grantedBy: owner.id,
+    })
+
     const booked = await createAppointment({
       customerId: otherCustomer.id,
       barberId: barber.id,
@@ -2884,6 +2932,15 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     const premium = services?.find((row) => row.duration_min === 60)
     expect(quick).toBeTruthy()
     expect(premium).toBeTruthy()
+
+    for (const created of [quick!, premium!]) {
+      await qualifyProvider({
+        shopId: fixtures.primaryShopId,
+        serviceId: created.id,
+        providerId: barber.id,
+        grantedBy: owner.id,
+      })
+    }
 
     const created = await createAppointment({
       customerId: customer.id,
@@ -3066,6 +3123,7 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     const now = new Date()
     const slotStepMs = 15 * 60_000
     const startsAt = new Date(Math.ceil((now.getTime() + 5 * 60_000) / slotStepMs) * slotStepMs)
+
     const appointmentDateParts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Manila',
       year: 'numeric',
@@ -3086,10 +3144,45 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     })
     expect(exceptionError).toBeNull()
 
+    // This test books "a few minutes from now", so the calendar day and clock
+    // time vary with every run. The shift exception above already opens the
+    // barber's schedule for that day; since P2-07 the shop's own hours are an
+    // availability input too, and the fixture only publishes a Monday block, so
+    // open the shop for the same date the same way.
+    const { error: openShopError } = await service.from('shop_closures').insert({
+      shop_id: fixtures.primaryShopId,
+      local_date: appointmentDate,
+      closed: false,
+      replacement_open_time: '00:00',
+      replacement_close_time: '23:59',
+      reason: 'Integration lifecycle window.',
+    })
+    expect(openShopError).toBeNull()
+
+    // Pre-existing time-of-day fragility, fixed here rather than left to fail
+    // overnight. This test needs a start within check-in's 30-minute window, and
+    // shift_exceptions.end_time is a time-of-day, so the whole service must also
+    // fit inside one local day. With the 30-minute fixture service both
+    // constraints are unsatisfiable for the last half hour before midnight. A
+    // five-minute service satisfies them at every hour.
+    const { data: shortService, error: shortServiceError } = await service.from('services').insert({
+      shop_id: fixtures.primaryShopId,
+      name: `Lifecycle Express ${fixtureNamespace}`,
+      duration_min: 5,
+      price_cents: 9000,
+    }).select('id').single()
+    expect(shortServiceError).toBeNull()
+    await qualifyProvider({
+      shopId: fixtures.primaryShopId,
+      serviceId: shortService!.id,
+      providerId: barber.id,
+      grantedBy: owner.id,
+    })
+
     const requested = await createAppointment({
       customerId: customer.id,
       barberId: barber.id,
-      serviceId: fixtures.primaryServiceId,
+      serviceId: shortService!.id,
       startsAt: startsAt.toISOString(),
     })
     const created = await acceptAppointment(requested, owner.id)
@@ -3469,5 +3562,430 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     ])
     expect(customerRace.filter((result) => result.error === null)).toHaveLength(1)
     expect(customerRace.filter((result) => result.error?.code === '23P01')).toHaveLength(1)
+  })
+
+  // ---- P2-07 availability engine (AVAIL-01, AVAIL-02, BOOK-02) -------------
+  // Each input the phase contract lists gets its own refusal. Before P2-07 the
+  // claim gate read none of publication, opening hours, closures, qualification,
+  // buffers, the booking window, or chair capacity, so a draft shop and a closed
+  // date were both bookable.
+  //
+  // 2030-03-04, -11, -18 and -25 are Mondays, matching the fixture's weekday-1
+  // shift pattern and opening hours, and are clear of every other fixture date.
+  const book = (customerId: string, barberId: string, startsAt: string, extra: Record<string, unknown> = {}) =>
+    service.rpc('api_create_appointment', {
+      p_customer_id: customerId,
+      p_barber_id: barberId,
+      p_service_id: fixtures.primaryServiceId,
+      p_starts_at: startsAt,
+      p_notes: null,
+      ...extra,
+    })
+
+  async function withShopFields<T>(
+    fields: Record<string, unknown>,
+    body: () => Promise<T>,
+  ): Promise<T> {
+    const { data: before, error: readError } = await service
+      .from('shops')
+      .select(Object.keys(fields).join(','))
+      .eq('id', fixtures.primaryShopId)
+      .single()
+    expect(readError).toBeNull()
+    const { error: setError } = await service.from('shops').update(fields).eq('id', fixtures.primaryShopId)
+    expect(setError).toBeNull()
+    try {
+      return await body()
+    } finally {
+      // Always restore, even on a failed assertion, so one broken expectation
+      // cannot leave the shared fixture shop in a state that breaks the rest.
+      await service.from('shops')
+        .update(before as unknown as Record<string, unknown>)
+        .eq('id', fixtures.primaryShopId)
+    }
+  }
+
+  it('refuses to book a shop that is not published', async () => {
+    await withShopFields({ lifecycle_status: 'suspended' }, async () => {
+      const suspended = await book(customer.id, barber.id, '2030-03-04T01:00:00.000Z')
+      expect(suspended.error?.code).toBe('P4027')
+    })
+
+    await withShopFields({ lifecycle_status: 'draft', published_at: null }, async () => {
+      const draft = await book(customer.id, barber.id, '2030-03-04T01:00:00.000Z')
+      expect(draft.error?.code).toBe('P4027')
+    })
+
+    // Positive control: the same request succeeds once the shop is published
+    // again, proving the refusals above were about publication and nothing else.
+    const published = await book(customer.id, barber.id, '2030-03-04T01:00:00.000Z')
+    expect(published.error).toBeNull()
+    await service.from('appointments').delete().eq('id', (published.data as { id: string }).id)
+  })
+
+  it('refuses times outside the shop opening hours and on closure dates', async () => {
+    // The fixture shift (09:00-17:00) sits inside the fixture hours
+    // (09:00-18:00), so hours are only observable once they are narrower than the
+    // shift. 14:00 is inside the barber's shift and outside a 09:00-12:00 shop.
+    await withShopFields({}, async () => {
+      const { error: narrowError } = await service
+        .from('shop_operating_hours')
+        .update({ close_time: '12:00' })
+        .eq('shop_id', fixtures.primaryShopId)
+        .eq('weekday', 1)
+      expect(narrowError).toBeNull()
+      try {
+        const outside = await book(customer.id, barber.id, '2030-03-11T06:00:00.000Z')
+        expect(outside.error?.code).toBe('P4028')
+        const inside = await book(customer.id, barber.id, '2030-03-11T01:00:00.000Z')
+        expect(inside.error).toBeNull()
+        await service.from('appointments').delete().eq('id', (inside.data as { id: string }).id)
+      } finally {
+        await service
+          .from('shop_operating_hours')
+          .update({ close_time: '18:00' })
+          .eq('shop_id', fixtures.primaryShopId)
+          .eq('weekday', 1)
+      }
+    })
+
+    const { data: closure, error: closureError } = await service.from('shop_closures').insert({
+      shop_id: fixtures.primaryShopId,
+      local_date: '2030-03-18',
+      closed: true,
+      reason: 'P2-07 closure regression',
+    }).select('id').single()
+    expect(closureError).toBeNull()
+    try {
+      const closed = await book(customer.id, barber.id, '2030-03-18T01:00:00.000Z')
+      expect(closed.error?.code).toBe('P4028')
+
+      // Replacement hours reopen a narrower day: 09:00 is inside, 14:00 is not.
+      const { error: replaceError } = await service.from('shop_closures').update({
+        closed: false,
+        replacement_open_time: '09:00',
+        replacement_close_time: '12:00',
+      }).eq('id', closure?.id as string)
+      expect(replaceError).toBeNull()
+
+      const outsideReplacement = await book(customer.id, barber.id, '2030-03-18T06:00:00.000Z')
+      expect(outsideReplacement.error?.code).toBe('P4028')
+      const insideReplacement = await book(customer.id, barber.id, '2030-03-18T01:00:00.000Z')
+      expect(insideReplacement.error).toBeNull()
+      await service.from('appointments').delete().eq('id', (insideReplacement.data as { id: string }).id)
+    } finally {
+      await service.from('shop_closures').delete().eq('id', closure?.id as string)
+    }
+  })
+
+  it('requires an active service qualification before anyone can be booked', async () => {
+    // 20260730000300 grants by default when an employment goes active, so the
+    // fixture barber arrives already qualified. That default is the thing under
+    // test as much as the refusal is.
+    const { data: granted, error: grantedError } = await service
+      .from('service_qualifications')
+      .select('id,active')
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('service_id', fixtures.primaryServiceId)
+      .eq('provider_user_id', barber.id)
+      .single()
+    expect(grantedError).toBeNull()
+    expect(granted?.active).toBe(true)
+
+    const { error: revokeError } = await service.from('service_qualifications').update({
+      active: false,
+      revoked_by: owner.id,
+      revoked_at: new Date().toISOString(),
+    }).eq('id', granted?.id as string)
+    expect(revokeError).toBeNull()
+    try {
+      const unqualified = await book(customer.id, barber.id, '2030-03-25T01:00:00.000Z')
+      expect(unqualified.error?.code).toBe('P4030')
+    } finally {
+      await service.from('service_qualifications').update({
+        active: true,
+        revoked_by: null,
+        revoked_at: null,
+      }).eq('id', granted?.id as string)
+    }
+
+    const requalified = await book(customer.id, barber.id, '2030-03-25T01:00:00.000Z')
+    expect(requalified.error).toBeNull()
+    await service.from('appointments').delete().eq('id', (requalified.data as { id: string }).id)
+  })
+
+  it('enforces the booking lead time and advance horizon', async () => {
+    // A start two days out is inside a three-day lead requirement and outside a
+    // one-day horizon, so one slot exercises both bounds.
+    const soon = new Date(Date.now() + 2 * 86_400_000)
+    // Land on the fixture's Monday shift at 09:00 Manila regardless of today.
+    soon.setUTCDate(soon.getUTCDate() + ((8 - soon.getUTCDay()) % 7))
+    const startsAt = `${soon.toISOString().slice(0, 10)}T01:00:00.000Z`
+
+    await withShopFields({ min_lead_minutes: 10080 }, async () => {
+      const tooSoon = await book(customer.id, barber.id, startsAt)
+      expect(tooSoon.error?.code).toBe('P4029')
+    })
+
+    await withShopFields({ max_advance_days: 1 }, async () => {
+      const tooFar = await book(customer.id, barber.id, startsAt)
+      expect(tooFar.error?.code).toBe('P4029')
+    })
+
+    // The default is no lead time and a null horizon, which must be a true
+    // no-op: the fixture's own 2030 appointments prove a null horizon imposes
+    // nothing, and this confirms the same slot is accepted with the defaults.
+    const accepted = await book(customer.id, barber.id, startsAt)
+    expect(accepted.error).toBeNull()
+    await service.from('appointments').delete().eq('id', (accepted.data as { id: string }).id)
+  })
+
+  it('keeps a cleanup buffer clear after a booking', async () => {
+    await withShopFields({ default_buffer_min: 30 }, async () => {
+      // Snapshotted at insert, so the buffer must be set before this booking.
+      const first = await book(customer.id, barber.id, '2030-03-04T02:00:00.000Z')
+      expect(first.error).toBeNull()
+      const created = first.data as { id: string; ends_at: string; booked_buffer_min: number }
+      expect(created.booked_buffer_min).toBe(30)
+      // The buffer must not extend the customer-visible end of the appointment.
+      expect(created.ends_at).toBe('2030-03-04T02:30:00+00:00')
+
+      try {
+        // 10:30 Manila starts exactly when the service ended, but the chair is
+        // still being cleaned until 11:00.
+        const inBuffer = await book(otherCustomer.id, barber.id, '2030-03-04T02:30:00.000Z')
+        expect(inBuffer.error?.code).toBe('23P01')
+
+        const afterBuffer = await book(otherCustomer.id, barber.id, '2030-03-04T03:00:00.000Z')
+        expect(afterBuffer.error).toBeNull()
+        await service.from('appointments').delete().eq('id', (afterBuffer.data as { id: string }).id)
+      } finally {
+        await service.from('appointments').delete().eq('id', created.id)
+      }
+    })
+  })
+
+  it('never exceeds the shop chair count across different providers', async () => {
+    // Chair capacity is the one input that per-barber checks cannot express: two
+    // customers booking two different barbers both pass provider and customer
+    // overlap and still want the same chair.
+    const chairEmail = fixtureEmail('barber-chair-capacity')
+    const chairBarberId = await createFixtureUser(chairEmail, 'Chair Capacity Barber')
+    const { error: roleError } = await service.from('users').upsert({
+      id: chairBarberId,
+      email: chairEmail,
+      full_name: 'Chair Capacity Barber',
+      role: 'barber',
+      requested_role: 'barber',
+      verification_status: 'verified',
+      onboarding_completed: true,
+    })
+    expect(roleError).toBeNull()
+    const { error: barberRowError } = await service.from('barbers').insert({
+      id: chairBarberId,
+      accepting_bookings: true,
+    })
+    expect(barberRowError).toBeNull()
+    const { data: chairEmployment, error: employmentError } = await service
+      .from('barber_employment')
+      .insert({
+        barber_id: chairBarberId,
+        shop_id: fixtures.primaryShopId,
+        status: 'active',
+        hired_at: '2026-01-01',
+      })
+      .select('id')
+      .single()
+    expect(employmentError).toBeNull()
+    const { error: patternError } = await service.from('shift_patterns').insert({
+      employment_id: chairEmployment?.id,
+      barber_id: chairBarberId,
+      shop_id: fixtures.primaryShopId,
+      weekday: 1,
+      start_time: '09:00',
+      end_time: '17:00',
+    })
+    expect(patternError).toBeNull()
+
+    // The employment trigger must have qualified the new hire for the shop's
+    // active service, otherwise the refusal below would be about qualification.
+    const { data: autoGrant } = await service
+      .from('service_qualifications')
+      .select('active')
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('service_id', fixtures.primaryServiceId)
+      .eq('provider_user_id', chairBarberId)
+      .single()
+    expect(autoGrant?.active).toBe(true)
+
+    const slot = '2030-03-11T03:00:00.000Z'
+    const first = await book(customer.id, barber.id, slot)
+    expect(first.error).toBeNull()
+    const firstId = (first.data as { id: string }).id
+    try {
+      // The fixture shop has chair_count 1, so the second provider has nowhere
+      // to work even though nothing about them personally is unavailable.
+      const second = await book(otherCustomer.id, chairBarberId, slot)
+      expect(second.error?.code).toBe('P4026')
+
+      // Two chairs make the same request legal, which proves the refusal was the
+      // chair count rather than an unrelated conflict.
+      await withShopFields({ chair_count: 2 }, async () => {
+        const withTwoChairs = await book(otherCustomer.id, chairBarberId, slot)
+        expect(withTwoChairs.error).toBeNull()
+        await service.from('appointments').delete().eq('id', (withTwoChairs.data as { id: string }).id)
+      })
+
+      // AVAIL-02: concurrent claims for the last chair produce exactly one win.
+      const raceSlot = '2030-03-11T04:00:00.000Z'
+      const race = await Promise.all([
+        book(customer.id, barber.id, raceSlot),
+        book(otherCustomer.id, chairBarberId, raceSlot),
+      ])
+      expect(race.filter((result) => result.error === null)).toHaveLength(1)
+      expect(race.filter((result) => result.error?.code === 'P4026')).toHaveLength(1)
+      for (const won of race.filter((result) => result.error === null)) {
+        await service.from('appointments').delete().eq('id', (won.data as { id: string }).id)
+      }
+    } finally {
+      await service.from('appointments').delete().eq('id', firstId)
+      await service.from('shift_patterns').delete().eq('employment_id', chairEmployment?.id as string)
+      await service.from('barber_employment').delete().eq('id', chairEmployment?.id as string)
+    }
+  })
+
+  it('offers only slots the claim command would accept', async () => {
+    // AVAIL-01. The projection used to be computed independently of the claim
+    // gate, so it could advertise a slot that submit then refused. Asserting that
+    // every offered slot is quotable is the property that stops them drifting.
+    const { data: slots, error: slotError } = await service.rpc('api_availability_slots', {
+      p_shop_id: fixtures.primaryShopId,
+      p_service_id: fixtures.primaryServiceId,
+      p_date: '2030-03-25',
+      p_customer_id: customer.id,
+      p_barber_id: null,
+    })
+    expect(slotError).toBeNull()
+    const offered = (slots ?? []) as Array<{ provider_user_id: string; starts_at: string; buffer_min: number }>
+    expect(offered.length).toBeGreaterThan(0)
+
+    // Earlier tests legitimately employ extra barbers at this shop, so assert
+    // membership of the qualified set rather than one hardcoded provider.
+    const { data: eligible } = await service
+      .from('service_qualifications')
+      .select('provider_user_id')
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('service_id', fixtures.primaryServiceId)
+      .eq('active', true)
+    const eligibleIds = new Set((eligible ?? []).map((row) => row.provider_user_id as string))
+    expect(offered.every((slot) => eligibleIds.has(slot.provider_user_id))).toBe(true)
+
+    for (const slot of [offered[0], offered[Math.floor(offered.length / 2)], offered[offered.length - 1]]) {
+      const { data: quote, error: quoteError } = await service.rpc('api_quote_appointment', {
+        p_customer_id: customer.id,
+        p_barber_id: slot.provider_user_id,
+        p_service_id: fixtures.primaryServiceId,
+        p_starts_at: slot.starts_at,
+        p_barber_preference: 'exact',
+      })
+      expect(quoteError).toBeNull()
+      expect((quote as Array<{ bookable: boolean }>)[0]?.bookable).toBe(true)
+    }
+
+    // A claimed slot must leave the offer set immediately.
+    const claimed = await book(customer.id, barber.id, offered[0].starts_at)
+    expect(claimed.error).toBeNull()
+    try {
+      const { data: afterClaim } = await service.rpc('api_availability_slots', {
+        p_shop_id: fixtures.primaryShopId,
+        p_service_id: fixtures.primaryServiceId,
+        p_date: '2030-03-25',
+        p_customer_id: customer.id,
+        p_barber_id: null,
+      })
+      expect(((afterClaim ?? []) as Array<{ starts_at: string }>)
+        .some((slot) => slot.starts_at === offered[0].starts_at)).toBe(false)
+    } finally {
+      await service.from('appointments').delete().eq('id', (claimed.data as { id: string }).id)
+    }
+
+    // An unpublished shop is an error, not an empty day, so the caller can tell
+    // "closed today" apart from "not bookable at all".
+    await withShopFields({ lifecycle_status: 'suspended' }, async () => {
+      const { error: suspendedError } = await service.rpc('api_availability_slots', {
+        p_shop_id: fixtures.primaryShopId,
+        p_service_id: fixtures.primaryServiceId,
+        p_date: '2030-03-25',
+        p_customer_id: null,
+        p_barber_id: null,
+      })
+      expect(suspendedError?.code).toBe('P4027')
+    })
+  })
+
+  it('records exact, preferred, and any assignment intent', async () => {
+    // BOOK-02. `exact` must surface a refusal rather than quietly substitute;
+    // `any` must resolve a provider and say that it did so automatically.
+    const anySlot = '2030-03-04T04:00:00.000Z'
+    const resolved = await book(customer.id, null as unknown as string, anySlot, {
+      p_barber_preference: 'any',
+      p_requested_barber_id: null,
+    })
+    expect(resolved.error).toBeNull()
+    const anyBooking = resolved.data as Record<string, unknown>
+    // The engine picks the qualified provider carrying the fewest assigned
+    // minutes that day, so assert the intent it recorded rather than which of the
+    // shop's barbers happened to win.
+    const { data: eligible } = await service
+      .from('service_qualifications')
+      .select('provider_user_id')
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('service_id', fixtures.primaryServiceId)
+      .eq('active', true)
+    expect((eligible ?? []).map((row) => row.provider_user_id as string))
+      .toContain(anyBooking.barber_id as string)
+    expect(anyBooking.barber_preference).toBe('any')
+    expect(anyBooking.requested_barber_id).toBeNull()
+    expect(anyBooking.assignment_source).toBe('automatic')
+    expect(anyBooking.assignment_reason).toContain('Assigned automatically')
+
+    try {
+      // `exact` on the provider who just took that slot must refuse rather than
+      // quietly hand the customer somebody else.
+      const exact = await book(otherCustomer.id, anyBooking.barber_id as string, anySlot, {
+        p_barber_preference: 'exact',
+        p_requested_barber_id: anyBooking.barber_id,
+      })
+      expect(exact.error?.code).toBe('23P01')
+
+      // `preferred` may substitute, so the outcome depends on whether another
+      // qualified provider is free. Either way it must be a definite answer: a
+      // different provider, or the no-provider refusal — never the busy one.
+      const preferred = await book(otherCustomer.id, anyBooking.barber_id as string, anySlot, {
+        p_barber_preference: 'preferred',
+        p_requested_barber_id: anyBooking.barber_id,
+      })
+      if (preferred.error) {
+        expect(preferred.error.code).toBe('P4033')
+      } else {
+        const substitute = preferred.data as Record<string, unknown>
+        expect(substitute.barber_id).not.toBe(anyBooking.barber_id)
+        expect(substitute.requested_barber_id).toBe(anyBooking.barber_id)
+        expect(substitute.assignment_source).toBe('automatic')
+        await service.from('appointments').delete().eq('id', substitute.id as string)
+      }
+    } finally {
+      await service.from('appointments').delete().eq('id', anyBooking.id as string)
+    }
+
+    const exactFree = await book(customer.id, barber.id, '2030-03-04T05:00:00.000Z', {
+      p_barber_preference: 'exact',
+      p_requested_barber_id: barber.id,
+    })
+    expect(exactFree.error).toBeNull()
+    const exactBooking = exactFree.data as Record<string, unknown>
+    expect(exactBooking.assignment_source).toBe('customer')
+    expect(exactBooking.requested_barber_id).toBe(barber.id)
+    await service.from('appointments').delete().eq('id', exactBooking.id as string)
   })
 })
