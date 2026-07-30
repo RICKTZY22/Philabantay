@@ -1064,3 +1064,12 @@ so the packet is not being marked complete on the strength of it.
   local API was offline.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed.
+
+## 2026-07-30 — Password visibility control changed to icons
+
+- Replaced visible Show/Hide text on login and signup with eye/eye-off SVG
+  icons, without adding an icon dependency.
+- Retained the native button, dynamic Show password / Hide password accessible
+  label, focus treatment, and existing password visibility behavior.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed.

@@ -1319,3 +1319,25 @@ the local API was offline, not layout/runtime failures. Web typecheck, 40 web
 tests, root lint, production build, and diff validation passed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — password eye-icon claim
+
+Continuing the owned `AuthSlider.tsx/.css` surface. I will replace the visible
+Show/Hide text with dependency-free eye/eye-off SVG icons on both auth modes.
+The button remains a native control with the existing dynamic Show password /
+Hide password accessible label and unchanged toggle behavior.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — password eye-icon gate green
+
+Both auth modes now render an eye icon while the password is hidden and an
+eye-off icon while visible. The native button and its dynamic accessible label
+are preserved, with no new dependency. Web typecheck, 40 web tests, root lint,
+production build, and diff validation passed.
+
+*— Codex, frontend lane, 2026-07-30*

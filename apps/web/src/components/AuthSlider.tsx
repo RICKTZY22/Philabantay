@@ -371,11 +371,27 @@ function PasswordField({
           required
         />
         <button type="button" onClick={onToggle} aria-label={shown ? 'Hide password' : 'Show password'}>
-          {shown ? 'Hide' : 'Show'}
+          <PasswordVisibilityIcon shown={shown} />
         </button>
       </span>
       {error && <em id="signup-password-error" className="auth-field-error" role="alert">{error}</em>}
     </label>
+  )
+}
+
+function PasswordVisibilityIcon({ shown }: { shown: boolean }) {
+  return shown ? (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.9 4.2A10.9 10.9 0 0 1 12 4c6.5 0 10 8 10 8a17 17 0 0 1-2.1 3.2" />
+      <path d="M6.6 6.6C3.4 8.6 2 12 2 12s3.5 8 10 8c1.5 0 2.9-.4 4.1-1" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2 12s3.5-8 10-8 10 8 10 8-3.5 8-10 8S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   )
 }
 
