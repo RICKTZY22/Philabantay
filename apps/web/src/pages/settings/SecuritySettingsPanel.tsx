@@ -1,15 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { DataError } from '@barbershop/shared'
 import { useAuth } from '../../features/auth/AuthContext'
-import { useCurtain } from '../../components/CurtainTransition'
+import { useSignOutToHome } from '../../hooks/useSignOutToHome'
 import { DoodleIcon } from '../../theme/DoodleDefs'
 import { SettingsActionRow, SettingsHeading } from './AccountSettingsPanel'
 
 export function SecuritySettingsPanel() {
-  const { changePassword, signOut } = useAuth()
-  const { transition } = useCurtain()
-  const navigate = useNavigate()
+  const { changePassword } = useAuth()
+  const signOutToHome = useSignOutToHome()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -39,11 +37,7 @@ export function SecuritySettingsPanel() {
   }
 
   async function handleSignOut() {
-    await transition(async () => {
-      navigate('/', { replace: true })
-      await signOut()
-      return null
-    })
+    await signOutToHome()
   }
 
   return (

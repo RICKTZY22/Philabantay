@@ -45,8 +45,11 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - Sign-in, sign-up, sign-out, and drawer section changes share one curtain
   transaction. Route content enters with a short transform/opacity animation,
   while reduced motion bypasses the curtain and disables the route animation.
-- Every sign-out surface now navigates to `/` before clearing the session, so
-  protected-route guards cannot race the user into `/login` or `/signup`.
+- Every sign-out surface uses the shared curtain hook to mark an explicit Home
+  route intent before clearing the session. The verification lock permits only
+  that one landing transition and consumes the marker after session clearing,
+  so protected-route guards cannot race the user into `/login` or `/signup`
+  and the exception cannot survive a later login.
 - Guest auth now has one dedicated surface: `/login` and `/signup` use a
   centered light form card, warm cream space, copper actions, and soft orange
   gradient patches. These routes intentionally have no global header or intro

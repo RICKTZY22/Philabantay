@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
-import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { isProfessionalLocked } from '../lib/access'
 import { profileAvatarRole } from '../lib/profile'
@@ -14,15 +14,25 @@ import { RouteErrorBoundary } from './RouteErrorBoundary'
 export function Layout() {
   const { profile, loading } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [headerVisible, setHeaderVisible] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const verificationLocked = Boolean(profile && isProfessionalLocked(profile))
+  const signingOutToHome = location.pathname === '/'
+    && Boolean((location.state as { signingOutToHome?: boolean } | null)?.signingOutToHome)
 
   // Route changes should open at the top instead of inheriting the scroll
   // position of a long dashboard/map page.
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [location.pathname])
+  // The route-state exception exists only while sign-out is clearing the
+  // session. Consume it once signed out so it cannot survive a later login.
+  useEffect(() => {
+    if (!profile && signingOutToHome) {
+      navigate('/', { replace: true, state: null })
+    }
+  }, [navigate, profile, signingOutToHome])
   // Landing keeps a transparent marketing header; auth lives on dedicated routes.
   const onLanding = location.pathname === '/'
   const onAuth = location.pathname === '/login' || location.pathname === '/signup'
@@ -114,7 +124,7 @@ export function Layout() {
 
   // Public discovery routes are normally reachable while signed in, but a
   // professional awaiting verification is intentionally restricted to one screen.
-  if (verificationLocked && location.pathname !== '/verification') {
+  if (verificationLocked && location.pathname !== '/verification' && !signingOutToHome) {
     return <Navigate to="/verification" replace />
   }
 

@@ -1116,3 +1116,22 @@ so the packet is not being marked complete on the strength of it.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed. Claude's in-progress P2-07 migration was not read, edited, staged, or
   committed.
+
+## 2026-07-30 — Verification sign-out race fixed
+
+- Reproduced the reported failure with a verification-locked Barber:
+  navigating Home before clearing the session let `Layout` redirect the still
+  authenticated user back through `/verification`, after which the auth guard
+  committed `/login`.
+- Centralized all three sign-out surfaces on `useSignOutToHome`. Behind the
+  closed curtain it marks a one-time Home route intent, which is the only
+  exception to the verification lock, and then clears the local session. The
+  marker is consumed immediately afterward so it cannot survive a later login.
+- Exact browser verification passed twice from `/verification` to `/`; the
+  landing page was visible and the curtain returned to `idle`. Revisiting
+  `/verification` then produced `/login`, confirming that the session was
+  cleared without making ordinary protected routes accessible.
+- The synthetic auth account used for the reproduction was removed with the
+  admin soft-delete path. Its immutable verification audit remains by design.
+- Web typecheck, all 40 web tests, production build, and diff validation
+  passed. Claude's P2-07 API/shared/migration work was untouched.

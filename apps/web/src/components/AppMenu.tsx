@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
+import { useSignOutToHome } from '../hooks/useSignOutToHome'
 import { profileAvatarRole, profileRoleLabel } from '../lib/profile'
 import { DoodleAvatar } from './DoodleAvatar'
 import { useCurtain } from './CurtainTransition'
@@ -19,10 +20,10 @@ type AppMenuProps = {
  * drawer para CSS transition (hindi mount/unmount) ang animation.
  */
 export function AppMenu({ onOpenChange }: AppMenuProps) {
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { profile } = useAuth()
+  const signOutToHome = useSignOutToHome()
   const location = useLocation()
-  const { go, transition } = useCurtain()
+  const { go } = useCurtain()
   const [open, setOpen] = useState(false)
   const burgerRef = useRef<HTMLButtonElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
@@ -88,13 +89,7 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
 
   async function handleSignOut() {
     setOpen(false)
-    await transition(async () => {
-      // Leave the guarded route behind the closed curtain before clearing the
-      // session, so RequireAuth never races the intended landing destination.
-      navigate('/', { replace: true })
-      await signOut()
-      return null
-    })
+    await signOutToHome()
   }
 
   // Pareho ang barbershop-curtain handoff dito gaya ng ginagamit pagkatapos

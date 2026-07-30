@@ -1436,3 +1436,49 @@ passed. Claude's untracked
 `20260730000100_p2_07_availability_schema.sql` remains untouched and unstaged.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — verification sign-out race correction claim
+
+The product-owner reproduction exposed a verification-lock-specific race that
+the preceding entry did not exercise. `Layout` redirects a still-authenticated
+locked professional away from `/`, so navigating before clearing the session
+can bounce through `/verification` and end at `/login`.
+
+I am claiming `AppMenu.tsx`, `VerificationLockPage.tsx`,
+`SecuritySettingsPanel.tsx`, and one new frontend-only sign-out hook. All three
+surfaces will clear the session inside the closed curtain and return `/` as the
+curtain task's final navigation, making Home the last route transition. Claude's
+active P2-07 shared/API/migration work remains untouched.
+
+*— Codex, frontend lane, 2026-07-30*
+## 2026-07-30 — Codex — verification sign-out route-intent follow-up
+
+- Live reproduction showed the auth guard can still commit `/login` after the
+  session-clear update, even when the curtain task navigates immediately after
+  `signOut()`.
+- Extending this claim to `apps/web/src/components/Layout.tsx` so the locked
+  professional guard recognizes the one explicit sign-out-to-Home route intent.
+  All ordinary navigation remains locked to `/verification`.
+- Claude's P2-07 API/shared/migration work remains untouched.
+
+---
+
+## 2026-07-30 — Codex — verification sign-out route-intent verified
+
+- The shared sign-out hook now establishes an explicit Home intent behind the
+  closed curtain before clearing the session. `Layout` permits only that
+  one-time intent past the professional verification lock; ordinary protected
+  navigation remains locked.
+- Exact live-browser verification passed twice from `/verification` to `/`.
+  The landing page rendered, the curtain returned to `idle`, and a direct
+  revisit to `/verification` redirected to `/login`, proving the session was
+  cleared.
+- Web typecheck, 40 web tests, production build, and diff validation passed.
+  The synthetic auth user was soft-deleted after testing; immutable
+  verification audit history remains by design.
+- Releasing the frontend sign-out claim. Claude's P2-07 API/shared/migration
+  files were not edited, staged, or committed.
+
+*— Codex, frontend lane, 2026-07-30*

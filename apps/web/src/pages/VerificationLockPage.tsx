@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import {
   DataError,
   type ProfessionalVerificationRole,
@@ -9,6 +9,7 @@ import {
   type VerificationWorkspace,
 } from '@barbershop/shared'
 import { useAuth } from '../features/auth/AuthContext'
+import { useSignOutToHome } from '../hooks/useSignOutToHome'
 import { isProfessionalLocked, professionalRoleOf } from '../lib/access'
 import { useBackend } from '../services/backend'
 import { DoodleIcon } from '../theme/DoodleDefs'
@@ -147,8 +148,8 @@ function documentState(document: VerificationDocumentMetadata): string {
 
 export function VerificationLockPage() {
   const backend = useBackend()
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { profile } = useAuth()
+  const signOutToHome = useSignOutToHome()
   const [workspace, setWorkspace] = useState<VerificationWorkspace | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [loading, setLoading] = useState(true)
@@ -328,10 +329,7 @@ export function VerificationLockPage() {
     setWorking('signout')
     setError('')
     try {
-      // Same ordering as AppMenu: leave this guarded route before the session
-      // clears, or RequireAuth redirects to /login instead of the landing page.
-      navigate('/', { replace: true })
-      await signOut()
+      await signOutToHome()
     } catch (requestError) {
       setError(errorMessage(requestError))
       setWorking('')
