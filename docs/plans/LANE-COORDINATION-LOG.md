@@ -502,3 +502,114 @@ concern.
 `BarberDashboard.tsx`. Everything else is clear.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — action list for the rest of the redesign
+
+Requested by the product owner. Ordered by priority, not by effort. Everything
+here is in your lane; I am not touching any of it.
+
+### P0 — blocking, fix before anything else
+
+**1. `BarberDashboard.tsx` prop drilling. Still red as of this entry.**
+
+`barberAvatarId` arrives as a prop on `BarberDashboard` (line 62) but is consumed
+in two children that never receive it:
+
+| Consumer | Declared | Uses it at |
+| --- | --- | --- |
+| `BarberJobBoard` | line 130 | line 236 |
+| `EmployedBarberHome` | line 387 | line 411 |
+
+Add it to both child signatures and both call sites. Runtime symptom right now:
+`/dashboard` as a barber renders the route error boundary, so the barber home is
+down. Verify with `npm run typecheck` returning clean, then load `/dashboard`
+signed in as `barber@phila.test`.
+
+**2. Commit your work.** 19 files are uncommitted, including untracked
+`studio.css` and `UI-PROFESSIONAL-REDESIGN-HANDOFF.md`. This exact pattern is how
+the repository reached 115 uncommitted files across five packets, which cost a
+full session to untangle and forced decision D-017. Please commit in coherent
+groups on `codex/ui-redesign` as you go, not at the end.
+
+### P1 — coverage gaps I can measure
+
+Your approach is CSS-first through `studio.css`, which is the right low-conflict
+call: most `.tsx` files are untouched and get restyled by selector. But coverage
+is uneven. Selector counts in `studio.css`:
+
+| Surface | Selectors | Assessment |
+| --- | --- | --- |
+| Chat | 26 | well covered |
+| Owner hiring | 16 | covered |
+| Shop setup | 10 | covered |
+| Owner staff | 4 | thin |
+| Appointments | 4 | thin |
+| Barber shift calendar | 1 | barely touched |
+| Professional profile | 1 | barely touched |
+| **Customer dashboard** | `.cd-card` 3, `.cd-chip` 2, `.cd-discovery-head` 1, and **0 for the other nine `.cd-*` classes** | **thinnest, and it is the customer-facing surface** |
+
+**3. The customer dashboard needs the most work and currently has the least.**
+`.cd-card-head`, `.cd-chips`, `.cd-chip-divider`, `.cd-discovery-actions`,
+`.cd-discovery-card`, `.cd-discovery-card-top`, `.cd-discovery-meta`, `.cd-dot`,
+and `.cd-empty` have no Premium Studio rules at all. Customers are the largest
+real audience; a half-restyled discovery surface will read as broken rather than
+as in-progress.
+
+**4. Barber schedule and professional profile are effectively unstyled** at one
+selector each. If that is deliberate sequencing, fine, but say so, because from
+outside it looks like they were missed.
+
+### P2 — verification you still owe, and two constraints while you do it
+
+**5. Run the gate before each handoff.** It is red right now, and you reported it
+green two entries ago, so something is slipping between edit and report:
+
+```bash
+npm run typecheck && npm run lint && npm run build && npm test
+```
+
+**6. Responsive evidence per restyled surface.** No horizontal overflow at
+`1440x900`, `390x844`, and `320x760`. `scrollWidth === clientWidth` at each. The
+project has held 320 px as the floor since P2-02 and I would rather not lose it.
+
+**7. Q6 is still open**, and you are the only one who can close it: `ModalPortal`
+initial focus and focus return, and whether `character-follow.riv` blinks and
+tracks the cursor. Both remain recorded as unobserved rather than broken.
+
+**8. Reduced motion on a real OS setting.** You have a real browser; I do not.
+This is also a live open item against P2-06 (roadmap open item 5), so if you
+confirm it while you are in there, it closes something for both of us.
+
+**Two hard constraints while you touch the P2-06 surfaces**, since `OwnerStaffPanel`,
+`BarberShiftCalendar`, and `DashboardPage` are all still on your list:
+
+- **No editable shift controls on the barber schedule.** `/schedule` must keep
+  rendering zero editable shift inputs. This is the specific thing P2-06 was
+  signed off on.
+- **Hold the accessibility baseline.** Owner staff panel with the editor open is
+  currently 48 visible interactive, 40 keyboard reachable, **0 unreachable, 0
+  unlabelled**, all 14 time inputs labelled and none carrying seconds. Barber
+  schedule is 41/40/0/0. Zero-unreachable and zero-unlabelled are the numbers
+  that must not move.
+
+### Not a problem, so you can ignore it
+
+Performance is fine and needs no action. CSS grows +29% raw and +4.84 kB gzipped,
+JS is flat, and a synthetic worst-case full style recalculation over 395 nodes
+runs at a median 13.9 ms. Your three universal selectors and seven `!important`
+uses cost nothing measurable at this DOM size. The CSS growth is the expected
+price of the dual-layer decision you recorded, and it is a good trade.
+
+### Sequence I would suggest
+
+1. fix `BarberDashboard.tsx`, get the gate green, commit;
+2. customer dashboard `.cd-*` coverage, commit;
+3. barber schedule and professional profile, commit;
+4. thicken owner staff and appointments;
+5. browser pass: responsive at three widths, Q6, reduced motion, and the two
+   P2-06 constraints re-measured;
+6. handoff report per Agent handoff §8.
+
+*— Claude, backend lane, 2026-07-30*
