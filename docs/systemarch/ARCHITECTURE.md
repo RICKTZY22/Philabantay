@@ -23,7 +23,7 @@ existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](../security/SECURIT
 | Realtime | Mock: `BroadcastChannel`. API: authenticated HTTP polling behind `chat.subscribe`. |
 | Maps | Leaflet + OpenStreetMap tiles |
 | Animation | CSS transitions/keyframes only. GSAP was removed with the 2026-07-29 landing redesign; `useJourneyScroll` now just pauses off-screen scenes via `IntersectionObserver`. |
-| Styling | Plain CSS, one colocated stylesheet per component/page, shared tokens in `theme/doodle.css` |
+| Styling | Plain CSS, one colocated stylesheet per component/page, with `theme/doodle.css` as the base/public layer and signed-in workspace overrides in `theme/studio.css` |
 | Monorepo | npm workspaces: `apps/*` and `packages/*` |
 
 **Phase 2 local setup complete:** Supabase Postgres/Auth/RLS migrations and the
@@ -77,7 +77,7 @@ workspaces.
 | `hooks/` | Reusable lifecycle behavior: `useLiveLocation`, `useCurrentTime`. |
 | `lib/` | Pure utilities: `date`, `geo`, `format`, `security`, `profile`. |
 | `config/` | Static metadata: `navigation` and `discovery` (nearby radius). |
-| `theme/` | `doodle.css` (tokens + global styles) and `DoodleDefs` (SVG icon sprite + rough filters). The GSAP runtime and its hook were deleted as dead code on 2026-07-29. |
+| `theme/` | `doodle.css` (base/public tokens + global styles), `studio.css` (professional signed-in workspace layer), and `DoodleDefs` (SVG icon sprite + rough filters). The GSAP runtime and its hook were deleted as dead code on 2026-07-29. |
 
 ---
 
@@ -151,7 +151,9 @@ service-role value is accepted through a browser `VITE_` variable.
 `App.tsx` then renders one `<Layout>` route with all pages nested inside it.
 `Layout` (`components/Layout.tsx`) provides the sticky header, the hamburger
 `AppMenu`, the background, the doodle SVG defs, the `CurtainProvider`, and a
-`Suspense` + `RouteErrorBoundary` around the lazy `<Outlet/>`.
+`Suspense` + `RouteErrorBoundary` around the lazy `<Outlet/>`. It also marks
+authenticated pages with `.app-shell.is-workspace`, the boundary that activates
+the Premium Studio theme without changing the public landing.
 
 ---
 
@@ -386,9 +388,15 @@ derived, never stored.
   query strings use `URLSearchParams`.
 - **Accessibility + motion:** modals trap focus and lock scroll; animations honor
   `prefers-reduced-motion`. Motion is CSS-only; no animation library ships.
-- **One stylesheet per component/page**, using tokens from `theme/doodle.css`.
-- **`DoodleBoard`** is the shared dashboard shell (teal rail + top bar) used by
-  the customer, barber, and owner dashboards, so all three share one look.
+- **One stylesheet per component/page**, plus two ordered global theme layers:
+  `theme/doodle.css` for the base/public identity and `theme/studio.css` for
+  `.app-shell.is-workspace`. The studio layer uses light warm-neutral content,
+  copper actions, and charcoal global navigation while retaining small pastel
+  status/avatar accents and minimal doodle character.
+- **`DoodleBoard`** remains the shared dashboard shell and feature-preserving
+  layout contract used by customer, barber, and owner dashboards. Its signed-in
+  presentation is restyled by the studio layer; it is not replaced by a new
+  navigation or information architecture.
 
 ---
 
@@ -422,9 +430,10 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 7. **Shared settings helpers live in a panel.** `SettingsHeading` and
    `SettingsActionRow` are exported from `AccountSettingsPanel.tsx` and imported by
    the other panels, which is a surprising home for shared UI.
-8. **`avatarRole()` is duplicated** in `SettingsPage.tsx`,
-   `AccountSettingsPanel.tsx`, and `AvatarSettingsPanel.tsx` with slightly
-   different signatures.
+8. **Resolved:** every profile-avatar surface uses
+   `lib/profile.ts#profileAvatarRole`, including the header, drawer, settings
+   shell, account panel, and avatar creator. Do not reintroduce local
+   requested-role/granted-role fallbacks.
 9. **`admin` role has no UI.** It exists in the type union and role flags
    (`isAdmin`), but the admin demo account was removed in migration v7 and there
    are no admin screens.

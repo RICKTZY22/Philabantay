@@ -230,10 +230,9 @@ were previously listed here in error. No P2-06 surface uses it:
 `OwnerStaffPanel`, `BarberShiftCalendar`, `DashboardPage`, and
 `ShopOwnerDashboard` do not import `ModalPortal` at all. Its users are `Layout`
 (the landing auth dialog), `CustomerDashboard`, and `AppointmentsPage`, so the
-check belongs to the pre-P2-07 landing/auth polish slice. It remains
-**unverified rather than broken**: focus is moved inside a
-`requestAnimationFrame` that a headless pane never fires, while Escape and the
-`inert` toggle are synchronous and both work.
+check belongs to the pre-P2-07 landing/auth polish slice. **Observed
+2026-07-30 in a real browser:** initial focus entered the dialog on its Close
+button, Escape closed it, and focus returned to the exact header Log in trigger.
 
 Agents update evidence links/commit IDs here only after tests actually pass.
 Do not replace “Pending” with assumptions.

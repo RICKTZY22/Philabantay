@@ -174,7 +174,18 @@ export function ExamplePage() {
 ## CSS pattern
 
 - A component or page owns one colocated stylesheet.
-- Use existing theme variables for color, paper, ink, shadows, and layers.
+- `theme/doodle.css` is the base/public identity and remains authoritative for
+  the landing page, auth fallback, rough SVG filters, and global layer tokens.
+- `theme/studio.css` is a later professional-surface layer. Keep its visual
+  overrides under `.app-shell.is-workspace` so signed-in customer, barber, and
+  owner screens can share light warm-neutral surfaces, copper actions, and
+  restrained pastel status accents without leaking into the public landing.
+  Charcoal is reserved for the global header/drawer and transient curtain; do
+  not use it as a content-surface default. The signed-in override currently neutralizes some
+  live doodle rules; those base rules are not dead CSS while public pages still
+  consume them.
+- Prefer the existing token set for the surface being changed. Do not add a
+  third global palette or copy role-specific colors into page styles.
 - Scope selectors under the component/page class; avoid new global element
   rules unless they are true design-system primitives.
 - Prefer CSS layout and responsive media queries over viewport checks in React.

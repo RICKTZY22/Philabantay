@@ -297,11 +297,13 @@ real API and browser UI, no SQL shortcuts. Full table with exact responses in
 | Owner UI round-trip | A weekday end time changed to 20:15 in the staff panel and saved persisted as `20:15:00` with `schedule_version` 5. |
 | Wall-clock asymmetry | Reads return `HH:MM:SS`, writes require `HH:MM`. Investigated as a suspected unchanged-save failure and dismissed: rendered time inputs are clean `HH:MM` with none empty. |
 
-Not covered by this run, and still requiring a person: keyboard-only traversal
-with visible focus, reduced motion on a real OS setting, `ModalPortal` initial
-focus and focus return (it uses `requestAnimationFrame`, which does not fire in
-a headless pane, so it is unverified rather than broken), and product judgment
-on the visible workflow.
+Follow-up browser evidence on 2026-07-30 closed the runtime-only checks:
+`prefers-reduced-motion: reduce` matched through browser media emulation, the
+Rive canvas resolved to `display: none`, and the static fallback remained
+visible at opacity 1. Opening the landing Log in dialog placed initial focus on
+its Close button; Escape closed it and restored focus to the exact header Log
+in trigger. Product judgment on the visible owner/barber workflow remains a
+human decision.
 
 ### Pre-P2-07 public landing/auth presentation smoke
 

@@ -26,6 +26,30 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 
 ## Active packet
 
+### Premium Studio signed-in UI redesign — implemented and locally verified
+
+- Customer, barber, and owner workspaces now use light warm-neutral content
+  surfaces, copper actions, restrained pastel status accents, and minimal
+  doodles. Charcoal is limited to the global header/drawer and transient route
+  curtain so dark content blocks do not fight legacy page CSS.
+- The existing avatar creator is preserved. Its saved allowlisted avatar is
+  now the user's profile picture in the signed-in header, drawer, settings, and
+  barber/owner dashboard profile chip.
+- The CSS-only presentation layer preserves existing routes, contracts, async
+  states, the hamburger navigation, owner schedule authority, and the barber's
+  read-only shift workflow.
+- Browser checks covered customer discovery/bookings/messages/settings,
+  barber Today's Chair/schedule/professional profile, and owner
+  overview/reservations/staff/hiring/shop setup. The signed-in surfaces hold
+  zero horizontal overflow at `1440x900`, `390x844`, and `320x760`.
+- `ModalPortal` initial focus and Escape focus return were observed in-browser.
+  The Rive character blinked and tracked the cursor; reduced-motion emulation
+  disabled its canvas and retained the static fallback.
+- Full local gate: all workspaces typechecked, lint and production build
+  passed, and 124 fast tests passed with 41 expected integration skips.
+
+This visual slice does not change packet counts. P2-07 remains next.
+
 ### Pre-P2-07 public landing/auth polish — verified locally
 
 The public presentation slice requested during P2-06 is implemented without

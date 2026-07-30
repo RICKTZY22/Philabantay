@@ -851,3 +851,42 @@ so the packet is not being marked complete on the strength of it.
   `app.set('trust proxy', ...)` is described in a code comment but not set, and
   the MemoryStore limiters would multiply if the API ever runs more than one
   instance.
+
+## 2026-07-30 — Premium Studio redesign preservation handoff
+
+- Added `plans/UI-PROFESSIONAL-REDESIGN-HANDOFF.md` as the independent reviewer
+  contract for the approved Style C signed-in workspace redesign.
+- Recorded the non-removal inventory for customer, barber, owner, shared
+  messaging/settings, Shop Setup, hiring, schedule authority, and owner-provider
+  workflows; no application code or packet status changed in this review.
+- Defined the saved doodle avatar as the user's profile picture in the header,
+  drawer, settings, customer home, and participant surfaces where a returned
+  public profile supplies it. The complete premade/custom creator remains.
+- Flagged four prototype mismatches: global navigation must remain the hamburger
+  drawer; next availability/live capacity may not be invented before P2-07;
+  Start service/Add walk-in wait for Phase 3 contracts; and avatar gear
+  eligibility is currently UI-derived despite comments implying backend
+  enforcement.
+- The first visual implementation pass can proceed under the documented
+  assumptions. Product/backend answers are needed only before expanding avatar
+  rewards or information architecture.
+
+## 2026-07-30 — Premium Studio signed-in redesign implementation
+
+- Implemented the selected Style C direction across customer discovery,
+  bookings, messages, settings/avatar, barber Today's Chair/schedule/profile,
+  and owner overview/reservations/staff/hiring/shop setup.
+- Corrected the first dark-heavy pass: content and work surfaces are light
+  warm neutrals, with charcoal restricted to global navigation and the route
+  curtain. Signed-in pages explicitly use `color-scheme: light`.
+- Preserved every route and feature contract. The saved allowlisted doodle
+  avatar is now the accessible profile-picture link to `/settings/avatar` and
+  is reused in barber/owner dashboard identity chips.
+- Fixed the reviewer-reported `barberAvatarId` prop-drilling error and loaded
+  the barber dashboard successfully afterward.
+- Browser evidence: zero horizontal overflow at the 1440, 390, and 320 width
+  gates; ModalPortal initial focus and Escape return work; the Rive character
+  blinks and tracks the cursor; reduced-motion emulation hides the Rive canvas
+  and keeps its static fallback visible.
+- Verification passed: typecheck, lint, production build, 124 fast tests with
+  41 expected integration skips, and diff validation.
