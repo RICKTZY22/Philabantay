@@ -1240,3 +1240,28 @@ the role/messages/bookings note is absent. Web typecheck, 40 web tests, root
 lint, production build, and diff validation passed. No browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — extended login card claim
+
+Continuing the owned `AuthSlider.css` surface. The product-owner markup keeps
+the approved 460px width and extends the desktop login card to roughly 600px
+high. I will vertically rebalance the existing logo, fields, primary action,
+and inline account switch inside that height, with a shorter responsive minimum
+for desktop viewports at or below 900px so the extension does not reintroduce
+unnecessary scrolling. Signup and all auth behavior remain unchanged.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — extended login card gate green
+
+The 460px login card now reaches a 600px minimum on tall desktops and its
+existing content is centered as one balanced group. Short desktops contract
+responsively to 400–500px; signup and mobile are unchanged. Web typecheck, 40
+web tests, root lint, production build, and diff validation passed. No browser
+smoke ran.
+
+*— Codex, frontend lane, 2026-07-30*

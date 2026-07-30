@@ -1021,3 +1021,16 @@ so the packet is not being marked complete on the strength of it.
   from the login card. No auth contracts or routing behavior changed.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed; no browser smoke ran.
+
+## 2026-07-30 — Login card vertically extended
+
+- Kept the approved 460px desktop width and extended the login panel to a
+  responsive 500–600px minimum on tall desktops, matching the product-owner
+  markup.
+- Centered the existing wordmark, fields, Log in action, and inline account
+  switch as one balanced content group instead of leaving unused space at the
+  bottom.
+- Desktop viewports at or below 900px use a responsive 400–500px minimum and
+  tighter spacing; mobile and signup layouts are unchanged.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed; no browser smoke ran.

@@ -50,11 +50,12 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   duplicate Log in heading. Large soft orange gradient patches are distributed
   behind both modes. The approved reference format uses a compact 460px desktop
   login card and an inline “New here? Create account” row below the primary
-  action; the redundant role/messages/bookings sentence is removed. Signup
-  mirrors the inline account switch and keeps two desktop contact columns to
-  reduce vertical height. The former dark split panel and duplicate landing
-  dialog are absent. Short desktop CSS still compacts spacing and hides only
-  decorative role/footer notes. Mobile remains one column and keeps necessary
+  action; the redundant role/messages/bookings sentence is removed. On tall
+  desktop viewports that card extends to roughly 600px and vertically centers
+  its contents, while a responsive 400–500px minimum protects short desktop
+  fit. Signup mirrors the inline account switch and keeps two desktop contact
+  columns to reduce vertical height. The former dark split panel and duplicate
+  landing dialog are absent. Mobile remains one column and keeps necessary
   natural scrolling. The product owner retained the next visual smoke.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's

@@ -469,6 +469,21 @@
     padding-block: 16px 24px;
   }
 
+  .auth-card.is-signin .auth-form-panel {
+    display: flex;
+    min-height: clamp(500px, 56vh, 600px);
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .auth-card.is-signin .auth-form-header {
+    margin-bottom: 32px;
+  }
+
+  .auth-card.is-signin .auth-form {
+    gap: 20px;
+  }
+
   .auth-page {
     padding-block: 8px 20px;
   }
@@ -514,6 +529,18 @@
 
   .auth-form-panel {
     padding: 22px 36px;
+  }
+
+  .auth-card.is-signin .auth-form-panel {
+    min-height: clamp(400px, 56vh, 500px);
+  }
+
+  .auth-card.is-signin .auth-form-header {
+    margin-bottom: 18px;
+  }
+
+  .auth-card.is-signin .auth-form {
+    gap: 14px;
   }
 
   .auth-form-header {
