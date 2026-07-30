@@ -26,11 +26,12 @@ export function Layout() {
   // Landing keeps a transparent marketing header; auth lives on dedicated routes.
   const onLanding = location.pathname === '/'
   const onAuth = location.pathname === '/login' || location.pathname === '/signup'
+  const hideGlobalHeader = location.pathname === '/onboarding/role'
   // Signed-in app pages: naka-pin ang header bar sa taas para laging abot ang
   // hamburger habang nag-scroll, pero HINDI tumatakip nang biglaan sa content
   // (kabaligtaran ng floating button). Iniiwasan ang landing para buo ang scroll
   // journey nito.
-  const stickyHeader = Boolean(profile) && !onLanding
+  const stickyHeader = Boolean(profile) && !onLanding && !hideGlobalHeader
   // Data-heavy app workspaces share the wider container. Reading-oriented
   // forms and account pages keep the narrower default width.
   const useWideWorkspace =
@@ -122,7 +123,7 @@ export function Layout() {
     <div className={`app-shell${onLanding ? ' is-landing' : profile ? ' is-workspace' : ' is-public'}`}>
       <div className="bg-pattern" aria-hidden="true" />
       <DoodleDefs />
-      <header
+      {!hideGlobalHeader && <header
         className={`container app-header${stickyHeader ? ' is-sticky' : ''}${stickyHeader && !headerVisible ? ' is-hidden' : ''}${useWideWorkspace ? ' is-dashboard-wide' : ''}`}
         onFocusCapture={() => setHeaderVisible(true)}
       >
@@ -189,7 +190,7 @@ export function Layout() {
             )}
           </div>
         </nav>
-      </header>
+      </header>}
 
       <main className={`page${onLanding ? ' is-landing-page' : ''}`}>
         <div className={`container${useWideWorkspace ? ' is-dashboard-wide' : ''}${onLanding ? ' is-landing-container' : ''}`}>

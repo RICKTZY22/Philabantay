@@ -1091,3 +1091,15 @@ so the packet is not being marked complete on the strength of it.
   zero overflow, forced light color scheme, and a console with zero warnings or
   errors.
 - No packet count changed. P2-07 remains the exact next implementation packet.
+
+## 2026-07-30 — Onboarding global header removed
+
+- Updated the shared layout so `/onboarding/role` does not render the global
+  signed-in wordmark, profile avatar, or hamburger. All other signed-in routes
+  keep the existing header.
+- Browser verification found zero onboarding headers/banners, one header after
+  returning to `/dashboard`, zero horizontal overflow at 1280×720, and no
+  console warnings or errors.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed. Auth guards, role submission, redirect state, and P2-07 contracts did
+  not change.

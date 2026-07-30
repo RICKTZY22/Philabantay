@@ -39,6 +39,9 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - The signed-in header keeps the handwritten Philabantay wordmark on its paper
   label. The drawer contains the canonical navigation only; the redundant
   context-shortcut card is removed.
+- The one-time `/onboarding/role` route intentionally renders without the
+  global signed-in header, avatar, or hamburger so the role decision remains a
+  focused standalone step. Normal signed-in routes retain the header.
 - Sign-in, sign-up, sign-out, and drawer section changes share one curtain
   transaction. Route content enters with a short transform/opacity animation,
   while reduced motion bypasses the curtain and disables the route animation.

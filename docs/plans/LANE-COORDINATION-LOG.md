@@ -1376,3 +1376,32 @@ toggled password/text/password, both cards centered exactly with zero
 console had zero warnings/errors. P2-07 remains next.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — onboarding header-removal claim
+
+Claiming `apps/web/src/components/Layout.tsx` for one route-scoped product
+follow-up. The `/onboarding/role` page will no longer render the global signed-in
+header, including its wordmark, avatar, and hamburger. The onboarding content,
+route guard, role submission, redirect destination, and header behavior on
+every other route remain unchanged. No shared contract, API, migration, or
+P2-07 file is in scope.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — onboarding header removal verified
+
+The scoped `Layout.tsx` change is complete. `/onboarding/role` renders no
+global header node, so the wordmark, avatar, hamburger, and sticky-header scroll
+listener are absent there. Browser inspection found zero header/banner nodes,
+the onboarding card at `y=42`, `scrollWidth = innerWidth = 1280`, and no console
+warnings/errors. Navigating the same signed-in session to `/dashboard` restored
+exactly one normal header.
+
+Web typecheck, 40 web tests, root lint, production build, and diff validation
+passed. No auth, role-onboarding, backend, migration, or P2-07 contract changed.
+
+*— Codex, frontend lane, 2026-07-30*
