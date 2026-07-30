@@ -6,7 +6,6 @@ import {
   MAX_FULL_NAME_LENGTH,
   MAX_PHONE_LENGTH,
   MAX_PASSWORD_LENGTH,
-  SHOP_NAME,
   validateEmail,
   validateFullName,
   validatePassword,
@@ -128,43 +127,14 @@ export function AuthSlider({
 
   return (
     <section className={`auth-card is-${mode}`} aria-labelledby="auth-page-title">
-      <aside className="auth-story">
-        <div className="auth-story-brand">
-          <span className="brand-pole" aria-hidden="true" />
-          {SHOP_NAME}
-        </div>
-        <div className="auth-story-copy">
-          <span className="auth-story-kicker">
-            {mode === 'signin' ? 'WELCOME BACK' : 'START WITH ONE ACCOUNT'}
-          </span>
-          <h1 id="auth-page-title">
-            {mode === 'signin'
-              ? 'Pick up where your last cut left off.'
-              : 'Your chair, shop, or next appointment starts here.'}
-          </h1>
-          <p>
-            {mode === 'signin'
-              ? 'Open your schedule, requests, messages, and shop work from one clear desk.'
-              : 'Create the account first. You will choose customer, barber, or shop owner on the next step.'}
-          </p>
-          <ul>
-            <li><span>01</span> One shared appointment status</li>
-            <li><span>02</span> Shop-controlled staff and schedules</li>
-            <li><span>03</span> Professional access stays verified</li>
-          </ul>
-        </div>
-        <div className="auth-story-doodle" aria-hidden="true">
-          <span className="auth-orbit" />
-          <span className="auth-chair-mark">PB</span>
-          <i className="auth-spark auth-spark-one" />
-          <i className="auth-spark auth-spark-two" />
-        </div>
-      </aside>
-
+      <span className="auth-blob auth-blob-large" aria-hidden="true" />
+      <span className="auth-blob auth-blob-small" aria-hidden="true" />
       <div className="auth-form-panel">
         <header className="auth-form-header">
-          <span className="auth-form-step">PB ACCESS · {mode === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT'}</span>
-          <h2>{mode === 'signin' ? 'Log in to Philabantay' : 'Create your account'}</h2>
+          <span className="auth-form-step">
+            {mode === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+          </span>
+          <h2>{mode === 'signin' ? 'Log in' : 'Your details'}</h2>
           <p>
             {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
             {/* `from` rides along so switching between sign-in and sign-up keeps
@@ -201,8 +171,7 @@ export function AuthSlider({
               {siBusy ? 'Logging in…' : 'Log in'}
             </button>
             <p className="auth-form-note">
-              Use the same account whether you are booking, working behind a chair,
-              or running the shop.
+              Your role, messages, and bookings stay connected to this account.
             </p>
           </form>
         ) : (
@@ -303,7 +272,7 @@ export function AuthSlider({
               {suBusy ? 'Creating account…' : 'Continue to account type'}
             </button>
             <p className="auth-form-note">
-              Barber and owner tools unlock only after the professional verification flow.
+              You’ll choose how you use Philabantay on the next step.
             </p>
           </form>
         )}

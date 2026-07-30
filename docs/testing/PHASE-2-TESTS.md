@@ -316,10 +316,10 @@ Verified locally on 2026-07-29 without changing P2-06/P2-07 status.
 | Static activity content | Morning contains school-bound students and a jeepney; afternoon contains customers waiting outside the barbershop plus traffic; evening contains workers travelling home with lit vehicles; midnight has no sidewalk pedestrians and only a jeepney/car. The hero contains zero runtime walker/pedestrian DOM or travel animation. |
 | Philippine-time switching | The dedicated hero schedule is midnight `00:00-04:59`, morning `05:00-11:59`, afternoon `12:00-16:59`, and evening `17:00-23:59`. Eight boundary assertions passed. Computed styles exposed all four asset URLs, forced checks activated exactly one matching layer, and live `Asia/Manila` time selected midnight during verification. |
 | Unified workflow | The workflow remains a bright, sticky-index layout independent of city phase. At desktop the index measured 664 px and the first chapter approximately 664 px. |
-| In-page auth | Landing buttons opened the real sign-in/sign-up forms without changing the route; switching modes stayed inside the same dialog. |
-| Keyboard/accessibility | Close received initial focus, Escape closed, focus returned to the invoking control, and empty sign-up exposed four alerts and focused the first invalid field. |
+| Dedicated auth | **Updated 2026-07-30:** landing buttons link to the single `/login` or `/signup` surface. Switching modes preserves the protected-route `from` state, and successful/failed mutations remain inside the curtain transaction. |
+| Keyboard/accessibility | **Updated 2026-07-30:** empty sign-up exposed four alerts and focused the first invalid field; password visibility remained a labeled button and invalid login returned focusable controls with the safe backend error on `/login`. |
 | Reduced motion | Scene crossfade duration resolved to `0s`. Existing auth/workflow reduced-motion behavior remains intact. (The device-UI animation claim was removed with the laptop/phone correction above.) |
-| Runtime and gates | Browser console stayed clean. Workspace typecheck, 124 fast tests with 41 skipped, lint, API/web production builds, and `git diff --check` passed. |
+| Runtime and gates | **Re-measured 2026-07-30:** no browser errors, no horizontal overflow at the measured desktop auth viewport, all workspaces typechecked, 124 fast tests passed with 41 expected skips, and lint/API/web production builds plus `git diff --check` passed. |
 
 ## P2-07 … P2-08 - not started {#not-started}
 

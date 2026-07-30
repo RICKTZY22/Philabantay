@@ -42,6 +42,10 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - Sign-in, sign-up, sign-out, and drawer section changes share one curtain
   transaction. Route content enters with a short transform/opacity animation,
   while reduced motion bypasses the curtain and disables the route animation.
+- Guest auth now has one dedicated surface: `/login` and `/signup` use a
+  centered light form card, the signature wordmark, warm cream space, copper
+  actions, and three restrained pastel role accents. The former dark split
+  panel and duplicate landing dialog are absent.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.
@@ -81,12 +85,12 @@ starting P2-07:
 - the bundled How it works chapter combines the booking lifecycle, customer
   flow, shop-side flow, and role capabilities in a bright sticky-index layout
   over the supplied repeating barber-tool doodle wallpaper;
-- landing Log in, Sign up, Request a Demo, and contact actions open the existing
-  real auth forms in one portalled dialog without changing route; direct
-  `/login` and `/signup` routes remain valid fallbacks;
-- signup validation focuses the first invalid field, modal Escape/focus return
-  works after switching modes, and form/entrance animation is disabled under
-  reduced motion.
+- landing Log in, Sign up, Request a Demo, and contact actions link to the
+  dedicated `/login` and `/signup` routes. Those pages are now the only auth
+  surface and preserve the sanitized protected-route `from` handoff;
+- signup validation focuses the first invalid field, password visibility is a
+  labeled keyboard control, failed login reopens on the same route after the
+  curtain, and form entrance animation is disabled under reduced motion.
 
 Verified on 2026-07-29:
 

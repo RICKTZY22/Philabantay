@@ -444,9 +444,10 @@ Things that surprised me while reading, worth keeping in mind (or fixing):
 10. **`effectiveBlocks` is re-exported from `MockBackend.ts`** "so pages can
     preview next open slot," but pages actually use `availability.getOpenSlots`;
     the re-export appears unused.
-11. **Landing owns auth.** There is no dedicated login/signup page; `/login` and
-    `/signup` redirect to `/` and the `AuthSlider` reads the mode from router
-    state. Losing that state (deep link) just lands on the default sign-in view.
+11. **Dedicated pages own auth.** `/login` and `/signup` are the only guest-auth
+    surface. Landing CTAs link there, while `RequireAuth` redirects to `/login`
+    with a sanitized `from` destination. `AuthSlider` carries that destination
+    when switching modes and after a successful curtain transaction.
 12. **Animation-by-attribute contract (narrowed).** The landing still keys
     CSS reveals off `data-reveal`, and `useJourneyScroll.ts` toggles
     `data-animation-paused` on named scene classes. Renaming those classes or

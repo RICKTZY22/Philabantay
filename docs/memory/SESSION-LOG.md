@@ -912,3 +912,24 @@ so the packet is not being marked complete on the strength of it.
   errors.
 - Full gate passed: typecheck, lint, production build, 124 fast tests, 41
   expected integration skips, and diff validation.
+
+## 2026-07-30 — Dedicated login and signup redesign
+
+- Read and accepted Claude's shared-index incident report before taking the
+  high-conflict auth files. The unpushed integrated commit was left intact and
+  the unrelated dirty `LandingPage.css` remained untouched.
+- Replaced the dark two-column auth story with one centered white form card on
+  a warm cream canvas. The header keeps the Gochi Hand paper-label wordmark;
+  headings and form controls use a professional sans-serif hierarchy.
+- Kept only two restrained coral/yellow organic shapes and three small pastel
+  role accents. The public auth shell explicitly uses `color-scheme: light`,
+  clips decorative overflow, and removes the wallpaper from the settled page.
+- Preserved the single `/login` and `/signup` architecture, sanitized `from`
+  return state, validation/focus behavior, password visibility, role
+  onboarding, professional verification note, and curtain auth transaction.
+- Browser checks confirmed the dark story is absent, the desktop viewport has
+  zero horizontal overflow, empty sign-up creates four alerts and focuses the
+  first invalid field, password visibility toggles, and invalid login safely
+  returns to `/login` with the backend error. Runtime logs had no errors.
+- Full gate passed: all workspaces typechecked, lint and production build
+  passed, and 124 fast tests passed with 41 expected integration skips.

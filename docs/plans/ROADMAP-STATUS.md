@@ -121,8 +121,8 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   commit.)
   A unified sticky-index workflow covers lifecycle, customer, shop, and role
   facts.
-  Guest auth CTAs open the existing real forms in an accessible in-page modal;
-  `/login` and `/signup` remain direct deep-link fallbacks. Latest browser
+  Guest auth CTAs link to one dedicated `/login` and `/signup` surface; the
+  duplicate in-page modal has been removed. Latest browser
   evidence confirms all four time variants load and activate one at a time,
   the scene and barbershop fit without horizontal overflow from `1440x900`
   through `320x760`, obsolete hero layers are absent, SVG device frames and
