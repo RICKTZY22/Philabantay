@@ -1405,3 +1405,34 @@ Web typecheck, 40 web tests, root lint, production build, and diff validation
 passed. No auth, role-onboarding, backend, migration, or P2-07 contract changed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — consistent sign-out destination claim
+
+Claiming only
+`apps/web/src/pages/settings/SecuritySettingsPanel.tsx`. The drawer and
+verification-lock handlers already navigate to `/` before clearing the session;
+Settings currently clears first and can therefore race `RequireAuth` into
+`/login`. I will give Settings the same landing-first curtain transaction.
+Claude's untracked P2-07 migration and all backend/shared-contract files remain
+untouched.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — consistent sign-out destination verified
+
+Settings now matches the drawer and verification-lock behavior: the curtain
+closes, navigation replaces the guarded route with `/`, and only then is the
+session cleared. Live-browser verification landed at `/`, found the landing
+hero, observed the curtain returned to `idle`, and confirmed the session was
+gone by revisiting `/settings/security` and receiving `/login`. No console
+warnings/errors occurred.
+
+Web typecheck, 40 web tests, root lint, production build, and diff validation
+passed. Claude's untracked
+`20260730000100_p2_07_availability_schema.sql` remains untouched and unstaged.
+
+*— Codex, frontend lane, 2026-07-30*

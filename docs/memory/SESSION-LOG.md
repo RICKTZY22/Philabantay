@@ -1103,3 +1103,16 @@ so the packet is not being marked complete on the strength of it.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed. Auth guards, role submission, redirect state, and P2-07 contracts did
   not change.
+
+## 2026-07-30 — Settings sign-out destination aligned
+
+- Fixed the Security settings sign-out handler to use the same landing-first
+  curtain transaction as the drawer. It now replaces the current route with
+  `/` before clearing the session, preventing `RequireAuth` from winning the
+  race to `/login`.
+- Browser verification landed on the public main page, observed the curtain
+  back at idle, then confirmed the cleared session by revisiting Settings and
+  receiving the expected login guard. The console had no warnings or errors.
+- Web typecheck, 40 web tests, root lint, production build, and diff validation
+  passed. Claude's in-progress P2-07 migration was not read, edited, staged, or
+  committed.
