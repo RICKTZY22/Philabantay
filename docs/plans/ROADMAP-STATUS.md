@@ -74,6 +74,7 @@ and adds the operator tools needed at PH scale:
 3. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
 4. **Remote rollout (Phase 5)** — the P2-04 hotfix and bounded hardening migrations/API intentionally remain local until the production-rollout phase selects and configures the hosted Supabase/API/web targets.
 5. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07.
+6. **Q4 first-publication admin review is not implemented (found 2026-07-29).** The product owner accepted on 2026-07-22 that "first publication requires a lightweight admin review of shop control/address/location," with later ordinary edits publishing immediately. `api_publish_owner_shop` in `20260726000100` instead sets `lifecycle_status = 'published'` directly, so first publication is self-service. The `pending_review` enum value exists from `20260722001800` and is referenced in `types.ts` and `ShopSetupPage.tsx`, but **nothing ever sets it** and no admin shop-review route exists (the admin surface covers verifications only). This is an accepted decision the implementation silently bypasses. It needs either an implementation packet or a dated decision reversing Q4. Do not treat Phase 2 as closed while it is open.
 
 ## Verification approach (decided 2026-07-24)
 
@@ -142,15 +143,14 @@ Matrix:    API integration/direct-RLS workspace 69/69 twice back to back,
 Tree:      all Phase 2 work committed; working tree clean
 ```
 
-Two caveats recorded honestly:
+Clean-replay proof is now complete: `supabase db reset` replayed the entire
+chain from an empty database through `20260728000700`, and the matrix then
+passed 69/69 twice without another reset. All 13 commits are merged to `main` as
+a fast-forward (`a281fb3..04af147`), so `main` carries zero merge commits and
+its tree is identical to the verified branch.
 
-- the last **clean-reset** replay proof is still 2026-07-28 through
-  `20260728000600`. `20260728000700` is applied locally but has not been proven
-  to replay from an empty database. A reset was skipped on purpose so the
-  seeded accounts and dev shop needed for the pending P2-06 product pass
-  survive;
-- web unit tests moved 32 → 40 with the landing work, so the older 116 / 157
-  totals in dated blocks are historical, not current.
+One caveat: web unit tests moved 32 → 40 with the landing work, so the older
+116 / 157 totals in dated blocks are historical, not current.
 
 The expanded matrix includes the P2-02 public shop-detail projection and media
 hardening, P4021 catalogue-invariant checks, P2-04 ownerless-resolution and

@@ -62,14 +62,17 @@ historical records and are left as written.
   plus the 41 integration tests that are otherwise skipped. That 69 is the
   security "matrix" number quoted in the roadmap.
 
-### Open gap: clean-replay proof stops at `20260728000600`
+### Clean-replay gap: closed 2026-07-29
 
-The last recorded clean `supabase db reset` was on 2026-07-28 through
-`20260728000600`. `20260728000700` arrived afterwards and is applied locally,
-but no run has yet proven the full chain replays from an empty database through
-it. Close this with a reset before P2-07 is called done. It was deliberately
-not run on 2026-07-29 because a reset would destroy the seeded owner/barber
-accounts and the dev shop that the pending P2-06 product-owner pass needs.
+`supabase db reset` replayed the whole chain from an empty database through
+`20260728000700_p2_06_narrowed_hours_conflict_guard.sql`, then the matrix
+passed **69/69 twice** without another reset. Every `NOTICE` in the reset was a
+benign `does not exist, skipping` from an idempotent `drop if exists` guard.
+
+`npm run seed:accounts -w @barbershop/api` rebuilds more than the logins: it
+restores `Philabantay · Dev Shop` (draft, 1 chair, 2 active services) and the
+barber's active employment there. It does **not** create operating hours, so the
+shop starts unpublishable until an owner adds at least one open day.
 
 ## Reproducing the full matrix
 

@@ -246,26 +246,33 @@ Environment as left on 2026-07-29:
 
 - Docker and the local Supabase stack are healthy on the moved ports
   (API/storage `54521`, database `54522`, studio `54523`);
-- every migration through `20260728000700` is applied;
-- the API dev server runs on `4000`; the web dev server could not be started
-  from this session because port `5174` is registered to another chat's server.
-  `5174` is not optional: `vite.config.ts` uses `strictPort` and the API's
-  `WEB_ORIGIN` allowlist only trusts that port, so any other port fails CORS;
-- `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` exist.
-  The owner owns "Philabantay · Dev Shop" (draft, 1 chair) and the barber has
-  active employment there, so scenarios 1-3 are ready. Passwords are generated
-  and never stored; re-run `npm run seed:accounts -w @barbershop/api` to reset
-  and print them.
+- the database was reset from empty and carries every migration through
+  `20260728000700`;
+- the API dev server runs on `4000` and the web dev server on `5174`. `5174` is
+  not optional: `vite.config.ts` uses `strictPort` and the API's `WEB_ORIGIN`
+  allowlist only trusts that port, so any other port fails CORS;
+- `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` were
+  re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
+  services) and the barber has active employment there, so P2-06 scenarios 1-3
+  are ready. The shop has **zero open operating-hours days**, so scenario 4
+  needs hours added, then publish, then one customer booking. Passwords are
+  generated and never stored; re-run
+  `npm run seed:accounts -w @barbershop/api` to reset and print them;
+- `main` is current at `04af147`, fast-forwarded with no merge commits.
 
 ## Known gaps carried forward
 
-- **Clean-replay proof stops at `20260728000600`.** `20260728000700` is applied
-  locally but has never been replayed from an empty database. A reset was
-  skipped on 2026-07-29 on purpose, because it would destroy the accounts and
-  dev shop the pending product pass needs. Run
-  `npx supabase db reset` followed by the matrix twice and
-  `npm run seed:accounts -w @barbershop/api` once that pass is done.
-- The 26 archived and 1 draft shop rows in the local database are matrix
+- **Q4 first-publication admin review is not implemented.** Found 2026-07-29.
+  The accepted 2026-07-22 decision requires a lightweight admin review before a
+  shop's first publication; `api_publish_owner_shop` publishes directly instead.
+  `pending_review` exists in the enum but nothing sets it and no admin
+  shop-review route exists. Needs an implementation packet or a dated decision
+  reversing Q4. Phase 2 is not closeable while this is open. See open item 6 in
+  [Roadmap status](../plans/ROADMAP-STATUS.md).
+- Clean-replay proof is **closed** as of 2026-07-29: a full `supabase db reset`
+  replayed every migration through `20260728000700` and the matrix then passed
+  69/69 twice.
+- Shop/employment/appointment rows above the seeded three accounts are matrix
   fixtures; the suite archives published test shops so repeat runs stay
   deterministic.
 

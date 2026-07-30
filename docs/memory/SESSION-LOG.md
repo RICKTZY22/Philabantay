@@ -696,3 +696,37 @@ catalog, commits, and implementation files.
   `requestAnimationFrame`, and rAF does not fire while the automation pane is
   hidden. Escape and the `inert` toggle are synchronous and both worked. Treat
   initial focus and focus return as unverified rather than broken.
+
+## 2026-07-29 — clean replay proved, merged to main, Q4 gap found
+
+- **Closed the clean-replay gap.** `supabase db reset` replayed every migration
+  from an empty database through `20260728000700`. Every `NOTICE` was a benign
+  `does not exist, skipping` from an idempotent `drop if exists` guard. The
+  matrix then passed **69/69 twice** without another reset.
+- Re-seeded accounts. Worth knowing: `seed:accounts` restores more than logins.
+  It rebuilt `Philabantay · Dev Shop` (draft, 1 chair, 2 active services) and the
+  barber's active employment there. It does not create operating hours, so the
+  shop starts with zero open days and cannot publish until an owner adds one.
+- Full gate re-run after the reset: typecheck clean, 124 fast tests, lint, API
+  and web production builds, and `supabase db lint` with no schema errors.
+- **Merged to `main` as a fast-forward.** `a281fb3..04af147`, 13 commits, zero
+  merge commits, `main` tree hash identical to the verified branch
+  (`d722a70977dc936a326c747248839f5e50288d4e`). Pre-merge checks confirmed
+  `origin/main` had not diverged, no duplicate commit subjects, and no duplicate
+  patch-ids. `main` was updated with `git branch -f` rather than a checkout so
+  the running dev server did not churn through a five-day-old tree and back.
+- Decided to stop batching. Main had been sitting five days and five packets
+  behind with a cross-tenant security fix stranded on a feature branch, while
+  several agents shared the workspace. From here, merge at packet boundaries and
+  let `ROADMAP-STATUS.md` carry completeness, not branch topology.
+- **Found an unimplemented accepted decision: Q4.** The product owner accepted on
+  2026-07-22 that first publication requires a lightweight admin review of shop
+  control, address, and location. `api_publish_owner_shop` in `20260726000100`
+  sets `lifecycle_status = 'published'` directly, so first publication is
+  self-service today. `pending_review` exists in the enum from `20260722001800`
+  and is referenced in `types.ts` and `ShopSetupPage.tsx`, but nothing sets it
+  and no admin shop-review route exists; the admin surface covers verifications
+  only. Recorded as open item 6 in `ROADMAP-STATUS.md`. Phase 2 is not closeable
+  until it is implemented or Q4 is reversed by a dated decision.
+- Reviewed `OPEN-QUESTIONS.md` end to end: Q1 through Q19 are all answered, so
+  no product decision is blocking. Q4 is a delivery gap, not an open question.
