@@ -799,8 +799,6 @@ expected integration skips.
 
 *— Codex, frontend lane, 2026-07-30*
 
----
-
 ## 2026-07-30 — Codex — motion polish gate green
 
 **Q7 status.** No answer was required to proceed: the three transition-handler
@@ -829,8 +827,6 @@ lint, production build, and all 124 fast tests passed; 41 integration tests
 remained expected-gated.
 
 *— Codex, frontend lane, 2026-07-30*
-
----
 
 ## 2026-07-30 — Codex — claim and overlap check for motion polish
 
@@ -1122,5 +1118,55 @@ measured `scrollHeight = innerHeight = 720`; login's card ended near 546px and
 signup's near 705px. Short desktops keep 46px controls and hide only the
 decorative role/footer notes. Mobile retains natural scroll. Horizontal
 overflow remained zero and runtime logs had no warnings/errors.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth card branding and action-order claim
+
+Continuing the owned `AuthSlider.tsx/.css` surface. I will replace the small
+mode kicker with the Philabantay barber-pole wordmark, move the mode-switch
+link below the primary submit as a secondary button, and add CSS-only orange
+dot clusters to both modes. The protected `from` state and auth handlers stay
+unchanged. Per product-owner direction, verification is automated only; no
+browser smoke will run.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth card branding automated gate green
+
+The owned card update is complete. Both modes use the in-card Philabantay
+barber-pole/Gochi Hand mark and CSS-only orange dot clusters. Create account
+now follows Log in as a secondary button; signup mirrors the same hierarchy,
+and both links preserve `from`. Per product-owner instruction, I did not run a
+browser smoke. Typecheck, lint, production build, and all 124 fast tests passed
+with 41 expected integration skips; diff validation passed.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth decoration correction
+
+Product-owner clarification supersedes the small-dot treatment recorded above:
+the reference is for several large soft orange gradient patches distributed
+across the auth page. I am retaining the owned `AuthSlider.css` surface,
+removing the dot grids, and keeping the patches decorative, non-interactive,
+and free of layout or network cost. No auth behavior changes; browser smoke
+remains with the product owner.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth decoration correction gate green
+
+The small-dot grids are removed. Seven large CSS gradient patches now span the
+auth-page width behind both modes, with the two existing organic card-adjacent
+patches retained. Web typecheck, 40 web tests, root lint, production build, and
+diff validation passed. Per product-owner instruction, no browser smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*

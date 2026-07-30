@@ -54,6 +54,27 @@
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.auth-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: -1;
+  width: 100vw;
+  height: 100%;
+  min-height: 680px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 118px 92px at 7% 23%, rgba(239, 128, 110, .58) 0 66%, transparent 69%),
+    radial-gradient(ellipse 76px 58px at 20% 72%, rgba(242, 184, 68, .52) 0 65%, transparent 69%),
+    radial-gradient(ellipse 54px 43px at 35% 10%, rgba(230, 108, 69, .38) 0 65%, transparent 69%),
+    radial-gradient(ellipse 82px 64px at 64% 21%, rgba(242, 164, 70, .43) 0 65%, transparent 69%),
+    radial-gradient(ellipse 62px 48px at 78% 76%, rgba(235, 113, 79, .46) 0 65%, transparent 69%),
+    radial-gradient(ellipse 126px 96px at 94% 35%, rgba(242, 184, 68, .52) 0 66%, transparent 69%),
+    radial-gradient(ellipse 48px 38px at 91% 88%, rgba(230, 108, 69, .36) 0 65%, transparent 69%);
+  transform: translateX(-50%);
+}
+
 .auth-page-intro {
   max-width: 720px;
   margin: clamp(28px, 3.8vw, 44px) auto 0;
@@ -152,23 +173,23 @@
   text-align: center;
 }
 
-.auth-form-step {
+.auth-form-brand {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--auth-copper);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .17em;
+  padding: 3px 9px 2px;
+  color: #29354a;
+  border: 1px solid rgba(45, 53, 64, .45);
+  border-radius: 3px 4px 3px 5px;
+  background: #fffaf2;
+  box-shadow: 3px 3px 0 rgba(45, 53, 64, .1);
+  font: 400 22px/1 "Gochi Hand", cursive;
+  transform: rotate(-.5deg);
 }
 
-.auth-form-step::before,
-.auth-form-step::after {
-  content: "";
-  width: 17px;
-  height: 1px;
-  background: currentColor;
-  opacity: .44;
+.auth-form-brand .brand-pole {
+  width: 8px;
+  height: 23px;
 }
 
 .auth-form-header h2 {
@@ -181,19 +202,12 @@
   letter-spacing: -.035em;
 }
 
-.auth-form-header p,
 .auth-form-note,
 .auth-password-hint {
   margin: 0;
   color: var(--auth-copy);
   font-size: 12px;
   line-height: 1.55;
-}
-
-.auth-form-header a {
-  color: var(--auth-copper-dark);
-  font-weight: 800;
-  text-underline-offset: 3px;
 }
 
 .auth-form {
@@ -357,6 +371,31 @@
   opacity: .66;
 }
 
+.auth-mode-action {
+  display: grid;
+  min-height: 44px;
+  padding: 10px 20px;
+  place-items: center;
+  color: var(--auth-copper-dark);
+  border: 1.5px solid rgba(142, 62, 34, .58);
+  border-radius: 999px;
+  background: #fffaf5;
+  font: 820 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-decoration: none;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+
+.auth-mode-action:hover {
+  border-color: var(--auth-copper-dark);
+  background: #f9e9de;
+  transform: translateY(-1px);
+}
+
+.auth-mode-action:focus-visible {
+  outline: 3px solid #e8bf55;
+  outline-offset: 3px;
+}
+
 .auth-form-note {
   text-align: center;
 }
@@ -465,11 +504,11 @@
   }
 
   .auth-card {
-    margin-top: 16px;
+    margin-top: 12px;
   }
 
   .auth-form-panel {
-    padding: 25px 36px;
+    padding: 22px 36px;
   }
 
   .auth-form-header {
@@ -479,6 +518,10 @@
   .auth-form-header h2 {
     margin-block: 5px 4px;
     font-size: 23px;
+  }
+
+  .auth-form-brand {
+    font-size: 20px;
   }
 
   .auth-form {
@@ -506,8 +549,14 @@
     min-height: 46px;
   }
 
+  .auth-mode-action {
+    min-height: 40px;
+    padding-block: 8px;
+  }
+
   .auth-role-strip,
-  .auth-page-footnote {
+  .auth-page-footnote,
+  .auth-form-note {
     display: none;
   }
 }
@@ -561,6 +610,11 @@
     height: 52px;
     opacity: .66;
   }
+
+  .auth-page::before {
+    min-height: 760px;
+    opacity: .72;
+  }
 }
 
 @media (max-width: 480px) {
@@ -599,13 +653,15 @@
 
   .auth-page-back > span,
   .auth-field input,
-  .auth-submit {
+  .auth-submit,
+  .auth-mode-action {
     transition: none;
   }
 
   .auth-page-back:hover > span,
   .auth-submit:hover:not(:disabled),
-  .auth-submit:active:not(:disabled) {
+  .auth-submit:active:not(:disabled),
+  .auth-mode-action:hover {
     transform: none;
   }
 }

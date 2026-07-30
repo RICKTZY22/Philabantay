@@ -45,10 +45,14 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - Guest auth now has one dedicated surface: `/login` and `/signup` use a
   centered light form card, warm cream space, copper actions, and three
   restrained pastel role accents. These routes intentionally have no global
-  header band; only Back to home sits above the introduction. The former dark
-  split panel and duplicate landing dialog are absent. Short desktop viewports
-  compact spacing and hide only the decorative role/footer notes so both login
-  and signup remain above the fold; mobile keeps necessary natural scrolling.
+  header band; only Back to home sits above the introduction. A small
+  barber-pole/Gochi Hand Philabantay mark now sits inside the card, large soft
+  orange gradient patches are distributed behind both modes, and the
+  mode-switch button follows the primary submit. The former dark split panel
+  and duplicate landing dialog are absent.
+  Short desktop CSS still compacts spacing and hides only decorative
+  role/footer notes; mobile keeps necessary natural scrolling. The product
+  owner retained the next visual smoke after this card-content change.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.

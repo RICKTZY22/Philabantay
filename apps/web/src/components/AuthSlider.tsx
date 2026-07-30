@@ -6,6 +6,7 @@ import {
   MAX_FULL_NAME_LENGTH,
   MAX_PHONE_LENGTH,
   MAX_PASSWORD_LENGTH,
+  SHOP_NAME,
   validateEmail,
   validateFullName,
   validatePassword,
@@ -131,18 +132,11 @@ export function AuthSlider({
       <span className="auth-blob auth-blob-small" aria-hidden="true" />
       <div className="auth-form-panel">
         <header className="auth-form-header">
-          <span className="auth-form-step">
-            {mode === 'signin' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+          <span className="auth-form-brand" aria-label={SHOP_NAME}>
+            <span className="brand-pole" aria-hidden="true" />
+            {SHOP_NAME}
           </span>
           <h2>{mode === 'signin' ? 'Log in' : 'Your details'}</h2>
-          <p>
-            {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
-            {/* `from` rides along so switching between sign-in and sign-up keeps
-                the destination RequireAuth was trying to reach. */}
-            <Link to={mode === 'signin' ? '/signup' : '/login'} state={{ from: safeFrom }}>
-              {mode === 'signin' ? 'Create an account' : 'Log in'}
-            </Link>
-          </p>
         </header>
 
         {mode === 'signin' ? (
@@ -170,6 +164,11 @@ export function AuthSlider({
             <button className="auth-submit" type="submit" disabled={siBusy}>
               {siBusy ? 'Logging in…' : 'Log in'}
             </button>
+            {/* `from` rides along so switching modes keeps the destination
+                RequireAuth was trying to reach. */}
+            <Link className="auth-mode-action" to="/signup" state={{ from: safeFrom }}>
+              Create account
+            </Link>
             <p className="auth-form-note">
               Your role, messages, and bookings stay connected to this account.
             </p>
@@ -271,6 +270,9 @@ export function AuthSlider({
             <button className="auth-submit" type="submit" disabled={suBusy}>
               {suBusy ? 'Creating account…' : 'Continue to account type'}
             </button>
+            <Link className="auth-mode-action" to="/login" state={{ from: safeFrom }}>
+              Log in instead
+            </Link>
             <p className="auth-form-note">
               You’ll choose how you use Philabantay on the next step.
             </p>

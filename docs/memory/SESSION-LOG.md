@@ -964,3 +964,26 @@ so the packet is not being marked complete on the strength of it.
   zero horizontal overflow and no runtime warnings/errors.
 - Mobile behavior is unchanged and retains natural scrolling where the longer
   signup form cannot honestly fit without shrinking usable controls.
+
+## 2026-07-30 — Auth card wordmark, dots, and action order
+
+- Replaced the compact SIGN IN / CREATE ACCOUNT kicker with the Philabantay
+  barber-pole logo and Gochi Hand wordmark inside both form cards.
+- Moved Create account below Log in as an outlined secondary button; signup
+  mirrors the hierarchy with Log in instead below Continue to account type.
+  Both links retain the sanitized protected-route `from` state.
+- Added two CSS-only orange dot clusters around each card without adding image
+  requests, scripts, or layout-affecting elements.
+- Per product-owner direction, no browser smoke ran. Automated verification
+  passed: all workspaces typechecked, lint and production build passed, and 124
+  fast tests passed with 41 expected integration skips.
+
+## 2026-07-30 — Auth decoration corrected to large patches
+
+- Product-owner clarification replaced the small orange dot grids with seven
+  large, soft orange gradient patches distributed across the full auth-page
+  width, plus the two existing organic card-adjacent blobs.
+- The decoration remains CSS-only, non-interactive, behind the content, and
+  does not add image requests or layout elements. Web typecheck, 40 web tests,
+  root lint, production build, and diff validation passed; visual smoke remains
+  with the product owner.
