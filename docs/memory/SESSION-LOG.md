@@ -1135,3 +1135,102 @@ so the packet is not being marked complete on the strength of it.
   admin soft-delete path. Its immutable verification audit remains by design.
 - Web typecheck, all 40 web tests, production build, and diff validation
   passed. Claude's P2-07 API/shared/migration work was untouched.
+
+## 2026-07-30 — Claude — P2-07 availability engine implemented
+
+Started P2-07 after Codex handed the tree back. Before writing anything, measured
+what the existing claim gate actually enforced instead of trusting the packet
+description.
+
+**Two live bypasses found and reproduced through the real HTTP API**, both
+returning `201 Created`:
+
+1. a customer booked a barber at a shop in `draft`, while the public catalogue
+   correctly refused to list that same shop;
+2. a customer booked a date the owner had marked as a full-day closure.
+
+`private.require_bookable_appointment_slot` from `20260722000600` was the
+authoritative gate and contained **zero** references to `lifecycle_status`,
+`shop_operating_hours`, `shop_closures`, `service_qualifications`,
+`owner_provider_profiles`, `chair_count`, `default_buffer_min`, or
+`booking_mode`. Five of the ten inputs the phase contract lists were missing,
+plus the whole BOOK-02 assignment model and the chair half of AVAIL-02.
+
+Five forward migrations, `20260730000100` through `20260730000500`:
+
+- schema for the booking window, per-service buffer, assignment intent, and a
+  qualification backfill so requiring qualification could not make an existing
+  provider unbookable;
+- the rebuilt gate: publication, shop timezone (no longer hardcoded Manila),
+  lead/advance window, opening hours, date closures and replacement hours,
+  qualification, buffer-aware provider gap, and chair capacity as peak
+  concurrency under a new shop-scoped advisory lock;
+- grant-on-hire so a new barber is not silently unbookable (D-024);
+- the slot projection and exact/preferred/any assignment, both answering by
+  calling the same gate rather than reimplementing it (D-022);
+- the read-only quote behind `POST /bookings/quote`.
+
+Express gained `GET /availability`, `POST /bookings/quote`, five new error codes,
+and the booking window on the owner and public shop contracts. The old Express
+slot math is gone: `publicSlots` now defers to the engine, so an offered slot is
+a claimable slot.
+
+**Two regressions I introduced were caught by the existing suite, not by me.**
+Reproducing the reschedule and reassign command bodies to change one lock call, I
+dropped their immutable `appointment_events` inserts and replaced the shared
+`require_appointment_reason` validator with an inline copy. The timeline
+assertion failed and both are restored verbatim. Worth remembering: when a
+forward migration has to restate an existing function, diff the whole body rather
+than the part being changed.
+
+Three pre-existing test-integrity problems surfaced because P2-07 made
+qualification load-bearing:
+
+- the P2-05 qualification race test ends on a nondeterministic winner and could
+  leave the fixture barber revoked, which was invisible while nothing read
+  qualifications. It now normalises the shared fixture at the end;
+- tests that mint a service mid-run must qualify a provider for it, exactly as a
+  real owner would. Added a `qualifyProvider` helper;
+- the lifecycle test books "a few minutes from now" and was unbookable for the
+  last half hour before midnight, because a shift exception cannot cover a
+  window crossing local midnight. It now uses a five-minute service, which
+  satisfies both that and check-in's 30-minute window at every hour. Pre-existing
+  and independent of P2-07.
+
+`seed-local-accounts.ts` now creates shop operating hours. Without them the
+seeded environment signs in fine and then refuses every slot, which reads as a
+bug rather than as missing setup.
+
+Verified on a database replayed from empty through all 47 migrations:
+
+```text
+typecheck   all workspaces passed
+lint        passed
+build       API + web production build passed
+fast tests  124 (shared 56, api 28, web 40)
+matrix      77/77 twice back to back, no reset between runs
+DB lint     no schema errors
+diff        git diff --check clean
+```
+
+The matrix gained 8 gated regressions: publication refusal with a positive
+control, closures and replacement hours, qualification revoke/restore,
+lead/advance bounds, the cleanup buffer, chair capacity across two providers with
+a two-chair control and a concurrent race, projection-equals-claim, and
+exact/preferred/any intent.
+
+Also ran two live end-to-end suites through the real API against the seeded
+stack: 14/14 and 16/16, both restoring the dev shop to `draft` afterwards. The
+matrix then passed 77/77 twice again with zero published shops left behind, so no
+fixture pollution this time.
+
+**One required input is not implemented and P2-07 is not complete without it.**
+Input 4 is "active employment *or owner provider capability*", and an owner
+cannot be booked at all: `appointments.barber_id` references `barbers(id)`, and
+P2-05 deliberately modelled owner-as-provider without a `barbers` row. Closing it
+means either giving owners a `barbers` row — which duplicates
+`accepting_bookings` and `rating`, the exact fields P2-05 separated — or
+introducing a real provider seam across roughly thirteen foreign keys. That is an
+architecture decision, not an implementation detail, so it is raised as an open
+question rather than guessed. Everything else in AVAIL-01, AVAIL-02, and BOOK-02
+is implemented and verified.

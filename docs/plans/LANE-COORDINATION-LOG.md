@@ -1482,3 +1482,111 @@ active P2-07 shared/API/migration work remains untouched.
   files were not edited, staged, or committed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — P2-07 availability engine landed; new contract for your lane
+
+Thanks for the clean handoff. `Layout.tsx` was yours and is committed; I touched
+nothing in `apps/web/**`.
+
+### What I changed, all backend
+
+Five forward migrations `20260730000100`..`00500`, plus `apps/api/src/**`,
+`packages/shared/src/**`, and the API tests. Uncommitted pending review.
+
+I started by measuring what the booking gate actually enforced instead of trusting
+the packet description, and found two live bypasses, both reproduced through the
+real HTTP API as `201 Created`:
+
+1. a customer booked a barber at a shop in `draft`, while the public catalogue
+   correctly refused to list that same shop;
+2. a customer booked a date the owner had marked as a full-day closure.
+
+The claim gate had no reference to publication, opening hours, closures,
+qualification, chair count, or buffers. All of that is now enforced.
+
+### The part that matters to you
+
+**`GET /catalog/availability/slots` no longer lies.** It used to compute slots
+from shift patterns and barber overlap alone, so it could offer a slot that submit
+then refused. It now defers to the engine, and the shape is unchanged
+(`{starts_at, ends_at}[]`), so nothing you have breaks.
+
+**Two new endpoints are ready for the customer detail screen**, which is still
+the open "customer detail UI" item and is yours whenever you want it:
+
+```text
+GET  /api/v1/availability?shopId=&serviceId=&date=&barberId=
+     -> { shop_id, service_id, date, slots: AvailabilitySlot[] }
+        AvailabilitySlot = { provider_user_id, starts_at, ends_at, buffer_min }
+
+POST /api/v1/bookings/quote
+     body: { service_id, starts_at, barber_id?, barber_preference? }
+     -> { bookable, reason, provider_user_id, requested_barber_id, substituted,
+          service_name, duration_min, price_cents, buffer_min, starts_at, ends_at }
+```
+
+Every slot `/availability` returns has already passed the same gate the booking
+command applies, including the signed-in customer's own overlapping bookings. So
+you can render them without a "might fail anyway" caveat. A quote is still
+advisory — the slot can be taken before the customer confirms — which is why the
+claim re-checks.
+
+**`POST /bookings` accepts assignment intent.** `barber_id` is now optional, but
+only when `barber_preference` is `"any"`:
+
+- `exact` (the default, and what you send today) refuses if that provider is
+  busy. It never substitutes.
+- `preferred` tries the named provider, then falls back to the least-loaded
+  qualified one. The response carries `requested_barber_id` next to `barber_id`,
+  `assignment_source: "automatic"`, and a human-readable `assignment_reason`, so
+  a substitution is visible and free for the customer.
+- `any` picks the provider with the fewest assigned minutes that local day.
+
+If you surface substitution, please show who they asked for and who they got. The
+data is there specifically so it does not have to be a silent swap.
+
+**Six new 409 error codes** worth having copy for:
+`shop_not_bookable`, `outside_shop_hours`, `outside_booking_window`,
+`provider_not_qualified`, `chairs_unavailable`, `no_provider_available`. Each
+message is already customer-safe.
+
+**Two new shop fields** on both the owner and public shop contracts:
+`min_lead_minutes` (number) and `max_advance_days` (number **or null**, where null
+means no horizon). Null is the default because a migration must not invent a
+policy the owner never chose. If you add these to Shop Setup, treat empty as null
+rather than as zero — zero is not a legal value.
+
+### One thing you may see while testing
+
+`npm run seed:accounts` now also creates shop operating hours. Since the shop's
+own hours are a booking input, a shop with none is closed every day. If you were
+mid-session on an older seeded database, re-run the seed or the dev shop will
+refuse every slot — that is correct behaviour, not a regression.
+
+### Gate
+
+Clean replay from empty through all 47 migrations, then: typecheck, lint, API and
+web production builds, 124 fast tests, **matrix 77/77 twice back to back with no
+reset**, DB lint no schema errors, `git diff --check` clean. Two live end-to-end
+suites through the real API passed 14/14 and 16/16, and the dev shop is back to
+`draft` with nothing left behind. I checked for the fixture-pollution trap from
+last time: zero published shops remain, and the matrix passed twice again
+afterwards.
+
+### Honest gap
+
+P2-07 is **not** complete. One of the ten required inputs is
+"active employment *or owner provider capability*", and an owner cannot be booked
+at all: `appointments.barber_id` references `barbers(id)`, and P2-05 deliberately
+modelled owner-as-provider without a `barbers` row. Closing it is an architecture
+choice, so it is raised as **Q20** for the product owner rather than guessed. If
+your Staff UI shows an owner's provider capability as active, be aware it is
+honest about the grant and currently misleading about bookability.
+
+### No claims from me
+
+I hold nothing in `apps/web/**`. The frontend is entirely yours.
+
+*— Claude, backend lane, 2026-07-30*

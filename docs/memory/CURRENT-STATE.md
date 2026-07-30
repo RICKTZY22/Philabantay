@@ -21,10 +21,70 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - P2-06 Schedule authority: **verified complete, signed off 2026-07-30** on an
   agent-executed functional and accessibility pass accepted in lieu of a
   personal visible-workflow review.
-- P2-07 Availability engine: next.
+- P2-07 Availability engine: **in progress. Nine of the ten required inputs are
+  implemented and verified; owner-as-provider booking is blocked on Q20.**
 - P2-08 Race gate: not started.
 
 ## Active packet
+
+### P2-07 availability engine — implemented and verified except one input
+
+Two real bypasses were found by measuring the existing gate rather than trusting
+the packet description, and both were reproduced through the real HTTP API before
+any code was written. Each returned `201 Created`:
+
+1. a customer booked a barber at a shop in `draft`, while the public catalogue
+   correctly refused to list that same shop;
+2. a customer booked a date the owner had marked as a full-day closure.
+
+`private.require_bookable_appointment_slot` was the authoritative claim gate and
+contained zero references to `lifecycle_status`, `shop_operating_hours`,
+`shop_closures`, `service_qualifications`, `owner_provider_profiles`,
+`chair_count`, `default_buffer_min`, or `booking_mode`.
+
+Five forward migrations, `20260730000100` through `20260730000500`:
+
+- the booking window (`min_lead_minutes`, nullable `max_advance_days`),
+  per-service `buffer_min`, BOOK-02 assignment intent, and a qualification
+  backfill so switching the requirement on could not make an existing provider
+  unbookable;
+- the rebuilt gate: publication, the shop's own timezone instead of a hardcoded
+  Manila, lead and advance bounds, opening hours, closures and replacement
+  hours, qualification, a buffer-aware provider gap, and chair capacity as peak
+  concurrency under a new shop-scoped advisory lock;
+- grant-on-hire, so a new barber is not silently unbookable, while a service
+  added later is deliberately granted to nobody (D-024);
+- the slot projection and exact/preferred/any assignment, both answering by
+  calling the same gate rather than reimplementing it (D-022);
+- the read-only quote behind `POST /bookings/quote`.
+
+Express gained `GET /availability`, `POST /bookings/quote`, six new error codes,
+and the booking window on the owner and public shop contracts. The old Express
+slot math is deleted, so an offered slot is a claimable slot by construction.
+
+Gate, on a database replayed from empty through all 47 migrations:
+
+```text
+typecheck   all workspaces passed
+lint        passed
+build       API + web production build passed
+fast tests  124 (shared 56, api 28, web 40)
+matrix      77/77 twice back to back, no reset between runs
+DB lint     no schema errors
+diff        git diff --check clean
+```
+
+Two live end-to-end suites through the real API passed 14/14 and 16/16 and
+restored the dev shop to `draft`. The matrix then passed 77/77 twice again with
+zero published shops left behind, so there is no fixture pollution this time.
+
+**Outstanding, and it is why this packet is not ✅:** owner-as-provider booking,
+required input 4. `appointments.barber_id` references `barbers(id)` and P2-05
+deliberately modelled owners without a `barbers` row, so closing the gap means
+either duplicating `accepting_bookings`/`rating` or building a real provider seam
+across roughly thirteen foreign keys. Raised as **Q20** rather than guessed.
+
+### Earlier this session
 
 ### Premium Studio signed-in UI redesign — implemented and locally verified
 
@@ -300,6 +360,22 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
+**Answer Q20 in [Open questions](../plans/OPEN-QUESTIONS.md).** P2-07 needs a
+product decision, not more code: which provider seam do we want so a shop owner
+can actually be booked? Option A gives a provider-enabled owner a `barbers` row
+(cheap, but recreates `accepting_bookings`/`rating` in two places, which is what
+D-009 separated). Option B builds a real provider seam across roughly thirteen
+foreign keys (correct, and a packet of its own). Recommendation is B, sequenced
+after P2-08 so the race gate lands against the current model first.
+
+Nothing else in P2-07 is waiting on anyone. When Q20 is answered, P2-07 either
+closes or gets its final slice, then **P2-08 Race gate**.
+
+The P2-07 work is uncommitted and unreviewed: five migrations plus the API,
+shared-contract, and test changes. The full gate is green on a clean replay.
+
+### Prior P2-06 detail
+
 P2-06's workflow scenarios 1 to 4 are **functionally verified** as of
 2026-07-30 (executed on the product owner's request while they were mid
 UI-redesign). Exact responses are tabled in
@@ -317,27 +393,30 @@ the product owner's call. Every technical gate for P2-06 is green and recorded.
 `ModalPortal` focus was previously listed as a P2-06 blocker in error and has
 been re-scoped to the landing/auth polish slice; no P2-06 surface imports it.
 
-P2-07 has not started.
-
-Environment as left on 2026-07-30:
+Environment as left on 2026-07-30, after the P2-07 work:
 
 - Docker and the local Supabase stack are healthy on the moved ports
   (API/storage `54521`, database `54522`, studio `54523`);
 - the database was reset from empty and carries every migration through
-  `20260728000700`;
+  `20260730000500`;
+- **`npm run seed:accounts` now also creates shop operating hours.** Since P2-07
+  the shop's own hours are a booking input, so a shop with none is closed every
+  day. Without this the seeded environment signs in fine and then refuses every
+  slot, which reads as a bug rather than as missing setup. The dev shop is open
+  Mon-Sat 09:00-18:00, matching the demo barber's shift;
 - the API dev server runs on `4000` and the web dev server on `5174`. `5174` is
   not optional: `vite.config.ts` uses `strictPort` and the API's `WEB_ORIGIN`
   allowlist only trusts that port, so any other port fails CORS;
 - `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` were
   re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
-  services) and the barber has active employment there. The 2026-07-30 scenario
-  run left weekly hours 08:00-21:00 Mon-Sat set, a `customer@phila.test` booking
-  on `2026-08-05` at 10:00 Manila, an owner exception of 09:00-20:00 on that
-  date, and a pending `different_hours` request on `2026-08-10`. **The shop is
-  back to `draft`.** It was published for the scenario-4 conflict test and left
-  published on purpose, which then broke the matrix: see the fixture-pollution
-  note below. Republishing takes one owner command whenever the P4025 guard needs
-  exercising again;
+  services, Mon-Sat 09:00-18:00) and the barber has active employment there and is
+  qualified for both services through the grant-on-hire trigger. **The shop is
+  back to `draft` and no closures or bookings remain**: the two P2-07 live suites
+  published it, exercised every rule, then cancelled their bookings, deleted their
+  closures, reset the buffer and booking window, and unpublished. The earlier
+  P2-06 schedule state described in previous entries was cleared by the clean
+  resets. Publishing takes one owner command whenever a rule needs exercising
+  again;
 - **Do not leave a manually published shop behind.**
   `local-supabase.integration.test.ts:333` asserts the customer sees *exactly*
   the suite's two fixture shops

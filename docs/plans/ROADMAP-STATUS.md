@@ -13,9 +13,9 @@ Legend: ✅ done and verified · 🔨 in progress · ⬜ not started · 🧹 nee
 ## Progress at a glance
 
 - **Phase 1 (foundation + identity): ✅ complete** — 7/7 packets, automated gate green.
-- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 through P2-06 verified complete and signed off; P2-07 and P2-08 remain.
+- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 through P2-06 verified complete and signed off. P2-07 is 🔨: nine of ten availability inputs implemented and verified, owner-as-provider booking blocked on Q20. P2-08 remains.
 - Phases 3–5: ⬜ not started.
-- **Overall: 13 of ~39 packets.**
+- **Overall: 13 of ~39 packets** verified complete, plus P2-07 substantially implemented.
 
 ## Phase 1 — foundation and identity ✅
 
@@ -41,7 +41,7 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 | P2-04 Employment convergence | ✅ (reverified after security fix) | Applications, invitations, and join codes converge on locked, versioned requests. The ownerless resolution exploit is repaired by fail-closed SQL, forward hotfix `20260728000100`, and API shop scoping. The bounded hardening follow-up removes retained plaintext legacy codes, enforces invitation creator provenance, uses 80-bit uppercase-hex join codes, and records competing requests as `superseded`. |
 | P2-05 Provider capabilities | ✅ | Explicit shop-scoped owner provider profile without role switching; owner-authoritative per-service barber/owner qualifications, accepting state, barber requests, immutable audit, version/idempotency/race guards, Staff/Professional UI. Clean reset through `20260727000300`; matrix 59/59; 93 fast tests; typecheck/build/diff and authenticated browser smoke green. |
 | P2-06 Schedule authority | ✅ | Slices 1, 2a, and 2c are implemented and locally verified. Migration `20260728000600` drops legacy self-write RPCs, requires request idempotency keys, and enforces pending/resolved invariants. Canonical owner routes version weekly patterns and exceptions; the barber view is read-only and submits structured change requests; approval applies the exception, links it, advances the revision, and appends an event transactionally. Clean reset through `00600`; matrix 69/69 twice; 116 fast tests; typecheck/lint/build/DB-lint/diff green. Authenticated desktop/mobile smoke passed weekly and exception edits, approval, stale-session refresh, keyboard-native controls, reduced motion, and no console errors. Follow-up `20260728000700` closes the last known gap: the booking-conflict guard now takes the resulting window, so narrowing hours or approving a `different_hours` request is refused when it would leave an active booking outside availability (previously only a full day off was checked, and times were ignored). Regression covers the narrowed-window refusal and a wide window still being accepted. **Workflow scenarios 1-4 functionally verified 2026-07-30** against the live stack through the real API and browser UI with no SQL shortcuts: concurrent owner writes gave one 200 and one 409, a barber token got 403 on the owner route and `/schedule` rendered zero time inputs, approval alone wrote the exception and advanced the revision, and both removing and narrowing availability on a booked date returned `409 schedule_has_active_bookings` naming exactly 1 booking while a still-covering window was accepted. Accessibility recorded at the same standard as P2-02..P2-05: **0 unreachable and 0 unlabelled** interactive controls on both surfaces (owner 47/39, barber 41/40, remainder disabled), all 14 shift-editor time inputs labelled, and reduced motion satisfied structurally because `BarberShiftCalendar.css` and `DashboardPage.css` declare no motion at all while `OwnerStaffPanel.css` carries a blanket `prefers-reduced-motion` guard. **Signed off 2026-07-30 by the product owner on the strength of that agent-executed functional and accessibility pass, accepted in lieu of a personal visible-workflow review.** Two caveats stay on the record: reduced motion was verified structurally rather than by emulating the OS setting, and no human has visually reviewed the two surfaces. `ModalPortal` focus was listed here in error and is re-scoped to the landing/auth slice, since no P2-06 surface imports it. |
-| P2-07 Availability engine | ⬜ | combine hours, closures, employment, qualification, shifts, buffers, overlap, chairs. |
+| P2-07 Availability engine | 🔨 | **Nine of the ten required inputs implemented and verified 2026-07-30; one is blocked on Q20.** Measured before building: the authoritative claim gate `private.require_bookable_appointment_slot` contained zero references to `lifecycle_status`, `shop_operating_hours`, `shop_closures`, `service_qualifications`, `owner_provider_profiles`, `chair_count`, `default_buffer_min`, or `booking_mode`. Two bypasses were reproduced live through the real HTTP API, both `201 Created`: a customer booked a barber at a `draft` shop that the public catalogue correctly refused to list, and a customer booked a date the owner had marked as a full-day closure. Five forward migrations `20260730000100`..`00500` add the booking window (`min_lead_minutes`, nullable `max_advance_days`), per-service `buffer_min`, BOOK-02 assignment intent (`barber_preference`, `requested_barber_id`, `assignment_source`, `assignment_reason`, `booked_buffer_min`), a qualification backfill, grant-on-hire, the rebuilt gate, the slot projection, and the read-only quote. The gate now enforces publication, the shop's own timezone instead of a hardcoded Manila, lead/advance bounds, opening hours, closures and replacement hours, qualification, a buffer-aware provider gap, and chair capacity as **peak concurrency** under a new shop-scoped advisory lock (D-023). The projection and quote answer by calling that same gate per candidate rather than reimplementing it, so an offered slot is a claimable slot by construction (D-022). Express gained `GET /availability`, `POST /bookings/quote`, and five error codes (`chairs_unavailable`, `shop_not_bookable`, `outside_shop_hours`, `outside_booking_window`, `provider_not_qualified`, plus `no_provider_available`); the old Express slot math is deleted. Gate on a database replayed from empty through all 47 migrations: typecheck, lint, API + web production build, **124 fast tests** (shared 56, api 28, web 40), **matrix 77/77 twice back to back with no reset**, DB lint no schema errors, `git diff --check` clean. The matrix gained 8 gated regressions: publication refusal with a positive control, closures and replacement hours, qualification revoke/restore, lead and advance bounds, the cleanup buffer, chair capacity across two providers with a two-chair control and a concurrent race, projection-equals-claim, and exact/preferred/any intent. Two live end-to-end suites through the real API passed 14/14 and 16/16 and restored the dev shop to `draft`; the matrix then passed 77/77 twice again with zero published shops left behind. **Outstanding:** owner-as-provider booking, required input 4. `appointments.barber_id` references `barbers(id)` and P2-05 deliberately modelled owners without a `barbers` row, so closing it means either duplicating `accepting_bookings`/`rating` or building a real provider seam across ~13 foreign keys. Raised as Q20 rather than guessed. |
 | P2-08 Race gate | ⬜ | concurrent claim / capacity probes. |
 
 ## Phases 3–5 ⬜
@@ -136,15 +136,20 @@ Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 56, api 28, web 40 (124 total; 41 integration skipped)
+Unit:      shared 56, api 28, web 40 (124 total; 49 integration skipped)
 Lint:      passed
 Build:     API + web production build passed
 DB lint:   no schema errors
-Matrix:    API integration/direct-RLS workspace 69/69 twice back to back,
-           no reset between runs, against a database carrying every
-           migration through 20260728000700
-Tree:      all Phase 2 work committed; working tree clean
+Matrix:    API integration/direct-RLS workspace 77/77 twice back to back,
+           no reset between runs, against a database replayed from empty
+           through every migration up to 20260730000500
+Diff:      git diff --check clean
+Tree:      P2-07 migrations, API, shared, and tests uncommitted pending review
 ```
+
+The matrix moved 69 → 77 with P2-07's eight new gated regressions, and the gated
+skip count moved 41 → 49 for the same reason. Fast tests stay at 124 because every
+new test needs the real database.
 
 Clean-replay proof is now complete: `supabase db reset` replayed the entire
 chain from an empty database through `20260728000700`, and the matrix then
@@ -166,12 +171,27 @@ packet. The per-test breakdown lives in
 
 ## Next up
 
-P2-06 is signed off (2026-07-30). **P2-07 Availability engine** is next: one
-transactional quote/claim engine combining publication, hours, closures,
-employment, verification, qualification, shifts, absence, duration and buffers,
-provider and customer overlap, and chair capacity. Requirements AVAIL-01,
-AVAIL-02, and BOOK-02. Forward migrations only. Stop before P2-08.
+**P2-07 is implemented apart from one input, and what it needs next is a product
+answer rather than more code.** Q20 asks which provider seam we want so a shop
+owner can actually be booked. Until that is answered P2-07 cannot be marked
+complete, because owner-as-provider is one of the ten inputs the phase contract
+lists. Everything else in AVAIL-01, AVAIL-02, and BOOK-02 is verified; the packet
+row above carries the evidence.
 
-Two P2-06 follow-ups ride along rather than blocking: a human visible-workflow
-review of the owner staff panel and barber schedule, and an OS-level
-reduced-motion check. Both are listed in the open items above.
+Two follow-ups ride along rather than blocking the packet:
+
+- the customer detail UI still does not consume the new `/availability` or
+  `/bookings/quote` contracts. The engine is honest now; the screen that shows it
+  is not built. This is the long-standing customer-detail-UI open item and it
+  belongs to the frontend lane;
+- the slot projection spends one subtransaction per candidate by design (D-022),
+  measured at roughly fifty savepoints for a thirteen-hour day. That is fine at
+  V1 volume. If a real shop's slot query ever gets slow, add a cheap pre-filter in
+  front of the gate — never a second copy of the predicates.
+
+**P2-08 Race gate** follows: concurrent claim and capacity probes. Forward
+migrations only.
+
+Two P2-06 follow-ups also remain open: a human visible-workflow review of the
+owner staff panel and barber schedule, and an OS-level reduced-motion check. Both
+are listed in the open items above.

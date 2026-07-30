@@ -5,6 +5,45 @@ permissions, or UI behavior enough that they should be answered before their
 listed phase. Each includes a recommended default so the product owner can
 reply “all recommended” or override individual IDs.
 
+## Blocking before Phase 2 can close
+
+### Q20 — can a shop owner actually be booked? (raised 2026-07-30, P2-07)
+
+**Question:** The phase contract lists "active employment **or owner provider
+capability**" as an availability input, and Q2/D-009 accepted owner-as-provider
+without role switching. But an owner cannot be booked at all today, and closing
+that gap is an architecture choice, not an implementation detail. Which seam do we
+want?
+
+**Why it is blocked rather than guessed.** `appointments.barber_id` references
+`barbers(id)`, and so do roughly thirteen other tables — `ratings`,
+`conversations`, `employment_events`, `staff_notes`, `favorite_barbers`, and
+more. P2-05 deliberately gave owners `owner_provider_profiles` with their *own*
+`accepting_bookings` and `rating`/`rating_count` instead of a `barbers` row.
+
+**Option A — give a provider-enabled owner a `barbers` row.** Cheap: nothing
+structural forbids it, since `barbers` is a plain profile extension keyed to
+`users(id)` with no role constraint. But it recreates
+`accepting_bookings`/`rating` in two places, which is the second source of truth
+D-009 and the phase doc's "no duplicate ways to mutate the same fact" rule both
+exclude. It would also leak owners into barber-shaped reads unless every one is
+audited.
+
+**Option B — a real `providers` seam.** Correct long-term: one provider identity
+that a barber row and an owner-provider profile both point at, with
+`appointments` and the rest keyed on it. This is a packet of its own, touching
+every one of those foreign keys plus their RLS.
+
+**Recommended default:** Option B as a dedicated packet, sequenced after P2-08 so
+the race gate lands against the current model first. Until it is answered, P2-07
+stays 🔨 with nine of ten inputs implemented and verified, and only owner-provider
+booking outstanding. Everything else in AVAIL-01, AVAIL-02, and BOOK-02 is done.
+
+**Consequence of deferring:** an owner who enables their provider capability and
+grants themselves qualifications still cannot receive a booking. The Staff UI will
+show the capability as active, which is honest about the grant but misleading
+about bookability, so the deferral should be visible in that screen.
+
 ## Blocking before Phase 1 implementation
 
 ### Q1 — pending professional access
