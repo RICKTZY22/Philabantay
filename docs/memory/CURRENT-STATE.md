@@ -40,8 +40,11 @@ starting P2-07:
   hero walker and legacy live-city layer remain disconnected, with retired art
   and the walker recipe kept only under
   `docs/design-archive/landing-hero-experiments/`;
-- the laptop and phone use inline SVG line-art chassis around animated HTML UI,
-  with those internal animations disabled under reduced motion;
+- the hero is deliberately art-only. The copy occupies the left grid track and
+  the right track is left empty so the scene's right-side barbershop stays
+  visible through the transparent section. There are no device mockups in the
+  hero, and the two-column grid is load-bearing for that framing: filling the
+  right track would cover the barbershop;
 - the bundled How it works chapter combines the booking lifecycle, customer
   flow, shop-side flow, and role capabilities in a bright sticky-index layout
   over the supplied repeating barber-tool doodle wallpaper;
@@ -62,9 +65,13 @@ Verified on 2026-07-29:
   Every scene held `scrollWidth = clientWidth` at `1440x900`, `1024x768`,
   `390x844`, and `320x760`; the narrowest check also verified the landing shell
   no longer inherits the global `320px` minimum through the browser scrollbar;
-- hero DOM contains one laptop SVG and one phone SVG, with zero legacy hero
-  walkers and zero legacy live-city layers. Reduced-motion emulation resolved
-  the scene transition to `0s` and both device UI animation names to `none`;
+- hero DOM contains zero legacy hero walkers and zero legacy live-city layers.
+  Reduced-motion emulation resolved the scene transition to `0s`. **Corrected
+  2026-07-29:** an earlier version of this entry claimed the hero contained one
+  laptop SVG and one phone SVG. It does not, and no commit ever contained them.
+  The hero holds only the copy column over the scene art. Re-measured at
+  `1440x900`: hero grid `442px 636px`, one child, section background
+  `rgba(0, 0, 0, 0)`, and the active scene layer spanning `1425x900` behind it;
 - the workflow stays `rgb(251, 250, 246)` even while the live city is in its
   `night` phase; desktop chapter index and first panel are approximately equal
   height;

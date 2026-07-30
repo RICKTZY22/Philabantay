@@ -288,13 +288,13 @@ Verified locally on 2026-07-29 without changing P2-06/P2-07 status.
 | Gate | Exact evidence |
 | --- | --- |
 | Responsive hero | A 16-case matrix covered morning, afternoon, evening, and midnight at `1440x900`, `1024x768`, `390x844`, and `320x760`. Every case exposed exactly one scene and held `scrollWidth = clientWidth`; the landing-specific `min-width: 0` override removed the prior scrollbar-width leak at 320 CSS pixels. Desktop keeps the approved device overlap and narrow layouts stack the devices. |
-| Four-scene framing | All four normalized `1915x821` WebPs preserve the same horizon, street, crack, and right-side barbershop footprint. Forced desktop screenshots confirmed the live SVG laptop/phone remain above the art without reintroducing the retired portal or live-city window. |
+| Four-scene framing | All four normalized `1915x821` WebPs preserve the same horizon, street, crack, and right-side barbershop footprint. Forced desktop screenshots confirmed the retired portal and live-city window are not reintroduced. **Corrected 2026-07-29:** this row previously claimed live SVG laptop/phone chassis sit above the art. No such elements exist in any commit; the hero right-hand grid track is intentionally empty so the barbershop art shows through. |
 | Static activity content | Morning contains school-bound students and a jeepney; afternoon contains customers waiting outside the barbershop plus traffic; evening contains workers travelling home with lit vehicles; midnight has no sidewalk pedestrians and only a jeepney/car. The hero contains zero runtime walker/pedestrian DOM or travel animation. |
 | Philippine-time switching | The dedicated hero schedule is midnight `00:00-04:59`, morning `05:00-11:59`, afternoon `12:00-16:59`, and evening `17:00-23:59`. Eight boundary assertions passed. Computed styles exposed all four asset URLs, forced checks activated exactly one matching layer, and live `Asia/Manila` time selected midnight during verification. |
 | Unified workflow | The workflow remains a bright, sticky-index layout independent of city phase. At desktop the index measured 664 px and the first chapter approximately 664 px. |
 | In-page auth | Landing buttons opened the real sign-in/sign-up forms without changing the route; switching modes stayed inside the same dialog. |
 | Keyboard/accessibility | Close received initial focus, Escape closed, focus returned to the invoking control, and empty sign-up exposed four alerts and focused the first invalid field. |
-| Reduced motion | Scene crossfade duration resolved to `0s`; laptop list/card and phone card/button animations resolved to `none`. Existing auth/workflow reduced-motion behavior remains intact. |
+| Reduced motion | Scene crossfade duration resolved to `0s`. Existing auth/workflow reduced-motion behavior remains intact. (The device-UI animation claim was removed with the laptop/phone correction above.) |
 | Runtime and gates | Browser console stayed clean. Workspace typecheck, 124 fast tests with 41 skipped, lint, API/web production builds, and `git diff --check` passed. |
 
 ## P2-07 … P2-08 - not started {#not-started}

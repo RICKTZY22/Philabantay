@@ -110,7 +110,11 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   sidewalks empty with sparse traffic; jeepneys anchor the Philippine street
   in every variant. One small sketched seam replaces the former dark portal.
   The former hero walker and live-city scene are disconnected and archived.
-  Inline SVG laptop/left-side phone chassis hold animated HTML product previews.
+  The hero is art-only: the copy takes the left grid track and the right track
+  stays empty so the scene's barbershop shows through the transparent section.
+  (Corrected 2026-07-29: this line previously described inline SVG laptop and
+  phone chassis holding animated product previews. They do not exist in any
+  commit.)
   A unified sticky-index workflow covers lifecycle, customer, shop, and role
   facts.
   Guest auth CTAs open the existing real forms in an accessible in-page modal;

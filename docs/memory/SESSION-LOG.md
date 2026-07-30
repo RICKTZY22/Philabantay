@@ -646,3 +646,53 @@ catalog, commits, and implementation files.
   `vite.config.ts` uses `strictPort` and the API's `WEB_ORIGIN` allowlist trusts
   only that port. Set `"autoPort": false` on the web entry in
   `.claude/launch.json` to document that constraint.
+
+## 2026-07-29 — landing dead-code sweep; hero "defect" retracted
+
+- Started the web dev server on 5174 once the port was freed and verified the
+  earlier `VITE_STORAGE_ORIGIN` fix live: the served CSP now carries
+  `http://127.0.0.1:54521` in both `img-src` and `connect-src`, alongside
+  `http://127.0.0.1:4000` and `'wasm-unsafe-eval'` for Rive.
+- **Retracted a wrong finding.** I reported the hero's empty 636px right grid
+  track as a layout defect. It is not. `.phil-hero-marketing` has
+  `background-color: rgba(0, 0, 0, 0)` and `background-image: none` at
+  `z-index: 12`, while `.phil-hero-time-scenes` sits at `z-index: 0` with
+  `inset: 0` and the active scene layer measures `1425x900`. The art paints
+  straight through the empty track, which is exactly what the source comment at
+  the disabled street block says: the hero is intentionally space-only. Filling
+  that track would cover the right-side barbershop. No change made.
+- Corrected the docs that claimed the opposite. `CURRENT-STATE.md`,
+  `PHASE-2-TESTS.md`, and `ROADMAP-STATUS.md` all recorded "one laptop SVG and
+  one phone SVG" in the hero as verified 2026-07-29 evidence. Those elements
+  exist in no commit. Each claim is now replaced with the measured truth and
+  marked as a correction rather than quietly deleted.
+- **Removed 363 lines of unreachable code from `LandingPage.tsx`** (1095 → 732):
+  the `{false && <>...</>}` fragment inside `HowStreetBackdrop` (former lines
+  668-771), the `{false && <><JourneyCityBackdrop /><JourneyDoodles />
+  <ScatterDoodles /></>}` call site, the three component definitions those were
+  the only reference to (former lines 777-1032), and the now-unused `WalkFigure`
+  import. All seven `WalkFigure` uses in this file were inside those dead
+  ranges; `WalkFigure` itself stays, with four live uses in `Storefront.tsx`.
+- This corrects a wrong conclusion in the earlier sweep, which kept those pieces
+  because an import scan found them referenced. The only references were from
+  branches that cannot run.
+- **Left the `{false && <div className="phil-street">` block** (now line 344, 61
+  lines) alone. It carries an explicit in-code comment stating the legacy street
+  source is deliberately kept out of the render tree, so removing it would
+  override a recorded decision. Archiving it under
+  `docs/design-archive/` the way the retired hero art was handled is the natural
+  next step if the tree should be fully clean.
+- No bundle change to speak of: the entry chunk moved 183.02 kB → 183.01 kB,
+  because Rollup was already eliminating `false &&` branches. The gain is 363
+  fewer lines to read and no more misleading "live" references.
+- Verified after the removal: all workspaces typecheck, 124 fast tests pass
+  (shared 56, api 28 with 41 gated, web 40), lint passes, API and web production
+  builds pass. Browser at `1440x900`, `390x844`, and `320x760` (the last also in
+  dark scheme) had no horizontal overflow, one active hero scene serving
+  `philabantay-hero-afternoon-v1.webp` for live Manila afternoon, the workflow
+  section and Rive canvas intact, 19 `data-reveal` nodes matching the previously
+  recorded count, and zero console errors.
+- Modal focus behavior could not be verified: `ModalPortal` moves focus inside a
+  `requestAnimationFrame`, and rAF does not fire while the automation pane is
+  hidden. Escape and the `inert` toggle are synchronous and both worked. Treat
+  initial focus and focus return as unverified rather than broken.
