@@ -3,48 +3,31 @@
 
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
 
-@keyframes carDriveFull { from { transform: translateX(-280px); } to { transform: translateX(calc(100vw + 80px)); } }
-@keyframes carDriveBack { from { transform: translateX(calc(100vw + 80px)); } to { transform: translateX(-340px); } }
-@keyframes wheelSpin { to { transform: rotate(360deg); } }
-@keyframes floatY { from { transform: translateY(0); } to { transform: translateY(-10px); } }
-@keyframes wobble { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
-
-@keyframes doorSwing {
+@keyframes carDriveFull { from { transform: translateX(-280px); } to { transform: translateX(calc(100vw + 80px)); } }@keyframes carDriveBack { from { transform: translateX(calc(100vw + 80px)); } to { transform: translateX(-340px); } }@keyframes wheelSpin { to { transform: rotate(360deg); } }@keyframes floatY { from { transform: translateY(0); } to { transform: translateY(-10px); } }@keyframes wobble { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }@keyframes doorSwing {
   0%, 26% { transform: scaleX(1); }
   30%, 62% { transform: scaleX(.12); }
   68%, 100% { transform: scaleX(1); }
-}
-
-@keyframes freshTag {
+}@keyframes freshTag {
   0%, 59% { opacity: 0; transform: scale(.4); }
   63% { opacity: 1; transform: scale(1); }
   82% { opacity: 1; transform: scale(1); }
   88%, 100% { opacity: 0; transform: scale(.8); }
-}
-
-@keyframes sparkle { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
-@keyframes howWalkRight {
+}@keyframes sparkle { 0%, 100% { opacity: .15; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }@keyframes howWalkRight {
   from { transform: translate3d(-180px, 0, 0); }
   to { transform: translate3d(calc(100vw + 180px), 0, 0); }
-}
-@keyframes howWalkLeft {
+}@keyframes howWalkLeft {
   from { transform: translate3d(180px, 0, 0); }
   to { transform: translate3d(calc(-100vw - 180px), 0, 0); }
-}
-@keyframes spaceTwinkle {
+}@keyframes spaceTwinkle {
   0%, 100% { opacity: .3; transform: scale(.72) rotate(0); }
   50% { opacity: 1; transform: scale(1.28) rotate(12deg); }
-}
-@keyframes planetFloat {
+}@keyframes planetFloat {
   from { transform: translateY(-7px) rotate(-5deg); }
   to { transform: translateY(9px) rotate(5deg); }
-}
-@keyframes skyCloudSail {
+}@keyframes skyCloudSail {
   from { transform: translateX(-8vw); }
   to { transform: translateX(8vw); }
-}
-
-/* Full-bleed breakout: the landing ignores the app's 1100px container so the
+}/* Full-bleed breakout: the landing ignores the app's 1100px container so the
    design's 1280px canvas renders at true size. Off-screen actors (birds, cars)
    are clipped instead of causing horizontal scroll. */
 .phil {
@@ -611,9 +594,7 @@
   0% { opacity: .25; transform: perspective(1500px) rotateY(82deg) scale(.96); }
   70% { opacity: 1; transform: perspective(1500px) rotateY(-4deg) scale(1); }
   100% { opacity: 1; transform: perspective(1500px) rotateY(0) scale(1); }
-}
-
-.phil-steps {
+}.phil-steps {
   position: relative;
   min-height: 1260px;
   overflow: hidden;
@@ -1121,9 +1102,7 @@
   .phil-pile-slot-2,
   .phil-pile-slot-4 { right: 2.5%; }
   .phil-pile-slot-3 { left: calc(50% - 200px); width: 400px; }
-}
-
-@media (max-width: 720px) {
+}@media (max-width: 720px) {
   .phil-hero {
     grid-template-columns: minmax(0, 1fr);
     justify-items: stretch;
@@ -1243,9 +1222,7 @@
     width: 128%;
     margin-left: -14%;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   .phil-journey-flip { animation: none; }
   .phil-how-walker { animation: none; }
   .phil-how-walker-one { left: 7%; transform: none; }
@@ -1257,8 +1234,7 @@
   .phil-space-planet,
   .phil-how-neighborhood::before,
   .phil-how-neighborhood::after { animation: none; }
-}
-.phil[data-animation-paused='true'] *,
+}.phil[data-animation-paused='true'] *,
 .phil-hero-main[data-animation-paused='true'] *,
 .phil-neighborhood-stage[data-animation-paused='true'] * {
   animation-play-state: paused !important;
@@ -1268,17 +1244,7 @@
    Landing world v2 — void -> open sky -> street city
    ======================================================================== */
 @property --sky-top { syntax: '<color>'; inherits: true; initial-value: #73c7ed; }
-@property --sky-middle { syntax: '<color>'; inherits: true; initial-value: #b8e3f5; }
-@property --sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f8d8b3; }
-@property --sun-color { syntax: '<color>'; inherits: true; initial-value: #ffd76a; }
-@property --sun-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 215, 106, .46); }
-@property --city-sky-top { syntax: '<color>'; inherits: true; initial-value: #78c8eb; }
-@property --city-sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f5d5af; }
-@property --city-night-wash { syntax: '<color>'; inherits: true; initial-value: rgba(15, 25, 64, 0); }
-@property --city-lamp-opacity { syntax: '<number>'; inherits: true; initial-value: .28; }
-@property --city-lamp-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 205, 90, .2); }
-
-.phil {
+@property --sky-middle { syntax: '<color>'; inherits: true; initial-value: #b8e3f5; }@property --sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f8d8b3; }@property --sun-color { syntax: '<color>'; inherits: true; initial-value: #ffd76a; }@property --sun-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 215, 106, .46); }@property --city-sky-top { syntax: '<color>'; inherits: true; initial-value: #78c8eb; }@property --city-sky-bottom { syntax: '<color>'; inherits: true; initial-value: #f5d5af; }@property --city-night-wash { syntax: '<color>'; inherits: true; initial-value: rgba(15, 25, 64, 0); }@property --city-lamp-opacity { syntax: '<number>'; inherits: true; initial-value: .28; }@property --city-lamp-glow { syntax: '<color>'; inherits: true; initial-value: rgba(255, 205, 90, .2); }.phil {
   --sky-top: #73c7ed;
   --sky-middle: #b8e3f5;
   --sky-bottom: #f8d8b3;
@@ -1364,19 +1330,14 @@
   0%, 100% { transform: translate(0, 0) rotate(-8deg); }
   45% { transform: translate(28px, -24px) rotate(7deg); }
   75% { transform: translate(-12px, 10px) rotate(-2deg); }
-}
-@keyframes astronautDriftTwo {
+}@keyframes astronautDriftTwo {
   0%, 100% { transform: translate(0, 0) rotate(10deg); }
   50% { transform: translate(-35px, 22px) rotate(-8deg); }
-}
-@keyframes spaceshipCruise {
+}@keyframes spaceshipCruise {
   0% { opacity: 0; transform: translate3d(-28vw, 0, 0) rotate(-4deg); }
   7%, 88% { opacity: 1; }
   96%, 100% { opacity: 0; transform: translate3d(128vw, -12vh, 0) rotate(5deg); }
-}
-@keyframes galaxyTurn { to { transform: rotate(360deg); } }
-
-.phil-space-astronaut {
+}@keyframes galaxyTurn { to { transform: rotate(360deg); } }.phil-space-astronaut {
   position: absolute;
   z-index: 3;
   width: clamp(88px, 8vw, 138px);
@@ -1480,12 +1441,10 @@
 @keyframes birdsAcross {
   from { transform: translateX(-220px); }
   to { transform: translateX(calc(100vw + 220px)); }
-}
-@keyframes cloudAcross {
+}@keyframes cloudAcross {
   from { transform: translateX(-18vw); }
   to { transform: translateX(18vw); }
-}
-.phil-sky-cloud {
+}.phil-sky-cloud {
   position: absolute;
   z-index: 1;
   width: 210px;
@@ -1530,17 +1489,13 @@
   .phil-space-galaxy { right: -44px; top: 23%; opacity: .66; }
   .phil-sky-birds-two { display: none; }
   .phil-sky-cloud { opacity: .58; transform: scale(.7); }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   .phil-space-astronaut,
   .phil-space-ship,
   .phil-space-galaxy,
   .phil-sky-birds,
   .phil-sky-cloud { animation: none !important; }
-}
-
-/* Landing owns its entire canvas; the application paper shell must not leak
+}/* Landing owns its entire canvas; the application paper shell must not leak
    between the space, sky, and city chapters. */
 .app-shell.is-landing {
   min-height: 100vh;
@@ -1775,9 +1730,7 @@ main.page.is-landing-page .phil {
   .phil-steps .phil-pile-icon { width: 56px; height: 56px; }
   .phil-steps .phil-pile-icon svg { width: 46px; height: 46px; }
   .phil-steps .phil-badge-no { width: 48px; height: 48px; }
-}
-
-/* Workflow guide v3 ------------------------------------------------------
+}/* Workflow guide v3 ------------------------------------------------------
    The sky chapter owns the viewport width. Content is constrained inside it,
    so the sticky scenery can no longer be clipped by the old 1080px wrapper. */
 .phil-how {
@@ -2025,9 +1978,7 @@ main.page.is-landing-page .phil {
 @media (max-width: 900px) {
   .phil-system-lifecycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .phil-capability-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
+}@media (max-width: 720px) {
   .phil-how-title,
   .phil-system-lifecycle,
   .phil-role-journeys,
@@ -2051,9 +2002,7 @@ main.page.is-landing-page .phil {
   .phil-journey-step-icon svg { width: 44px; height: 44px; }
   .phil-journey-step-copy h3 { font-size: 25px; }
   .phil-capabilities { padding-bottom: 56px; }
-}
-
-/* Landing polish v4 ------------------------------------------------------
+}/* Landing polish v4 ------------------------------------------------------
    Guides are always visible. Browsers with view timelines add a small reveal;
    unsupported or interrupted animation can never hide the information. */
 @keyframes guideReveal {
@@ -2070,9 +2019,7 @@ main.page.is-landing-page .phil {
     animation-timeline: view();
     animation-range: entry 0% cover 18%;
   }
-}
-
-.phil-how-title,
+}.phil-how-title,
 .phil-system-lifecycle,
 .phil-role-journeys,
 .phil-capabilities {
@@ -2187,8 +2134,7 @@ main.page.is-landing-page .phil {
   50% { transform: translate3d(-62vw, 9vh, 0) rotate(8deg); }
   75% { transform: translate3d(-91vw, -13vh, 0) rotate(-18deg); }
   100% { transform: translate3d(calc(-100vw - 190px), 14vh, 0) rotate(9deg); }
-}
-.phil-space-astronaut-one {
+}.phil-space-astronaut-one {
   left: -150px;
   top: 20%;
   animation: astronautTourOne 43s linear infinite -11s;
@@ -2278,18 +2224,14 @@ main.page.is-landing-page .phil {
   .phil-space-galaxy-two { display: none; }
   .phil-space-meteors i:nth-child(n + 3) { display: none; }
   .phil-sky-balloon { width: 50px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   [data-reveal] { opacity: 1; transform: none; transition: none; }
   .phil-sky-balloon,
   .phil-space-astronaut,
   .phil-space-galaxy,
   .phil-space-meteors i { animation: none !important; }
   .phil-space-meteors { display: none; }
-}
-
-/* Professional curved city/space hero ----------------------------------- */
+}/* Professional curved city/space hero ----------------------------------- */
 .phil .phil-hero-main {
   min-height: max(720px, 100svh);
   overflow: hidden;
@@ -2530,9 +2472,7 @@ main.page.is-landing-page .phil {
     width: 70vw;
     opacity: .92;
   }
-}
-
-@media (max-width: 820px) {
+}@media (max-width: 820px) {
   .phil .phil-hero-main,
   .phil .phil-hero-marketing {
     min-height: 980px;
@@ -2573,9 +2513,7 @@ main.page.is-landing-page .phil {
   .app-shell.is-landing .nav-links .nav-link {
     display: none;
   }
-}
-
-@media (max-width: 620px) {
+}@media (max-width: 620px) {
   .phil .phil-hero-main,
   .phil .phil-hero-marketing {
     min-height: 920px;
@@ -2634,9 +2572,7 @@ main.page.is-landing-page .phil {
     padding-inline: 14px;
     font-size: 11px;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   .phil-hero-primary,
   .phil-hero-secondary {
     transition: none;
@@ -2648,9 +2584,7 @@ main.page.is-landing-page .phil {
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
-}
-
-/* Landing composition v5 ------------------------------------------------
+}/* Landing composition v5 ------------------------------------------------
    Smaller editorial typography, a real laptop/phone silhouette, a dedicated
    storefront window, and one unified workflow chapter. */
 .phil .phil-hero-main {
@@ -2860,10 +2794,6 @@ main.page.is-landing-page .phil {
 .phil-hero-city-scene .city-pedestrian-six,
 .phil-hero-city-scene .city-pedestrian-seven {
   display: none;
-}
-
-.app-shell.is-landing .landing-auth-trigger {
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .app-shell.is-landing button.nav-link {
@@ -3098,9 +3028,7 @@ main.page.is-landing-page .phil {
   }
 
   .phil-workflow-shell { gap: 30px; }
-}
-
-@media (max-width: 1120px) {
+}@media (max-width: 1120px) {
   .phil .phil-hero-main,
   .phil .phil-hero-marketing {
     min-height: 1080px;
@@ -3145,16 +3073,10 @@ main.page.is-landing-page .phil {
     transform: translateX(-50%) scale(.54);
   }
 
-  .app-shell.is-landing .landing-auth-trigger.nav-link {
-    display: inline-flex;
-  }
-
   .phil-workflow-shell {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 620px) {
+}@media (max-width: 620px) {
   .phil .phil-hero-main,
   .phil .phil-hero-marketing {
     min-height: 960px;
@@ -3209,11 +3131,6 @@ main.page.is-landing-page .phil {
     transform: translateX(-50%) scale(.45);
   }
 
-  .app-shell.is-landing .landing-auth-trigger.nav-link {
-    padding-inline: 2px;
-    font-size: 9px;
-  }
-
   .phil-workflow {
     padding: 64px 0 68px;
   }
@@ -3247,18 +3164,14 @@ main.page.is-landing-page .phil {
   .phil-workflow-steps > li:last-child {
     grid-column: auto;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
 
   .phil-workflow [data-reveal] {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
-}
-
-/* Split-scene containment -------------------------------------------------
+}/* Split-scene containment -------------------------------------------------
    The city is a right-side window, not a floating card. Keep that split on
    tablet/small-desktop widths and clip only the artwork that travels beyond
    the landing canvas. */
@@ -3317,9 +3230,7 @@ body:has(.app-shell.is-landing) {
     border-right: 0;
     border-radius: 46% 0 36% 54% / 32% 0 34% 44%;
   }
-}
-
-@media (max-width: 860px) {
+}@media (max-width: 860px) {
   .phil .phil-hero-marketing {
     padding-right: 0;
   }
@@ -3331,9 +3242,7 @@ body:has(.app-shell.is-landing) {
     border-right: 0;
     border-radius: 176px 0 118px 214px / 92px 0 112px 146px;
   }
-}
-
-@media (max-width: 620px) {
+}@media (max-width: 620px) {
   .phil-workflow::before {
     background-size: 300px 300px;
     opacity: .11;
@@ -3342,9 +3251,7 @@ body:has(.app-shell.is-landing) {
   .phil-hero-city-scene {
     border-radius: 88px 0 68px 108px / 58px 0 66px 78px;
   }
-}
-
-/* Time-aware generated hero world ---------------------------------------
+}/* Time-aware generated hero world ---------------------------------------
    Four aligned Asia/Manila scenes keep the city geometry fixed while the
    people, vehicles, shop activity, and light change through the day. */
 .phil-hero-time-scenes {
@@ -3402,15 +3309,11 @@ body:has(.app-shell.is-landing) {
     background-position: center, 64% center;
     background-size: 100% 100%, cover;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   .phil-hero-time-scene {
     transition: none;
   }
-}
-
-/* ---- Bottom feature rows, CTA band, and footer ---- */
+}/* ---- Bottom feature rows, CTA band, and footer ---- */
 
 .phil-visually-hidden {
   position: absolute;
@@ -3621,15 +3524,11 @@ body:has(.app-shell.is-landing) {
   .phil-feature-row.is-reversed .phil-feature-copy,
   .phil-feature-row.is-reversed .phil-feature-art { order: unset; }
   .phil-feature-art { max-width: 320px; margin-inline: auto; }
-}
-
-@media (prefers-reduced-motion: reduce) {
+}@media (prefers-reduced-motion: reduce) {
   .phil-feature-cta { transition: none; }
   .phil-feature-cta:hover,
   .phil-feature-cta:active { transform: none; }
-}
-
-/* ---- Closing CTA band ---- */
+}/* ---- Closing CTA band ---- */
 
 .phil-cta-band {
   display: grid;

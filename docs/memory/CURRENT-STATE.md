@@ -297,11 +297,23 @@ Environment as left on 2026-07-30:
 - `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` were
   re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
   services) and the barber has active employment there. The 2026-07-30 scenario
-  run then moved that shop forward: weekly hours 08:00-21:00 Mon-Sat are set,
-  the shop is **published**, and `customer@phila.test` holds a real booking on
-  `2026-08-05` at 10:00 Manila, kept deliberately so the P4025 conflict guard
-  stays reproducible. `2026-08-05` also carries an owner exception of
-  09:00-20:00 and `2026-08-10` a pending `different_hours` request;
+  run left weekly hours 08:00-21:00 Mon-Sat set, a `customer@phila.test` booking
+  on `2026-08-05` at 10:00 Manila, an owner exception of 09:00-20:00 on that
+  date, and a pending `different_hours` request on `2026-08-10`. **The shop is
+  back to `draft`.** It was published for the scenario-4 conflict test and left
+  published on purpose, which then broke the matrix: see the fixture-pollution
+  note below. Republishing takes one owner command whenever the P4025 guard needs
+  exercising again;
+- **Do not leave a manually published shop behind.**
+  `local-supabase.integration.test.ts:333` asserts the customer sees *exactly*
+  the suite's two fixture shops
+  (`toEqual([primaryShopId, secondShopId].sort())`), so any third published shop
+  fails it with `expected [ …(3) ] to deeply equal [ …(2) ]`. The suite archives
+  its own published fixtures for repeatability but cannot know about a shop
+  published by hand. Separately worth noting as brittleness rather than a bug:
+  that assertion is global rather than scoped to its own fixtures, so it is
+  sensitive to any local state. It was deliberately **not** loosened to make the
+  number green;
 - the test-account password is now **pinned** via `SEED_PASSWORD` in the
   gitignored `apps/api/.env`, so `npm run seed:accounts -w @barbershop/api` no
   longer regenerates it. Before this, every seed run silently invalidated the
