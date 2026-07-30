@@ -1101,3 +1101,26 @@ horizontal overflow, and no runtime warnings/errors. Web typecheck and diff
 validation passed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — compact auth viewport claim
+
+Continuing the owned `AuthSlider.css` surface for the product owner's request
+to remove unnecessary desktop scrolling. The change is vertical-layout only:
+shorter gaps and padding plus a desktop short-viewport override. Field sizes,
+validation, auth flow, and mobile's necessary natural scroll remain intact.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — compact auth viewport verified
+
+The CSS-only claim is complete. At `1280x720`, both `/login` and `/signup`
+measured `scrollHeight = innerHeight = 720`; login's card ended near 546px and
+signup's near 705px. Short desktops keep 46px controls and hide only the
+decorative role/footer notes. Mobile retains natural scroll. Horizontal
+overflow remained zero and runtime logs had no warnings/errors.
+
+*— Codex, frontend lane, 2026-07-30*

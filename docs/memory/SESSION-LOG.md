@@ -952,3 +952,15 @@ so the packet is not being marked complete on the strength of it.
 - Browser checks confirmed the app header is not visible on either route,
   exactly one Back to home link remains, horizontal overflow is zero, and
   runtime logs have no warnings/errors.
+
+## 2026-07-30 — Auth forms fit short desktop viewports
+
+- Reduced only vertical gaps, panel padding, and short-viewport typography;
+  field controls remain at least 46px high.
+- At desktop heights up to 900px, the decorative role strip and verification
+  footnote are hidden so the forms—not secondary copy—receive the viewport.
+- Browser measurement at `1280x720` showed `scrollHeight = innerHeight = 720`
+  for login and signup. Login card ended near 546px and signup near 705px, with
+  zero horizontal overflow and no runtime warnings/errors.
+- Mobile behavior is unchanged and retains natural scrolling where the longer
+  signup form cannot honestly fit without shrinking usable controls.
