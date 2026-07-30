@@ -145,12 +145,12 @@ export function AuthSlider({
         {mode === 'signin' ? (
           <form className="auth-form" onSubmit={submitSignIn}>
             <label className="auth-field">
-              <span>Email or phone</span>
+              <span>Email</span>
               <input
-                type="text"
+                type="email"
                 value={siEmail}
                 onChange={(event) => setSiEmail(event.target.value)}
-                placeholder="you@email.com or +63..."
+                placeholder="you@email.com"
                 autoComplete="username"
                 maxLength={MAX_EMAIL_LENGTH}
                 required
@@ -280,9 +280,6 @@ export function AuthSlider({
               <Link className="auth-mode-action" to="/login" state={{ from: safeFrom }}>
                 Log in
               </Link>
-            </p>
-            <p className="auth-form-note">
-              You’ll choose how you use Philabantay on the next step.
             </p>
           </form>
         )}

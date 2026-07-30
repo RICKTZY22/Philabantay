@@ -1341,3 +1341,38 @@ are preserved, with no new dependency. Web typecheck, 40 web tests, root lint,
 production build, and diff validation passed.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — final auth release-gate claim
+
+Before fast-forwarding the completed redesign to `main`, I am reclaiming only
+`apps/web/src/components/AuthSlider.tsx/.css` for two bounded contract
+corrections found in the final audit. The login field currently says “Email or
+phone” even though `SignInInput`, the shared schema, and Express accept email
+only; it will become a native email field with accurate copy. I will also remove
+the remaining signup role-selection note so the approved minimal auth card has
+no residual role explainer. No session, redirect, curtain, validation, API,
+shared-contract, migration, or P2-07 work is changing.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — final auth release gate green
+
+The audit found and corrected one contract mismatch: login advertised phone
+sign-in even though the shared/Express contract is email-only. It now uses an
+email control and accurate copy. The remaining signup role-selection note is
+also gone. No backend, shared-contract, migration, or P2-07 file changed.
+
+All-workspace typecheck, lint, production build, and the 124-test fast gate
+passed. The local API/direct-RLS matrix passed **69/69 twice consecutively**
+without another reset. In-browser, invalid login recovered after the curtain,
+seeded login returned to the original protected URL, sign-out re-locked that
+route, signup focused the first of four invalid fields, both eye controls
+toggled password/text/password, both cards centered exactly with zero
+1280×720 overflow, the auth shell reported `color-scheme: light`, and the
+console had zero warnings/errors. P2-07 remains next.
+
+*— Codex, frontend lane, 2026-07-30*

@@ -170,7 +170,6 @@
   letter-spacing: -.035em;
 }
 
-.auth-form-note,
 .auth-password-hint {
   margin: 0;
   color: var(--auth-copy);
@@ -382,10 +381,6 @@
   outline-offset: 2px;
 }
 
-.auth-form-note {
-  text-align: center;
-}
-
 @keyframes authCardIn {
   from {
     opacity: 0;
@@ -502,10 +497,6 @@
 
   .auth-submit {
     min-height: 46px;
-  }
-
-  .auth-form-note {
-    display: none;
   }
 }
 

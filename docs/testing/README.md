@@ -50,6 +50,11 @@ So the full picture with the integration layer enabled is **shared 56 + api 69 +
 web 40 = 165 passing**, zero failing. Typecheck, lint, API/web production
 builds, and `supabase db lint` (no schema errors) passed in the same session.
 
+The final pre-P2-07 auth release gate reran the same 69-test API/direct-RLS
+matrix twice consecutively without a reset between runs. Both runs passed
+69/69. The default 124-test gate, all-workspace typecheck, lint, production
+build, `git diff --check`, and live-browser auth verification also passed.
+
 Web moved from 32 to 40 with the 2026-07-29 landing work: the
 `philippineHeroTime` schedule gained its own suite. The older 116 / 157 totals
 still appear in dated evidence blocks below and in the session log, which are

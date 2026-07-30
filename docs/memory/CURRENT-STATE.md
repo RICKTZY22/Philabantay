@@ -70,6 +70,16 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   disabled its canvas and retained the static fallback.
 - Full local gate: all workspaces typechecked, lint and production build
   passed, and 124 fast tests passed with 41 expected integration skips.
+- Final auth release verification on 2026-07-30 reran the real local
+  Supabase/API matrix **69/69 twice consecutively** without a reset between
+  runs. Login failure recovery, protected-route return, successful seeded
+  login, sign-out/session clearing, signup first-error focus, both password eye
+  controls, exact desktop centering, zero overflow, forced light color scheme,
+  and a clean browser console were observed against the live local API.
+- The login identifier now accurately uses an email input because the shared
+  and Express sign-in contracts accept email, not phone. The final residual
+  signup role-selection note is removed; auth routes, session behavior, and
+  backend contracts are otherwise unchanged.
 
 This visual slice does not change packet counts. P2-07 remains next.
 

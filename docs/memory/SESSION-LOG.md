@@ -1073,3 +1073,21 @@ so the packet is not being marked complete on the strength of it.
   label, focus treatment, and existing password visibility behavior.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed.
+
+## 2026-07-30 — Final auth release verification before P2-07
+
+- Audited the dedicated login/signup surface, route guards, safe internal
+  redirects, auth context, API adapter, curtain transaction, Express auth
+  routes, and authorization middleware.
+- Corrected the login field to native email semantics because the shared and
+  Express contracts do not support phone sign-in. Removed the remaining signup
+  role-selection note from the approved minimal card.
+- All-workspace typecheck, lint, production build, and the 124-test fast gate
+  passed. The live local Supabase/API matrix passed 69/69 twice consecutively
+  without another reset.
+- Live browser verification covered invalid-login recovery, successful seeded
+  login back to the original protected URL, sign-out and protected-route
+  re-lock, signup first-error focus, eye-icon toggles, exact 1280×720 centering,
+  zero overflow, forced light color scheme, and a console with zero warnings or
+  errors.
+- No packet count changed. P2-07 remains the exact next implementation packet.
