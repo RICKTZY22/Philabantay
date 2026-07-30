@@ -2951,13 +2951,20 @@ main.page.is-landing-page .phil {
   gap: 34px;
 }
 
+/* Chapters used to be separate white cards, which is exactly what made the
+   stack look like scattered panels. They are transparent now: the one sheet
+   under them supplies the paper, and a dashed rule marks where each ends. */
 .phil-workflow-chapter {
   scroll-margin-top: 100px;
-  padding: clamp(28px, 4vw, 48px);
-  border: 1px solid #dce2e2;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, .93);
-  box-shadow: 0 22px 55px rgba(30, 44, 54, .09), 5px 6px 0 rgba(30, 44, 54, .08);
+  padding: clamp(28px, 4vw, 48px) clamp(28px, 4vw, 48px);
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.phil-workflow-chapter + .phil-workflow-chapter {
+  border-top: 1px dashed rgba(43, 42, 40, .16);
 }
 
 .phil-workflow-chapter > header {
@@ -3417,11 +3424,77 @@ body:has(.app-shell.is-landing) {
   border: 0;
 }
 
+/* ---- Notebook paper for the lower half -------------------------------------
+   Everything below the hero reads as pages torn from one notebook: white ruled
+   paper, a red margin rule, and a lifted edge over the doodle wallpaper that
+   `.phil-workflow::before` multiplies across this whole region.
+
+   This is also what earns `character-follow.riv` its place. That artboard has a
+   near-white card baked into it, which looked pasted on when the rows sat
+   directly on cream. On a white page it reads as a framed illustration instead,
+   so the asset needs no editing and no blend-mode trickery.
+
+   Tokens live on `.phil-workflow` because it is the common ancestor of both the
+   How-it-works chapters and the feature rows. */
+.phil-workflow {
+  --nb-paper: #fff;
+  --nb-rule: rgba(43, 42, 40, .085);
+  --nb-margin-rule: rgba(217, 79, 79, .2);
+  --nb-margin: clamp(20px, 3.4vw, 44px);
+  --nb-line: 32px;
+  --nb-edge: rgba(43, 42, 40, .16);
+}
+
+/* The single sheet. The vertical margin rule sits in its own layer so the
+   horizontal rules can repeat independently of it, and both are painted once
+   here rather than per card, which is what makes the whole stack continuous.
+   `z-index: 2` lifts the page above the wallpaper pseudo-element; the page is
+   inset from the section edges so that wallpaper still shows in the gutters. */
+.phil-notebook {
+  position: relative;
+  z-index: 2;
+  /* The `calc` term guarantees a gutter at every width, so the wallpaper always
+     frames the page and the sheet never butts against the viewport edge on a
+     narrow phone. */
+  max-width: min(1180px, calc(100% - clamp(16px, 4vw, 32px)));
+  margin-inline: auto;
+  /* `clip`, not `hidden`. Both keep the rules inside the rounded corners, but
+     `hidden` would make this a scroll container and silently kill
+     `position: sticky` on anything placed inside the page later. */
+  overflow: clip;
+  background-color: var(--nb-paper);
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 0 var(--nb-margin),
+      var(--nb-margin-rule) var(--nb-margin),
+      var(--nb-margin-rule) calc(var(--nb-margin) + 1.5px),
+      transparent calc(var(--nb-margin) + 1.5px)
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 calc(var(--nb-line) - 1px),
+      var(--nb-rule) calc(var(--nb-line) - 1px),
+      var(--nb-rule) var(--nb-line)
+    );
+  border: 1px solid var(--nb-edge);
+  border-radius: 22px;
+  box-shadow:
+    0 22px 55px rgba(43, 42, 40, .12),
+    5px 6px 0 rgba(43, 42, 40, .05);
+}
+
+/* Sections on the page are transparent so the one sheet reads through them.
+   A dashed rule separates them the way a tear line would. */
+.phil-notebook > * + * {
+  border-top: 1px dashed rgba(43, 42, 40, .16);
+}
+
 .phil-features {
   display: grid;
   gap: 0;
-  padding: clamp(32px, 6vw, 76px) clamp(18px, 5vw, 64px);
-  background: var(--paper, #fdfbf6);
+  padding: 0;
+  background: none;
 }
 
 .phil-feature-row {
@@ -3429,13 +3502,14 @@ body:has(.app-shell.is-landing) {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
   align-items: center;
   gap: clamp(20px, 4vw, 56px);
-  max-width: 1080px;
-  margin-inline: auto;
-  padding: clamp(26px, 4vw, 48px) 0;
-  border-bottom: 2px dashed var(--line, #ded6c6);
+  /* Left padding clears the margin rule so copy never sits on top of it. */
+  padding: clamp(26px, 4vw, 48px) clamp(22px, 3.5vw, 44px)
+           clamp(26px, 4vw, 48px) calc(var(--nb-margin) + clamp(18px, 2.4vw, 34px));
 }
 
-.phil-features .phil-feature-row:last-of-type { border-bottom: 0; }
+.phil-features .phil-feature-row + .phil-feature-row {
+  border-top: 1px dashed rgba(43, 42, 40, .16);
+}
 
 /* Even rows put the art first on wide screens; source order stays copy-first so
    the reading and tab order never depend on the visual flip. */

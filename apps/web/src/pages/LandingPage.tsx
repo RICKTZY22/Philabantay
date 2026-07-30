@@ -418,6 +418,11 @@ export function LandingPage() {
       <section id="how" className="phil-workflow" aria-labelledby="phil-workflow-title">
         <HowStreetBackdrop />
 
+        {/* One continuous notebook sheet. The How-it-works heading, its three
+            chapters, and the feature rows all sit on this single page, so they
+            read as one document instead of separate floating cards. The doodle
+            wallpaper stays visible in the gutters either side of it. */}
+        <div className="phil-notebook">
         <header className="phil-workflow-heading">
           <span>HOW PHILABANTAY WORKS</span>
           <h2 id="phil-workflow-title">One clear flow for every side of the chair.</h2>
@@ -539,6 +544,7 @@ export function LandingPage() {
             </article>
           ))}
         </section>
+        </div>
 
         {/* Centered closing band: one heading, one line of context, one action,
             then a wide scene. Swap in a .riv via `src` when the artwork lands. */}
