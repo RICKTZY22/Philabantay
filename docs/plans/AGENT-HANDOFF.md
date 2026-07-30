@@ -16,6 +16,7 @@ Every agent reads, in order:
 7. current shared types/services and relevant migrations/routes
 8. `docs/plans/OPEN-QUESTIONS.md`
 9. `docs/plans/MODEL-ROUTING-GUIDE.md`
+10. `docs/plans/UI-REDESIGN-CODEX-BRIEF.md` while the UI redesign is in flight
 
 The agent reports which requirement IDs it owns before editing.
 

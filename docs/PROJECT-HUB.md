@@ -32,6 +32,7 @@ Git-tracked Markdown that Codex, Claude, Antigravity, and humans can all read.
 | V1 boundaries and non-negotiable behavior | [V1 product contract](plans/00-V1-PRODUCT-CONTRACT.md) |
 | Active implementation sequence | [Implementation work breakdown](plans/06-IMPLEMENTATION-WORKBREAKDOWN.md) |
 | Cost-aware model and effort assignment | [Model routing guide](plans/MODEL-ROUTING-GUIDE.md) |
+| Active UI-redesign lane brief | [UI redesign Codex brief](plans/UI-REDESIGN-CODEX-BRIEF.md) |
 | Phase 1 | [Foundation and identity](plans/01-PHASE-1-FOUNDATION-IDENTITY.md) |
 | Phase 2 | [Shops, workforce, availability](plans/02-PHASE-2-SHOP-WORKFORCE-AVAILABILITY.md) |
 | Phase 3 | [Booking and live operations](plans/03-PHASE-3-BOOKING-LIVE-OPERATIONS.md) |
