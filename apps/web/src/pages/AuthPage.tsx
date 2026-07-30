@@ -23,32 +23,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         Back to home
       </Link>
 
-      <header className="auth-page-intro">
-        <p className="auth-page-eyebrow">
-          {mode === 'signin' ? 'WELCOME BACK' : 'ONE ACCOUNT, THREE WAYS TO USE IT'}
-        </p>
-        <h1 id="auth-page-title">
-          {mode === 'signin' ? 'Good to see you again' : 'Let’s get you set up'}
-        </h1>
-        <p className="auth-page-summary">
-          {mode === 'signin'
-            ? 'Log in to manage your next appointment, chair, or shop.'
-            : 'Create your account now. You’ll choose customer, barber, or shop owner next.'}
-        </p>
-      </header>
-
       <AuthSlider mode={mode} from={from} />
-
-      <div className="auth-role-strip" aria-label="One account works for">
-        <span className="auth-role-label">One account for</span>
-        <span><i className="is-customer" aria-hidden="true" /> Customers</span>
-        <span><i className="is-barber" aria-hidden="true" /> Barbers</span>
-        <span><i className="is-owner" aria-hidden="true" /> Shop owners</span>
-      </div>
-
-      <p className="auth-page-footnote">
-        Professional tools stay locked until the required verification is complete.
-      </p>
     </div>
   )
 }

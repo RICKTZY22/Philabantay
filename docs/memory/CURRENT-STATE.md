@@ -43,20 +43,20 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   transaction. Route content enters with a short transform/opacity animation,
   while reduced motion bypasses the curtain and disables the route animation.
 - Guest auth now has one dedicated surface: `/login` and `/signup` use a
-  centered light form card, warm cream space, copper actions, and three
-  restrained pastel role accents. These routes intentionally have no global
-  header band; only Back to home sits above the introduction. A prominent
-  barber-pole/Gochi Hand Philabantay mark now leads the card, without a
-  duplicate Log in heading. Large soft orange gradient patches are distributed
-  behind both modes. The approved reference format uses a compact 460px desktop
-  login card and an inline “New here? Create account” row below the primary
-  action; the redundant role/messages/bookings sentence is removed. On tall
-  desktop viewports that card extends to roughly 600px and vertically centers
-  its contents, while a responsive 400–500px minimum protects short desktop
-  fit. Signup mirrors the inline account switch and keeps two desktop contact
-  columns to reduce vertical height. The former dark split panel and duplicate
-  landing dialog are absent. Mobile remains one column and keeps necessary
-  natural scrolling. The product owner retained the next visual smoke.
+  centered light form card, warm cream space, copper actions, and soft orange
+  gradient patches. These routes intentionally have no global header or intro
+  copy; only Back to home sits above the card. A prominent barber-pole/Gochi
+  Hand Philabantay mark leads the card without a duplicate Log in heading. The
+  approved reference format uses a compact 460px desktop login card and an
+  inline “New here? Create account” row below the primary action. The
+  role/messages/bookings sentence, role strip, and professional-tools footnote
+  are removed with their unused CSS. On tall desktop viewports the card extends
+  to roughly 600px and vertically centers its contents, while a responsive
+  400–500px minimum protects short desktop fit. Signup mirrors the inline
+  account switch and keeps two desktop contact columns to reduce vertical
+  height. The former dark split panel and duplicate landing dialog are absent.
+  Mobile remains one column and keeps necessary natural scrolling. The product
+  owner retained the next visual smoke.
 - The CSS-only presentation layer preserves existing routes, contracts, async
   states, the hamburger navigation, owner schedule authority, and the barber's
   read-only shift workflow.

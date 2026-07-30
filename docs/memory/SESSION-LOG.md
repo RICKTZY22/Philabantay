@@ -1034,3 +1034,16 @@ so the packet is not being marked complete on the strength of it.
   tighter spacing; mobile and signup layouts are unchanged.
 - Web typecheck, 40 web tests, root lint, production build, and diff validation
   passed; no browser smoke ran.
+
+## 2026-07-30 — Auth-page text remnants removed
+
+- Removed the complete login/signup intro copy, including both eyebrow labels,
+  the large welcome/setup headings, and their supporting summaries.
+- Removed the “One account for” customer/barber/shop-owner strip and the
+  professional-tools verification footnote from both modes.
+- Deleted all CSS selectors and responsive overrides that existed only for
+  those blocks. Replaced the removed `auth-page-title` ARIA reference with an
+  explicit Log in/Create account section label.
+- Source search found no requested text, selector, or ARIA remnants. Web
+  typecheck, 40 web tests, root lint, production build, and diff validation
+  passed; no browser smoke ran.

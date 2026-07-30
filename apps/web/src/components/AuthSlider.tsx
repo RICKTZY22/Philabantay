@@ -127,7 +127,10 @@ export function AuthSlider({
   }
 
   return (
-    <section className={`auth-card is-${mode}`} aria-labelledby="auth-page-title">
+    <section
+      className={`auth-card is-${mode}`}
+      aria-label={mode === 'signin' ? 'Log in' : 'Create account'}
+    >
       <span className="auth-blob auth-blob-large" aria-hidden="true" />
       <span className="auth-blob auth-blob-small" aria-hidden="true" />
       <div className="auth-form-panel">

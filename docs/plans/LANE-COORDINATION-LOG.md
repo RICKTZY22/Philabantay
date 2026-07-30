@@ -1265,3 +1265,28 @@ web tests, root lint, production build, and diff validation passed. No browser
 smoke ran.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — remove auth-page text remnants claim
+
+Claiming `AuthPage.tsx`, `AuthSlider.tsx`, and the owned `AuthSlider.css`
+surface. Per the three product-owner screenshots, I will remove the complete
+login/signup intro block, the “One account for” role strip, the professional
+tools footnote, and all now-unused presentation rules. The card will receive an
+explicit accessible label so removing `auth-page-title` leaves no broken ARIA
+reference. Forms, validation, routing, and auth behavior stay unchanged.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth-page text remnants gate green
+
+All three requested text groups and their CSS/responsive selectors are absent
+from both modes. The card now exposes an explicit Log in/Create account
+accessible label instead of the removed title reference. A source search found
+no text, selector, or ARIA remnants. Web typecheck, 40 web tests, root lint,
+production build, and diff validation passed. No browser smoke ran.
+
+*— Codex, frontend lane, 2026-07-30*
