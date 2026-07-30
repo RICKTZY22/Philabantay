@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
-import { profileRoleLabel } from '../lib/profile'
+import { profileAvatarRole, profileRoleLabel } from '../lib/profile'
 import { DoodleAvatar } from './DoodleAvatar'
 import { useCurtain } from './CurtainTransition'
 import { DoodleIcon } from '../theme/DoodleDefs'
@@ -84,8 +84,6 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
   if (!profile) return null
 
   const pending = profile.verification_status === 'pending'
-  const avatarRole = profile.requested_role
-    ?? (profile.role === 'barber' || profile.role === 'shop_owner' ? profile.role : 'customer')
   const ownerWorkspace = isShopOwner
   const menuContext = getMenuContext(
     location.pathname,
@@ -159,7 +157,7 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
             <DoodleIcon name="x" size={25} />
           </button>
           <div className="app-menu-user">
-            <DoodleAvatar avatarId={profile.avatar_url} role={avatarRole} size={62} />
+            <DoodleAvatar avatarId={profile.avatar_url} role={profileAvatarRole(profile)} size={62} />
             <div>
               <strong>{profile.full_name}</strong>
               <span>{profileRoleLabel(profile)}</span>

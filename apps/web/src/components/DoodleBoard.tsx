@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import type { OnboardingRole } from '@barbershop/shared'
+import { DoodleAvatar } from './DoodleAvatar'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import './DoodleBoard.css'
 
@@ -12,8 +14,10 @@ interface DoodleBoardSearch {
 }
 
 interface DoodleBoardProps {
-  /** Shown in the top-bar profile chip (with derived initials). */
+  /** Shown beside the user's saved profile picture in the top-bar chip. */
   userName: string
+  userAvatarId?: string | null
+  userAvatarRole?: OnboardingRole
   /** Center label beside the live dot, e.g. the shop name. */
   centerLabel: string
   liveTone?: 'green' | 'yellow' | 'red'
@@ -32,7 +36,17 @@ interface DoodleBoardProps {
  * customer, barber, and owner homes share one visual language. The rail is
  * purely decorative now — real navigation lives in the global hamburger menu.
  */
-export function DoodleBoard({ userName, centerLabel, liveTone = 'green', search, showUserChip = true, variant = 'default', children }: DoodleBoardProps) {
+export function DoodleBoard({
+  userName,
+  userAvatarId,
+  userAvatarRole = 'customer',
+  centerLabel,
+  liveTone = 'green',
+  search,
+  showUserChip = true,
+  variant = 'default',
+  children,
+}: DoodleBoardProps) {
   return (
     <div className={`doodle-board-wrap is-${variant}`}>
       <div className="doodle-board">
@@ -77,7 +91,7 @@ export function DoodleBoard({ userName, centerLabel, liveTone = 'green', search,
             </div>
             {showUserChip ? (
               <div className="doodle-chip">
-                <span>{initials(userName)}</span>
+                <DoodleAvatar avatarId={userAvatarId} role={userAvatarRole} size={36} />
                 <strong>{userName}</strong>
               </div>
             ) : (
@@ -90,8 +104,4 @@ export function DoodleBoard({ userName, centerLabel, liveTone = 'green', search,
       </div>
     </div>
   )
-}
-
-function initials(name: string) {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'PB'
 }

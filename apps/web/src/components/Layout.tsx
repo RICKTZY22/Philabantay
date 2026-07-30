@@ -2,11 +2,13 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { NavLink, Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { isProfessionalLocked } from '../lib/access'
+import { profileAvatarRole } from '../lib/profile'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
 import { AuthSlider } from './AuthSlider'
 import { CurtainProvider } from './CurtainTransition'
+import { DoodleAvatar } from './DoodleAvatar'
 import { Loading } from './Loading'
 import { ModalPortal } from './ModalPortal'
 import { RouteErrorBoundary } from './RouteErrorBoundary'
@@ -133,8 +135,8 @@ export function Layout() {
   }
 
   return (
-    <CurtainProvider>
-    <div className={`app-shell${onLanding ? ' is-landing' : ''}`}>
+    <CurtainProvider studio={Boolean(profile)}>
+    <div className={`app-shell${onLanding ? ' is-landing' : profile ? ' is-workspace' : ' is-public'}`}>
       <div className="bg-pattern" aria-hidden="true" />
       <DoodleDefs />
       <header
@@ -159,7 +161,21 @@ export function Layout() {
           <div className="nav-links">
             {/* Signed in: isang malaking hamburger lang ang buong navigation. */}
             {profile && !verificationLocked ? (
-              <AppMenu onOpenChange={setMenuOpen} />
+              <>
+                <Link
+                  to="/settings/avatar"
+                  className="app-profile-avatar"
+                  aria-label={`Edit ${profile.full_name}'s profile avatar`}
+                  title="Edit profile avatar"
+                >
+                  <DoodleAvatar
+                    avatarId={profile.avatar_url}
+                    role={profileAvatarRole(profile)}
+                    size={42}
+                  />
+                </Link>
+                <AppMenu onOpenChange={setMenuOpen} />
+              </>
             ) : (
               !profile && (onLanding ? (
                 <>

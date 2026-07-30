@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './theme/doodle.css'
 import { App } from './App'
+import './theme/studio.css'
 import { BackendProvider } from './services/backend'
 import { AuthProvider } from './features/auth/AuthContext'
 

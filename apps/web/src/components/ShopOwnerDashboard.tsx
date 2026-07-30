@@ -22,6 +22,7 @@ import './ShopOwnerDashboard.css'
 
 interface ShopOwnerDashboardProps {
   ownerName: string
+  ownerAvatarId: string | null
   section: OwnerDashboardSection
 }
 
@@ -98,7 +99,7 @@ function shortMoney(cents: number): string {
   return `₱${Math.round(pesos)}`
 }
 
-export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardProps) {
+export function ShopOwnerDashboard({ ownerName, ownerAvatarId, section }: ShopOwnerDashboardProps) {
   const backend = useBackend()
   const nowEpochMs = useCurrentTime()
   const [query, setQuery] = useState('')
@@ -189,6 +190,8 @@ export function ShopOwnerDashboard({ ownerName, section }: ShopOwnerDashboardPro
   return (
     <DoodleBoard
       userName={ownerName}
+      userAvatarId={ownerAvatarId}
+      userAvatarRole="shop_owner"
       centerLabel={shopName}
       variant="owner"
       search={section === 'reservations' ? {

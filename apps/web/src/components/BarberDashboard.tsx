@@ -29,6 +29,7 @@ const ShopMap = lazy(() => import('./ShopMap'))
 interface BarberDashboardProps {
   barberId: string
   barberName: string
+  barberAvatarId: string | null
   pending: boolean
 }
 
@@ -58,7 +59,7 @@ const emptyData: BarberHomeData = {
   shiftRequests: [],
 }
 
-export function BarberDashboard({ barberId, barberName, pending }: BarberDashboardProps) {
+export function BarberDashboard({ barberId, barberName, barberAvatarId, pending }: BarberDashboardProps) {
   const backend = useBackend()
   const [data, setData] = useState<BarberHomeData | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -101,6 +102,7 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
     return (
       <BarberJobBoard
         barberName={barberName}
+        barberAvatarId={barberAvatarId}
         pending={pending}
         hiringShops={data.hiringShops}
         requests={data.requests}
@@ -113,6 +115,7 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
   return (
     <EmployedBarberHome
       barberName={barberName}
+      barberAvatarId={barberAvatarId}
       shop={data.shop}
       appointments={data.appointments}
       conversations={data.conversations}
@@ -128,6 +131,7 @@ export function BarberDashboard({ barberId, barberName, pending }: BarberDashboa
 
 function BarberJobBoard({
   barberName,
+  barberAvatarId,
   pending,
   hiringShops,
   requests,
@@ -135,6 +139,7 @@ function BarberJobBoard({
   onRefresh,
 }: {
   barberName: string
+  barberAvatarId: string | null
   pending: boolean
   hiringShops: HiringShop[]
   requests: EmploymentRequest[]
@@ -232,6 +237,8 @@ function BarberJobBoard({
   return (
     <DoodleBoard
       userName={barberName}
+      userAvatarId={barberAvatarId}
+      userAvatarRole="barber"
       centerLabel="Barber hiring map"
       liveTone={location ? 'green' : 'yellow'}
     >
@@ -381,8 +388,9 @@ function BarberJobBoard({
   )
 }
 
-function EmployedBarberHome({ barberName, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests, loadError }: {
+function EmployedBarberHome({ barberName, barberAvatarId, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests, loadError }: {
   barberName: string
+  barberAvatarId: string | null
   shop: ShopWithStatus
   appointments: AppointmentDetailed[]
   conversations: ConversationDetailed[]
@@ -405,6 +413,8 @@ function EmployedBarberHome({ barberName, shop, appointments, conversations, rul
   return (
     <DoodleBoard
       userName={barberName}
+      userAvatarId={barberAvatarId}
+      userAvatarRole="barber"
       centerLabel={shop.name}
       liveTone={shop.status === 'open' ? 'green' : shop.status === 'busy' ? 'yellow' : 'red'}
     >

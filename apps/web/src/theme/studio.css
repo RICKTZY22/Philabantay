@@ -1,0 +1,1993 @@
+/*
+ * Premium Studio — signed-in application skin.
+ *
+ * The public landing intentionally keeps the original notebook/city art. This
+ * layer only restyles application workspaces and leaves every route, control,
+ * contract, and async state in place.
+ */
+
+:root {
+  --studio-page: #f2f1ee;
+  --studio-surface: #ffffff;
+  --studio-surface-soft: #f8f7f5;
+  --studio-charcoal: #202428;
+  --studio-charcoal-soft: #2a3035;
+  --studio-ink: #24282c;
+  --studio-muted: #66717b;
+  --studio-faint: #87909a;
+  --studio-line: #d8d9d6;
+  --studio-copper: #a7653d;
+  --studio-copper-deep: #824729;
+  --studio-copper-soft: #f1e6dc;
+  --studio-blue-soft: #e6edf3;
+  --studio-green-soft: #e7efe7;
+  --studio-pink-soft: #f2e6e5;
+  --studio-purple-soft: #ece8f0;
+  --studio-danger: #b94f53;
+  --studio-shadow: 0 14px 40px rgba(29, 33, 36, .1);
+  --studio-shadow-sm: 0 4px 14px rgba(29, 33, 36, .07);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Signed-in shell and shared primitives                                      */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace {
+  --paper: var(--studio-page);
+  --paper-soft: var(--studio-surface);
+  --ink: var(--studio-ink);
+  --muted: var(--studio-muted);
+  --faint: var(--studio-faint);
+  --line: var(--studio-line);
+  --yellow: var(--studio-copper-soft);
+  --green: var(--studio-green-soft);
+  --pink: var(--studio-pink-soft);
+  --blue: var(--studio-blue-soft);
+  --purple: var(--studio-purple-soft);
+  --orange: var(--studio-copper-soft);
+  --danger: var(--studio-danger);
+  --shadow: rgba(29, 33, 36, .1);
+  color: var(--studio-ink);
+  background: var(--studio-page);
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-width: 0;
+}
+
+html:has(.app-shell.is-workspace),
+body:has(.app-shell.is-workspace) {
+  min-width: 0;
+}
+
+.app-shell.is-workspace .bg-pattern {
+  display: none;
+}
+
+.curtain.is-studio .curtain-panel {
+  background: var(--studio-charcoal);
+  border-color: var(--studio-copper);
+}
+
+.curtain.is-studio .curtain-left::after,
+.curtain.is-studio .curtain-right::after {
+  display: none;
+}
+
+.curtain.is-studio .curtain-badge {
+  color: #fff;
+  background: var(--studio-charcoal-soft);
+  border-color: var(--studio-copper);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace h1,
+.app-shell.is-workspace h2,
+.app-shell.is-workspace h3,
+.app-shell.is-workspace h4,
+.app-shell.is-workspace strong,
+.app-shell.is-workspace .btn,
+.app-shell.is-workspace label,
+.app-shell.is-workspace input,
+.app-shell.is-workspace textarea,
+.app-shell.is-workspace select,
+.app-shell.is-workspace button {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace h1,
+.app-shell.is-workspace h2,
+.app-shell.is-workspace h3,
+.app-shell.is-workspace h4 {
+  letter-spacing: -.025em;
+  line-height: 1.18;
+}
+
+.app-shell.is-workspace h1 {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+}
+
+.app-shell.is-workspace h2 {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+}
+
+.app-shell.is-workspace main.page {
+  padding-block: 24px 64px;
+}
+
+.app-shell.is-workspace .rough-card,
+.app-shell.is-workspace .cd-card,
+.app-shell.is-workspace .barber-home-card,
+.app-shell.is-workspace .barber-paper-stack,
+.app-shell.is-workspace .barber-paper-stack-sm,
+.app-shell.is-workspace .schedule-paper-card,
+.app-shell.is-workspace .owner-paper-card,
+.app-shell.is-workspace .owner-mosaic-card,
+.app-shell.is-workspace .owner-style-card,
+.app-shell.is-workspace .owner-performance-card,
+.app-shell.is-workspace .owner-section-card,
+.app-shell.is-workspace .shop-setup-form,
+.app-shell.is-workspace .shop-setup-panel,
+.app-shell.is-workspace .owner-hiring-card,
+.app-shell.is-workspace .owner-hiring-section {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+  filter: none;
+}
+
+.app-shell.is-workspace .barber-paper-stack::before,
+.app-shell.is-workspace .barber-paper-stack::after,
+.app-shell.is-workspace .barber-paper-stack-sm::after {
+  display: none;
+}
+
+.app-shell.is-workspace .btn {
+  min-height: 42px;
+  padding: 9px 16px;
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: .95rem;
+  font-weight: 650;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.app-shell.is-workspace .btn:hover:not(:disabled) {
+  background: var(--studio-surface-soft);
+  border-color: #b8b9b5;
+  transform: translateY(-1px);
+}
+
+.app-shell.is-workspace .btn:active:not(:disabled) {
+  transform: none;
+}
+
+.app-shell.is-workspace .btn-primary,
+.app-shell.is-workspace .btn-green,
+.app-shell.is-workspace .btn-blue {
+  color: #fff;
+  background: var(--studio-copper);
+  border-color: var(--studio-copper-deep);
+}
+
+.app-shell.is-workspace .btn-primary:hover:not(:disabled),
+.app-shell.is-workspace .btn-green:hover:not(:disabled),
+.app-shell.is-workspace .btn-blue:hover:not(:disabled) {
+  color: #fff;
+  background: var(--studio-copper-deep);
+  border-color: var(--studio-copper-deep);
+}
+
+.app-shell.is-workspace .btn-pink {
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+.app-shell.is-workspace .btn-danger {
+  color: #fff;
+  background: var(--studio-danger);
+  border-color: #963d41;
+}
+
+.app-shell.is-workspace .btn-sm {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: .85rem;
+}
+
+.app-shell.is-workspace .btn-ghost {
+  min-height: 36px;
+  color: var(--studio-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.app-shell.is-workspace .pill,
+.app-shell.is-workspace .eyebrow {
+  padding: 4px 9px;
+  color: var(--studio-muted);
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  filter: none;
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.app-shell.is-workspace .pill-on,
+.app-shell.is-workspace .pill-green {
+  color: #32613b;
+  background: var(--studio-green-soft);
+  border-color: #bdd2c0;
+}
+
+.app-shell.is-workspace .pill-yellow {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border-color: #ddc4b1;
+}
+
+.app-shell.is-workspace .pill-blue {
+  color: #3f5f77;
+  background: var(--studio-blue-soft);
+  border-color: #c4d2dc;
+}
+
+.app-shell.is-workspace .pill-pink {
+  color: #80545a;
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+.app-shell.is-workspace .field label,
+.app-shell.is-workspace .shop-field > span,
+.app-shell.is-workspace .settings-panel-card label > span {
+  font-weight: 650;
+}
+
+.app-shell.is-workspace .field input,
+.app-shell.is-workspace .field textarea,
+.app-shell.is-workspace .field select,
+.app-shell.is-workspace .shop-field input,
+.app-shell.is-workspace .shop-field textarea,
+.app-shell.is-workspace .shop-field select,
+.app-shell.is-workspace .owner-hiring-fields input,
+.app-shell.is-workspace .owner-hiring-fields textarea,
+.app-shell.is-workspace .owner-staff-card input:not([type="checkbox"]),
+.app-shell.is-workspace .owner-staff-card select,
+.app-shell.is-workspace .owner-staff-card textarea,
+.app-shell.is-workspace .schedule-paper-card input:not([type="checkbox"]),
+.app-shell.is-workspace .schedule-paper-card select,
+.app-shell.is-workspace .schedule-paper-card textarea {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace :where(button, a, input, textarea, select):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--studio-copper) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.app-shell.is-workspace .divider {
+  border-top: 1px solid var(--studio-line);
+}
+
+/* -------------------------------------------------------------------------- */
+/* App header, profile picture, and drawer                                    */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .app-header {
+  width: 100%;
+  max-width: none;
+  padding-inline: max(16px, calc((100% - 1600px) / 2));
+  color: #fff;
+  background: var(--studio-charcoal);
+}
+
+.app-shell.is-workspace .app-header.is-sticky {
+  background: color-mix(in srgb, var(--studio-charcoal) 96%, transparent);
+  box-shadow: 0 8px 24px rgba(22, 25, 28, .16);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell.is-workspace .site-nav {
+  min-height: 64px;
+  padding-block: 8px;
+  flex-wrap: nowrap;
+}
+
+.app-shell.is-workspace .brand {
+  gap: 9px;
+  padding: 0;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.app-shell.is-workspace .brand-pole {
+  width: 9px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 999px;
+  animation-duration: 3.4s;
+}
+
+.app-shell.is-workspace .nav-links {
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.app-profile-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  overflow: hidden;
+  color: var(--studio-ink);
+  background: var(--studio-copper-soft);
+  border: 1px solid rgba(255, 255, 255, .48);
+  border-radius: 50%;
+  text-decoration: none;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.app-profile-avatar:hover {
+  border-color: var(--studio-copper);
+  transform: translateY(-1px);
+}
+
+.app-profile-avatar .doodle-avatar {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.app-burger {
+  width: 44px;
+  height: 44px;
+  padding: 11px 10px;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .34);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-burger:hover {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .6);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-burger span {
+  height: 2px;
+  background: #fff;
+}
+
+.app-burger span:nth-child(1),
+.app-burger span:nth-child(2),
+.app-burger span:nth-child(3) {
+  transform: none;
+}
+
+.app-burger:focus-visible {
+  outline-color: var(--studio-copper);
+}
+
+.app-menu-backdrop {
+  background: rgba(16, 18, 20, .55);
+  backdrop-filter: blur(3px);
+}
+
+.app-menu-drawer {
+  --paper: var(--studio-page);
+  --paper-soft: var(--studio-surface);
+  --ink: var(--studio-ink);
+  --muted: var(--studio-muted);
+  --faint: var(--studio-faint);
+  --line: var(--studio-line);
+  --yellow: var(--studio-copper-soft);
+  --green: var(--studio-green-soft);
+  --pink: var(--studio-pink-soft);
+  --blue: var(--studio-blue-soft);
+  --purple: var(--studio-purple-soft);
+  --danger: var(--studio-danger);
+  --shadow: rgba(29, 33, 36, .1);
+  gap: 8px;
+  padding: 20px 18px max(24px, env(safe-area-inset-bottom));
+  color: #fff;
+  background: var(--studio-charcoal);
+  border-left: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: -18px 0 50px rgba(10, 12, 14, .2);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.app-menu-close {
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-menu-close:hover {
+  background: rgba(255, 255, 255, .08);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-menu-user {
+  padding: 6px 52px 15px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, .13);
+}
+
+.app-menu-user strong {
+  color: #fff;
+  font-family: inherit;
+}
+
+.app-menu-user > div > span {
+  color: rgba(255, 255, 255, .56);
+}
+
+.app-menu-user > .doodle-avatar {
+  color: var(--studio-ink);
+  background: var(--studio-copper-soft);
+  border: 1px solid var(--studio-copper);
+  border-radius: 50%;
+}
+
+.app-menu-context {
+  padding: 13px;
+  color: var(--studio-ink);
+  background: var(--studio-copper-soft);
+  border: 1px solid #dec6b5;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-menu-context .eyebrow {
+  color: var(--studio-copper-deep);
+  background: transparent;
+  border: 0;
+}
+
+.app-menu-context-icon {
+  color: var(--studio-copper-deep);
+  background: transparent;
+  border: 0;
+}
+
+.app-menu-context h2 {
+  font-family: inherit;
+}
+
+.app-menu-context .btn {
+  min-height: 32px;
+  color: #fff;
+  background: var(--studio-copper);
+  border: 1px solid var(--studio-copper-deep);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.app-menu-links {
+  gap: 3px;
+}
+
+.app-menu-link {
+  min-height: 46px;
+  gap: 12px;
+  padding: 10px 12px;
+  color: rgba(255, 255, 255, .68);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: .95rem;
+}
+
+.app-menu-link:hover,
+.app-menu-link:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+  transform: none;
+}
+
+.app-menu-link.active {
+  color: #fff;
+  background: color-mix(in srgb, var(--studio-copper) 17%, transparent);
+  border-color: var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-menu-signout {
+  color: rgba(255, 255, 255, .56);
+  border-top: 1px solid rgba(255, 255, 255, .13);
+  border-left: 0;
+}
+
+.app-menu-signout:hover {
+  color: #fff;
+  background: rgba(185, 79, 83, .16);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared role dashboard shell                                                */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .doodle-board-wrap {
+  margin: 0 0 48px;
+}
+
+.app-shell.is-workspace .doodle-board,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-board {
+  grid-template-columns: 64px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--studio-page);
+  border: 1px solid var(--studio-line);
+  border-radius: 5px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .doodle-rail,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-rail {
+  padding: 16px 8px;
+  color: var(--studio-ink);
+  background: var(--studio-surface-soft);
+  border: 0;
+  border-right: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .doodle-rail-mark,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-rail-mark {
+  color: var(--studio-ink);
+  font-family: inherit;
+  font-size: .8rem;
+  letter-spacing: .06em;
+}
+
+.app-shell.is-workspace .doodle-owner-rail-stack,
+.app-shell.is-workspace .doodle-rail-scissors {
+  display: none;
+}
+
+.app-shell.is-workspace .doodle-workspace,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-workspace {
+  padding: 22px;
+}
+
+.app-shell.is-workspace .doodle-topbar,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-topbar {
+  min-height: 48px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .doodle-search,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-search {
+  min-height: 40px;
+  padding: 8px 11px;
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .doodle-live-dot {
+  width: 8px;
+  height: 8px;
+  background: #4c8658;
+  border: 0;
+}
+
+.app-shell.is-workspace .doodle-chip > span,
+.app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-chip > span {
+  color: #fff;
+  background: var(--studio-copper);
+  border: 0;
+  border-radius: 50%;
+  font-family: inherit;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Customer home and Discover                                                 */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .cd-main {
+  gap: 18px;
+}
+
+.app-shell.is-workspace .cd-overview {
+  padding: 18px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .cd-head h1 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-head-sub {
+  font-size: .9rem;
+}
+
+.app-shell.is-workspace .cd-stats {
+  max-width: 540px;
+}
+
+.app-shell.is-workspace .cd-stat {
+  min-height: 84px;
+  padding: 15px 12px 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-top: 3px solid var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: none;
+  transform: none !important;
+}
+
+.app-shell.is-workspace .cd-stat.cd-stat-blue {
+  background: var(--studio-blue-soft);
+}
+
+.app-shell.is-workspace .cd-stat.cd-stat-pink {
+  background: var(--studio-pink-soft);
+}
+
+.app-shell.is-workspace .cd-stat-badge {
+  position: static;
+  width: 28px;
+  height: 28px;
+  color: var(--studio-copper-deep);
+  background: transparent;
+  border: 0;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-stat strong {
+  margin-top: 2px;
+  font-family: inherit;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.app-shell.is-workspace .cd-profile-avatar {
+  margin-right: clamp(10px, 2vw, 36px);
+}
+
+.app-shell.is-workspace .cd-profile-avatar-frame {
+  width: 78px;
+  height: 78px;
+  background: var(--studio-copper-soft);
+  border: 1px solid var(--studio-copper);
+  border-radius: 50%;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-profile-avatar-label {
+  bottom: 3px;
+  padding: 3px 8px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: .72rem;
+  transform: translateX(-50%);
+}
+
+.app-shell.is-workspace .cd-profile-avatar:hover .cd-profile-avatar-frame {
+  border-color: var(--studio-copper-deep);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.app-shell.is-workspace .cd-map-grid {
+  gap: 18px;
+}
+
+.app-shell.is-workspace .cd-card {
+  padding: 20px;
+}
+
+.app-shell.is-workspace .cd-card-head {
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .cd-chips {
+  gap: 7px;
+}
+
+.app-shell.is-workspace .cd-chip-divider {
+  width: 1px;
+  background: var(--studio-line);
+}
+
+.app-shell.is-workspace .cd-kicker,
+.app-shell.is-workspace .cd-shop-card-kicker,
+.app-shell.is-workspace .cd-search-results-head {
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.app-shell.is-workspace .cd-discovery-head h2 {
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-view-toggle {
+  padding: 2px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cd-view-toggle button {
+  min-height: 36px;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .cd-view-toggle button.is-active {
+  color: #fff;
+  background: var(--studio-copper);
+}
+
+.app-shell.is-workspace .cd-filter-bar {
+  padding: 12px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .cd-filter-bar select,
+.app-shell.is-workspace .cd-chip {
+  min-height: 36px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-chip.is-active {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border: 1px solid #ddc4b1;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cd-discovery-card {
+  padding: 15px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-top: 3px solid var(--studio-copper);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .cd-discovery-card-top {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .cd-discovery-meta {
+  color: var(--studio-muted);
+}
+
+.app-shell.is-workspace .cd-discovery-meta span,
+.app-shell.is-workspace .cd-service-tags span {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .cd-service-tags span {
+  background: var(--studio-blue-soft);
+}
+
+.app-shell.is-workspace .cd-discovery-actions {
+  padding-top: 10px;
+  color: #3f7449;
+  border-top: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .cd-dot {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .cd-empty,
+.app-shell.is-workspace .cd-map-loading,
+.app-shell.is-workspace .cd-side-empty {
+  color: var(--studio-muted);
+  background: var(--studio-surface-soft);
+  border: 1px dashed var(--studio-line);
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-map-frame .shop-map,
+.app-shell.is-workspace .shop-map {
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cd-search-results {
+  padding: 8px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .cd-search-results button {
+  background: var(--studio-surface);
+  border: 0;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cd-search-results button:hover {
+  background: var(--studio-copper-soft);
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-shop-popup-backdrop {
+  background: rgba(17, 20, 22, .58);
+  backdrop-filter: blur(3px);
+}
+
+.app-shell.is-workspace .cd-shop-card,
+.app-shell.is-workspace .cd-shop-popup {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .cd-shop-popup {
+  padding: 42px 24px 24px;
+}
+
+.app-shell.is-workspace .cd-shop-popup::after {
+  left: 24px;
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-shop-popup .cd-shop-main,
+.app-shell.is-workspace .cd-shop-popup .cd-shop-services,
+.app-shell.is-workspace .cd-shop-popup .cd-shop-staff {
+  padding: 14px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-shop-popup .cd-shop-services::before,
+.app-shell.is-workspace .cd-shop-popup .cd-shop-staff::before {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border: 1px solid #ddc4b1;
+  font-family: inherit;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-shop-popup-close {
+  color: var(--studio-muted);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-heart {
+  color: var(--studio-muted);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 50%;
+}
+
+.app-shell.is-workspace .cd-heart.is-fav {
+  color: var(--studio-danger);
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+.app-shell.is-workspace .cd-side {
+  background: var(--studio-surface);
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-side-shop {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-side-shop:hover,
+.app-shell.is-workspace .cd-side-shop.is-active {
+  background: var(--studio-copper-soft);
+  border-color: var(--studio-copper);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.is-workspace .cd-side-rating {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-engagement-wide {
+  background: var(--studio-surface);
+}
+
+.app-shell.is-workspace .cd-stamp-row > span {
+  color: var(--studio-muted);
+  background: var(--studio-surface-soft);
+  border: 1px dashed var(--studio-line);
+  border-radius: 50%;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cd-stamp-row > span.is-filled {
+  color: var(--studio-ink);
+  background: var(--studio-green-soft);
+  border: 1px solid #bdd2c0;
+}
+
+.app-shell.is-workspace .cd-notification-link {
+  padding: 10px 12px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Bookings and messages                                                      */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .appointments-page {
+  gap: 18px;
+}
+
+.app-shell.is-workspace .appointments-head {
+  padding: 18px 0 2px;
+}
+
+.app-shell.is-workspace .appointments-sidebar > *,
+.app-shell.is-workspace .appointments-calendar-shell {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .appointments-sidebar > section {
+  padding: 14px;
+  transform: none;
+}
+
+.app-shell.is-workspace .appointments-plan {
+  background: var(--studio-copper-soft) !important;
+}
+
+.app-shell.is-workspace .appointments-plan input {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .appointments-mini-list > header span {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .appointments-mini-list button {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-left: 3px solid var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .appointments-mini-list button:hover {
+  background: var(--studio-surface-soft);
+  transform: none;
+}
+
+.app-shell.is-workspace .cut-calendar {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.is-workspace .cut-calendar::after {
+  display: none;
+}
+
+.app-shell.is-workspace .cut-calendar-kicker {
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.app-shell.is-workspace .cut-calendar-nav strong,
+.app-shell.is-workspace .cut-calendar-date-button {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cut-calendar-nav button,
+.app-shell.is-workspace .cut-calendar-today,
+.app-shell.is-workspace .cut-calendar-booking {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cut-calendar-day {
+  background: var(--studio-surface-soft);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .cut-calendar-day.is-today {
+  border: 1px solid var(--studio-copper);
+}
+
+.app-shell.is-workspace .cut-calendar-day.is-selected,
+.app-shell.is-workspace .cut-calendar.is-large .cut-calendar-day.is-today {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border: 1px solid var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .cut-calendar-event {
+  background: var(--studio-blue-soft);
+  border: 1px solid #c4d2dc;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .booking-notebook-backdrop {
+  background: rgba(17, 20, 22, .58);
+  backdrop-filter: blur(3px);
+}
+
+.app-shell.is-workspace .booking-notebook {
+  padding: 26px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .booking-notebook::before,
+.app-shell.is-workspace .booking-notebook::after {
+  display: none;
+}
+
+.app-shell.is-workspace .booking-notebook-close {
+  color: var(--studio-muted);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .booking-notebook-date,
+.app-shell.is-workspace .booking-notebook-review {
+  background: var(--studio-blue-soft);
+  border: 1px solid #c4d2dc;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .chat-layout,
+.app-shell.is-workspace .chat-layout[data-notebook] {
+  overflow: hidden;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .chat-inbox,
+.app-shell.is-workspace .chat-layout[data-notebook] .chat-inbox {
+  padding: 18px 14px;
+  background: var(--studio-surface-soft);
+  border-right: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .chat-kicker {
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.app-shell.is-workspace .chat-search,
+.app-shell.is-workspace .chat-layout[data-notebook] .chat-search {
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .convo-list {
+  gap: 3px;
+}
+
+.app-shell.is-workspace .convo-item,
+.app-shell.is-workspace .chat-layout[data-notebook] .convo-item {
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none !important;
+}
+
+.app-shell.is-workspace .convo-item:hover {
+  background: var(--studio-surface);
+  transform: none;
+}
+
+.app-shell.is-workspace .convo-item.active,
+.app-shell.is-workspace .chat-layout[data-notebook] .convo-item.active {
+  background: var(--studio-copper-soft);
+  border-left-color: var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .chat-thread {
+  background: var(--studio-surface);
+}
+
+.app-shell.is-workspace .thread-head,
+.app-shell.is-workspace .chat-layout[data-notebook] .thread-head {
+  background: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .thread-identity strong,
+.app-shell.is-workspace .chat-empty strong {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .thread-body,
+.app-shell.is-workspace .chat-empty,
+.app-shell.is-workspace .chat-layout[data-notebook] .thread-body,
+.app-shell.is-workspace .chat-layout[data-notebook] .chat-empty {
+  padding: 18px 22px;
+  background: var(--studio-page);
+}
+
+.app-shell.is-workspace .chat-layout[data-notebook] .thread::after {
+  top: 84px;
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+  transform: none;
+}
+
+.app-shell.is-workspace .chat-welcome-note {
+  background: var(--studio-copper-soft);
+  border: 1px dashed var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: none;
+  transform: rotate(-.35deg);
+}
+
+.app-shell.is-workspace .bubble,
+.app-shell.is-workspace .chat-layout[data-notebook] .bubble {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px 10px 10px 10px;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell.is-workspace .bubble-row.mine .bubble,
+.app-shell.is-workspace .chat-layout[data-notebook] .bubble-row.mine .bubble {
+  background: var(--studio-blue-soft);
+  border-radius: 10px 3px 10px 10px;
+  transform: none;
+}
+
+.app-shell.is-workspace .thread-compose,
+.app-shell.is-workspace .chat-layout[data-notebook] .thread-compose {
+  background: var(--studio-surface);
+  border-top: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .chat-quick-replies button,
+.app-shell.is-workspace .chat-layout[data-notebook] .chat-quick-replies button {
+  min-height: 34px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+}
+
+.app-shell.is-workspace .thread-input input,
+.app-shell.is-workspace .chat-layout[data-notebook] .thread-input input {
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .chat-staff-strip button {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Settings and profile avatar studio                                         */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .settings-fluent-shell {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+  backdrop-filter: none;
+}
+
+.app-shell.is-workspace .settings-fluent-nav {
+  background: var(--studio-surface-soft);
+  border-right: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .settings-fluent-title,
+.app-shell.is-workspace .settings-fluent-title strong {
+  color: var(--studio-ink);
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .settings-user-tile {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .settings-user-tile small {
+  color: var(--studio-muted);
+}
+
+.app-shell.is-workspace .settings-user-tile .doodle-avatar {
+  background: var(--studio-copper-soft);
+  border-radius: 50%;
+}
+
+.app-shell.is-workspace .settings-search {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .settings-search,
+.app-shell.is-workspace .settings-search input {
+  color: var(--studio-ink);
+}
+
+.app-shell.is-workspace .settings-fluent-nav nav a {
+  color: var(--studio-muted);
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+}
+
+.app-shell.is-workspace .settings-fluent-nav nav a:hover {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+}
+
+.app-shell.is-workspace .settings-fluent-nav nav a.is-active {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border-left-color: var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .settings-fluent-nav nav a.is-active::before {
+  display: none;
+}
+
+.app-shell.is-workspace .settings-fluent-nav nav a small {
+  color: var(--studio-muted);
+}
+
+.app-shell.is-workspace .settings-nav-icon {
+  color: currentColor;
+  background: transparent !important;
+}
+
+.app-shell.is-workspace .settings-fluent-main {
+  background: var(--studio-page);
+}
+
+.app-shell.is-workspace .settings-page-heading > span,
+.app-shell.is-workspace .settings-preview-label {
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.app-shell.is-workspace .settings-panel-card {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .settings-account-hero strong,
+.app-shell.is-workspace .settings-avatar-preview-pane strong {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .settings-panel-card input:not([type="checkbox"]),
+.app-shell.is-workspace .settings-panel-card select,
+.app-shell.is-workspace .settings-panel-card textarea {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .settings-primary-button,
+.app-shell.is-workspace .settings-secondary-button,
+.app-shell.is-workspace .settings-danger-button {
+  min-height: 40px;
+  padding: 9px 15px;
+  border-radius: 4px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .settings-primary-button {
+  color: #fff;
+  background: var(--studio-copper);
+  border-color: var(--studio-copper-deep);
+}
+
+.app-shell.is-workspace .settings-secondary-button {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border-color: var(--studio-line);
+}
+
+.app-shell.is-workspace .settings-avatar-preview-pane {
+  background: var(--studio-pink-soft);
+  border: 1px solid #ddc4c3;
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .settings-avatar-preview-pane .doodle-avatar {
+  background: color-mix(in srgb, var(--avatar-accent) 44%, var(--studio-surface));
+  border: 1px solid color-mix(in srgb, var(--avatar-accent) 70%, var(--studio-line));
+  border-radius: 50%;
+}
+
+.app-shell.is-workspace .settings-segmented {
+  background: var(--studio-page);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .settings-segmented button {
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .settings-segmented button.is-active {
+  color: #fff;
+  background: var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .settings-premade-grid button,
+.app-shell.is-workspace .settings-choice-group button {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .settings-premade-grid button:hover,
+.app-shell.is-workspace .settings-choice-group button:hover {
+  background: var(--studio-surface-soft);
+}
+
+.app-shell.is-workspace .settings-premade-grid button.is-selected,
+.app-shell.is-workspace .settings-choice-group button.is-selected {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border: 2px solid var(--studio-copper);
+}
+
+.app-shell.is-workspace .settings-gear-progress {
+  background: var(--studio-copper-soft);
+  border: 1px solid #ddc4b1;
+}
+
+.app-shell.is-workspace .settings-gear-lock {
+  border: 1px solid var(--studio-line);
+}
+
+/* The doodle itself remains the profile-picture feature; only its frame is
+   professionalized. The creator's face parts and reward gear stay untouched. */
+.app-shell.is-workspace .doodle-avatar {
+  border-radius: 50%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Barber home, Today's Chair/schedule, and owner operations                  */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .barber-jobs-hero,
+.app-shell.is-workspace .barber-home-hero,
+.app-shell.is-workspace .schedule-page-hero {
+  padding: 18px 20px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-left: 3px solid var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .barber-jobs-hero h1,
+.app-shell.is-workspace .barber-home-hero h1,
+.app-shell.is-workspace .schedule-page-hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.app-shell.is-workspace .barber-role-strip,
+.app-shell.is-workspace .barber-flow-message,
+.app-shell.is-workspace .schedule-message {
+  background: var(--studio-copper-soft);
+  border: 1px solid #ddc4b1;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .barber-home-stat,
+.app-shell.is-workspace .schedule-attendance-grid article {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-top: 3px solid var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .barber-home-stat strong,
+.app-shell.is-workspace .schedule-attendance-grid strong {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .barber-booking-row,
+.app-shell.is-workspace .barber-hiring-row,
+.app-shell.is-workspace .barber-application,
+.app-shell.is-workspace .barber-shift-row,
+.app-shell.is-workspace .schedule-readonly-list li,
+.app-shell.is-workspace .hours-row,
+.app-shell.is-workspace .ov-item {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .schedule-live-card {
+  background: var(--studio-surface);
+  color: var(--studio-ink);
+  border: 1px solid var(--studio-line);
+  border-left: 3px solid var(--studio-copper);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow);
+}
+
+.app-shell.is-workspace .schedule-live-card p,
+.app-shell.is-workspace .schedule-live-card small {
+  color: var(--studio-muted);
+}
+
+.app-shell.is-workspace .schedule-live-icon {
+  color: var(--studio-ink);
+  background: var(--studio-copper-soft);
+  border: 1px solid var(--studio-copper);
+}
+
+.app-shell.is-workspace .schedule-live-icon.is-on {
+  background: var(--studio-green-soft);
+  box-shadow: 0 0 0 5px rgba(118, 159, 122, .15);
+}
+
+.app-shell.is-workspace .schedule-paper-card,
+.app-shell.is-workspace .bsc-day-card {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .schedule-attendance-rate {
+  background: var(--studio-green-soft);
+  border: 1px solid #bdd2c0;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .schedule-readonly-list li {
+  border-style: solid;
+}
+
+.app-shell.is-workspace .bsc-head strong,
+.app-shell.is-workspace .bsc-day-card > header strong {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .bsc-grid {
+  gap: 5px;
+}
+
+.app-shell.is-workspace .bsc-cell {
+  color: var(--studio-ink);
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .bsc-cell.is-scheduled {
+  background: var(--studio-green-soft);
+  border-color: #bdd2c0;
+}
+
+.app-shell.is-workspace .bsc-cell.is-absent {
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+.app-shell.is-workspace .bsc-cell.is-unavailable {
+  background: var(--studio-blue-soft);
+  border-color: #c4d2dc;
+}
+
+.app-shell.is-workspace .bsc-cell.is-today,
+.app-shell.is-workspace .bsc-cell.is-selected {
+  background: var(--studio-copper-soft);
+  border: 1px solid var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .bsc-request-form input,
+.app-shell.is-workspace .bsc-request-form select {
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .professional-profile form,
+.app-shell.is-workspace .professional-qualifications {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-left: 3px solid var(--studio-copper);
+  border-radius: 4px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.app-shell.is-workspace .professional-profile input,
+.app-shell.is-workspace .professional-profile textarea {
+  color: var(--studio-ink);
+  background: var(--studio-surface);
+  border: 1px solid #bfc2c4;
+  border-bottom-color: #7d858b;
+  border-radius: 4px;
+}
+
+.app-shell.is-workspace .professional-visible,
+.app-shell.is-workspace .professional-qualifications li {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .professional-alert {
+  background: var(--studio-pink-soft);
+  border: 1px solid #ddc4c3;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .professional-ok {
+  background: var(--studio-green-soft);
+  border: 1px solid #bdd2c0;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .owner-overview-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .owner-card-kicker {
+  color: var(--studio-copper-deep);
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.app-shell.is-workspace .owner-metric,
+.app-shell.is-workspace .owner-performance-stats > div {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-top: 3px solid var(--studio-copper);
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-metric-icon {
+  color: var(--studio-copper-deep);
+  background: var(--studio-copper-soft);
+  border: 0;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .owner-command-alert,
+.app-shell.is-workspace .owner-preview-banner {
+  background: var(--studio-copper-soft);
+  border: 1px solid #ddc4b1;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-join-code-card {
+  background: var(--studio-purple-soft);
+  border: 1px solid #d4c9dc;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-join-code-card code,
+.app-shell.is-workspace .owner-code-reveal {
+  background: var(--studio-surface);
+  border: 1px dashed var(--studio-copper);
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.app-shell.is-workspace .owner-range-toggle,
+.app-shell.is-workspace .owner-service-tabs {
+  padding: 2px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-range-toggle button,
+.app-shell.is-workspace .owner-service-tabs button {
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .owner-range-toggle button.is-active,
+.app-shell.is-workspace .owner-service-tabs button.is-active {
+  color: #fff;
+  background: var(--studio-copper);
+}
+
+.app-shell.is-workspace .owner-reservations table,
+.app-shell.is-workspace .owner-reservations th,
+.app-shell.is-workspace .owner-reservations td {
+  border-color: var(--studio-line);
+}
+
+.app-shell.is-workspace .owner-provider-toggle,
+.app-shell.is-workspace .owner-provider-card,
+.app-shell.is-workspace .owner-qualification-request,
+.app-shell.is-workspace .owner-shift-summary li,
+.app-shell.is-workspace .owner-shift-editor-row,
+.app-shell.is-workspace .owner-exception-list > div,
+.app-shell.is-workspace .owner-request-row,
+.app-shell.is-workspace .owner-note {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .owner-provider-card legend,
+.app-shell.is-workspace .owner-staff-head strong,
+.app-shell.is-workspace .owner-shift-editor-row label {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .owner-attendance-bar,
+.app-shell.is-workspace .owner-rank-bar {
+  background: var(--studio-page);
+  border: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .owner-attendance-bar i,
+.app-shell.is-workspace .owner-rank-bar i {
+  background: var(--studio-copper);
+  border: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hiring and Shop Setup                                                      */
+/* -------------------------------------------------------------------------- */
+
+.app-shell.is-workspace .owner-hiring {
+  color: var(--studio-ink);
+}
+
+.app-shell.is-workspace .owner-hiring-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .owner-hiring-badge {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-hiring-choice,
+.app-shell.is-workspace .owner-hiring-item {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .owner-hiring-choice.is-selected {
+  background: var(--studio-copper-soft);
+  border-color: var(--studio-copper);
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .owner-hiring-visibility,
+.app-shell.is-workspace .owner-hiring-alert,
+.app-shell.is-workspace .owner-hiring-ok {
+  background: var(--studio-blue-soft);
+  border: 1px solid #c4d2dc;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .owner-hiring-ok {
+  background: var(--studio-green-soft);
+  border-color: #bdd2c0;
+}
+
+.app-shell.is-workspace .shop-setup-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.app-shell.is-workspace .shop-setup-status {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.app-shell.is-workspace .shop-setup-status strong {
+  font-family: inherit;
+}
+
+.app-shell.is-workspace .shop-setup-ok,
+.app-shell.is-workspace .shop-setup-error {
+  background: var(--studio-green-soft);
+  border: 1px solid #bdd2c0;
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .shop-setup-error {
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+.app-shell.is-workspace .shop-hours-row,
+.app-shell.is-workspace .shop-closure-row,
+.app-shell.is-workspace .shop-service-row,
+.app-shell.is-workspace .shop-service-add,
+.app-shell.is-workspace .shop-media-card {
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .shop-media-card img,
+.app-shell.is-workspace .shop-media-placeholder {
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .shop-readiness-icon {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-line);
+  border-radius: 3px;
+}
+
+.app-shell.is-workspace .shop-readiness-item.is-done .shop-readiness-icon {
+  background: var(--studio-green-soft);
+  border-color: #bdd2c0;
+}
+
+.app-shell.is-workspace .shop-readiness-item.is-todo .shop-readiness-icon {
+  background: var(--studio-pink-soft);
+  border-color: #ddc4c3;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsive and motion                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 960px) {
+  .app-shell.is-workspace .doodle-board,
+  .app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-board {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell.is-workspace .doodle-rail,
+  .app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-rail {
+    flex-direction: row;
+    padding: 10px 14px;
+    border-right: 0;
+    border-bottom: 1px solid var(--studio-line);
+  }
+
+  .app-shell.is-workspace .settings-fluent-nav {
+    border-right: 0;
+    border-bottom: 1px solid var(--studio-line);
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell.is-workspace main.page {
+    padding-block: 14px 40px;
+  }
+
+  .app-shell.is-workspace .doodle-workspace,
+  .app-shell.is-workspace .doodle-board-wrap.is-owner .doodle-workspace {
+    padding: 14px;
+  }
+
+  .app-shell.is-workspace .cd-overview {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .app-shell.is-workspace .cd-head {
+    width: 100%;
+  }
+
+  .app-shell.is-workspace .cd-stats {
+    order: 3;
+    width: 100%;
+    max-width: none;
+  }
+
+  .app-shell.is-workspace .cd-profile-avatar {
+    margin: 0 0 0 auto;
+  }
+
+  .app-shell.is-workspace .chat-inbox {
+    border-right: 0;
+  }
+
+  .app-shell.is-workspace .settings-fluent-main {
+    padding: 28px 16px 40px;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell.is-workspace .app-header {
+    padding-inline: 12px;
+  }
+
+  .app-shell.is-workspace .brand {
+    font-size: 1rem;
+  }
+
+  .app-profile-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-burger {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-shell.is-workspace .cd-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .app-shell.is-workspace .cd-card,
+  .app-shell.is-workspace .rough-card,
+  .app-shell.is-workspace .schedule-paper-card,
+  .app-shell.is-workspace .owner-paper-card,
+  .app-shell.is-workspace .shop-setup-form,
+  .app-shell.is-workspace .shop-setup-panel,
+  .app-shell.is-workspace .owner-hiring-card,
+  .app-shell.is-workspace .owner-hiring-section {
+    padding: 14px;
+  }
+
+  .app-shell.is-workspace .booking-notebook {
+    padding: 22px 14px 18px;
+  }
+
+  .app-shell.is-workspace .thread-body,
+  .app-shell.is-workspace .chat-layout[data-notebook] .thread-body {
+    padding-inline: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.is-workspace *,
+  .app-menu *,
+  .app-profile-avatar {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

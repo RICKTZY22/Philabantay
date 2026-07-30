@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DataError, type OnboardingRole } from '@barbershop/shared'
+import { DataError } from '@barbershop/shared'
 import { useAuth } from '../../features/auth/AuthContext'
+import { profileAvatarRole } from '../../lib/profile'
 import { useBackend } from '../../services/backend'
 import {
   BARBER_GEAR_CATALOG,
@@ -31,7 +32,7 @@ const LABELS: Record<string, string> = {
 export function AvatarSettingsPanel() {
   const { profile, updateProfile } = useAuth()
   const backend = useBackend()
-  const role = avatarRole(profile?.requested_role, profile?.role)
+  const role = profileAvatarRole(profile)
   const isCustomer = role === 'customer'
   const isBarber = role === 'barber'
   // Role-locked gear: hindi nakikita ng barber ang customer catalogue at vice
@@ -190,10 +191,4 @@ function ChoiceGroup<T extends string>({ title, value, options, onChange, color 
       </div>
     </fieldset>
   )
-}
-
-function avatarRole(requested: OnboardingRole | null | undefined, granted: string | undefined): OnboardingRole {
-  if (requested) return requested
-  if (granted === 'barber' || granted === 'shop_owner') return granted
-  return 'customer'
 }

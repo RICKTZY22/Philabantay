@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import type { DoodleIconName } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
-import { profileRoleLabel } from '../lib/profile'
+import { profileAvatarRole, profileRoleLabel } from '../lib/profile'
 import { DoodleAvatar } from '../components/DoodleAvatar'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { AccountSettingsPanel } from './settings/AccountSettingsPanel'
@@ -66,7 +66,7 @@ function SettingsShell({ active, children }: { active: SettingsSection; children
       <aside className="settings-fluent-nav" aria-label="Settings pages">
         <div className="settings-fluent-title"><DoodleIcon name="gear" size={22} /><strong>Settings</strong></div>
         <div className="settings-user-tile">
-          <DoodleAvatar avatarId={profile.avatar_url} role={avatarRole(profile.requested_role, profile.role)} size={52} />
+          <DoodleAvatar avatarId={profile.avatar_url} role={profileAvatarRole(profile)} size={52} />
           <span><strong>{profile.full_name}</strong><small>{profileRoleLabel(profile)}</small></span>
         </div>
         <label className="settings-search">
@@ -87,10 +87,4 @@ function SettingsShell({ active, children }: { active: SettingsSection; children
       <main className="settings-fluent-main">{children}</main>
     </div>
   )
-}
-
-function avatarRole(requested: string | null | undefined, granted: string) {
-  if (requested === 'barber' || requested === 'shop_owner' || requested === 'customer') return requested
-  if (granted === 'barber' || granted === 'shop_owner') return granted
-  return 'customer'
 }

@@ -34,7 +34,7 @@ export function AppDashboardPage() {
     if (!isOwnerDashboardSection(ownerSection)) {
       return <Navigate to="/dashboard/owner/overview" replace />
     }
-    return <OwnerDashboardGate ownerName={profile.full_name} section={ownerSection} />
+    return <OwnerDashboardGate ownerName={profile.full_name} ownerAvatarId={profile.avatar_url} section={ownerSection} />
   }
 
   // Owner-only URLs never fall through to a customer or barber dashboard.
@@ -43,7 +43,7 @@ export function AppDashboardPage() {
   // Pending barber sees the layout but never gets write access; the verified
   // role guard on /dashboard/barber remains the real security boundary.
   if (profile.requested_role === 'barber' || isBarber) {
-    return <Suspense fallback={<Loading label="Opening chair tools…" />}><BarberDashboard barberId={profile.id} barberName={profile.full_name} pending={pending} /></Suspense>
+    return <Suspense fallback={<Loading label="Opening chair tools…" />}><BarberDashboard barberId={profile.id} barberName={profile.full_name} barberAvatarId={profile.avatar_url} pending={pending} /></Suspense>
   }
 
   // Customer home: sidebar shell + live map + favorites, walang extra hero.
@@ -55,7 +55,7 @@ export function AppDashboardPage() {
  * operational dashboard. The extra read is cheap and keeps the dashboard honest:
  * no empty operational panels for an owner who has not created a shop.
  */
-function OwnerDashboardGate({ ownerName, section }: { ownerName: string; section: OwnerDashboardSection }) {
+function OwnerDashboardGate({ ownerName, ownerAvatarId, section }: { ownerName: string; ownerAvatarId: string | null; section: OwnerDashboardSection }) {
   const backend = useBackend()
   const [state, setState] = useState<'loading' | 'no-shop' | 'ready'>('loading')
 
@@ -71,7 +71,7 @@ function OwnerDashboardGate({ ownerName, section }: { ownerName: string; section
   if (state === 'no-shop') return <Navigate to="/dashboard/owner/shop" replace />
   return (
     <Suspense fallback={<Loading label="Opening owner tools…" />}>
-      <ShopOwnerDashboard ownerName={ownerName} section={section} />
+      <ShopOwnerDashboard ownerName={ownerName} ownerAvatarId={ownerAvatarId} section={section} />
     </Suspense>
   )
 }

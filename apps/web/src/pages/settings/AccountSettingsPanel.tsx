@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { DataError, type OnboardingRole } from '@barbershop/shared'
+import { DataError } from '@barbershop/shared'
 import { useAuth } from '../../features/auth/AuthContext'
 import { DoodleAvatar } from '../../components/DoodleAvatar'
+import { profileAvatarRole } from '../../lib/profile'
 import { DoodleIcon } from '../../theme/DoodleDefs'
 
 export function AccountSettingsPanel() {
@@ -63,7 +64,7 @@ export function AccountSettingsPanel() {
       <SettingsHeading eyebrow="ACCOUNT" title="Your account" description="Manage your private contact information and home area." />
       <form className="settings-panel-card settings-account-form" onSubmit={save}>
         <div className="settings-account-hero">
-          <DoodleAvatar avatarId={profile.avatar_url} role={avatarRole(profile.requested_role, profile.role)} size={86} trackCursor />
+          <DoodleAvatar avatarId={profile.avatar_url} role={profileAvatarRole(profile)} size={86} trackCursor />
           <div><strong>{profile.full_name}</strong><span>{profile.email}</span></div>
         </div>
         <div className="settings-form-grid">
@@ -81,12 +82,6 @@ export function AccountSettingsPanel() {
       </form>
     </>
   )
-}
-
-function avatarRole(requested: OnboardingRole | null | undefined, granted: string): OnboardingRole {
-  if (requested) return requested
-  if (granted === 'barber' || granted === 'shop_owner') return granted
-  return 'customer'
 }
 
 export function SettingsHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {

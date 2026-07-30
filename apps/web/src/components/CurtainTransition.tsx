@@ -24,7 +24,7 @@ interface CurtainState {
 
 const CurtainContext = createContext<CurtainState | null>(null)
 
-export function CurtainProvider({ children }: { children: ReactNode }) {
+export function CurtainProvider({ children, studio = false }: { children: ReactNode; studio?: boolean }) {
   const [phase, setPhase] = useState<Phase>('idle')
   const navigate = useNavigate()
   // Ref ito para hindi magpalit ang destination habang tumatakbo ang timers.
@@ -70,7 +70,7 @@ export function CurtainProvider({ children }: { children: ReactNode }) {
   return (
     <CurtainContext.Provider value={{ go }}>
       {children}
-      <div className={`curtain ${phase}`} aria-hidden="true">
+      <div className={`curtain${studio ? ' is-studio' : ''} ${phase}`} aria-hidden="true">
         <div className="curtain-panel curtain-left" />
         <div className="curtain-panel curtain-right" />
         <div className="curtain-badge">
