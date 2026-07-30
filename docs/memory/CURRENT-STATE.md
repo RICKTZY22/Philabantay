@@ -18,9 +18,11 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - P2-03 Hiring state: verified complete.
 - P2-04 Employment convergence: verified complete.
 - P2-05 Provider capabilities: verified complete.
-- P2-06 Schedule authority: in progress (Slices 1, 2a, and 2c implemented and
-  verified; packet sign-off remains pending).
-- P2-07 through P2-08: not started.
+- P2-06 Schedule authority: **verified complete, signed off 2026-07-30** on an
+  agent-executed functional and accessibility pass accepted in lieu of a
+  personal visible-workflow review.
+- P2-07 Availability engine: next.
+- P2-08 Race gate: not started.
 
 ## Active packet
 

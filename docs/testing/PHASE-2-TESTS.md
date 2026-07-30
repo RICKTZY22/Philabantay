@@ -1,9 +1,10 @@
 # Phase 2 tests - shops, workforce, availability
 
-Covers packets P2-01 through P2-08. P2-01 through P2-05 are verified complete.
-The rest are not started. Test names are quoted verbatim.
+Covers packets P2-01 through P2-08. P2-01 through P2-06 are verified complete
+and signed off. P2-07 is next and P2-08 is not started. Test names are quoted
+verbatim.
 
-Jump to: [P2-01](#p2-01) · [P2-02](#p2-02) · [P2-03](#p2-03) · [P2-04](#p2-04) · [P2-05](#p2-05) · [P2-06…P2-08](#not-started) ·
+Jump to: [P2-01](#p2-01) · [P2-02](#p2-02) · [P2-03](#p2-03) · [P2-04](#p2-04) · [P2-05](#p2-05) · [P2-06](#p2-06) · [P2-07…P2-08](#not-started) ·
 [Findings](#findings)
 
 ---
@@ -255,7 +256,7 @@ normalization, and all canonical appointment pill states.
 
 ---
 
-## P2-06 - schedule authority (implementation gate green) {#p2-06}
+## P2-06 - schedule authority ✅ signed off 2026-07-30 {#p2-06}
 
 Verified on 2026-07-28 without marking the packet complete:
 
@@ -279,7 +280,7 @@ Verified on 2026-07-28 without marking the packet complete:
   recovery, exact 390×844 owner/barber layouts without overflow, native
   keyboard controls, reduced motion, and a clean console.
 
-Independent review/product sign-off remains pending. P2-07 was not started.
+Signed off 2026-07-30 on the agent-executed functional and accessibility pass below, accepted by the product owner in lieu of a personal visible-workflow review. That review and an OS-level reduced-motion check are carried as open items in [the roadmap](../plans/ROADMAP-STATUS.md). P2-07 is next.
 
 ### Workflow scenarios executed 2026-07-30 ✅ (functional half)
 
@@ -322,7 +323,7 @@ Verified locally on 2026-07-29 without changing P2-06/P2-07 status.
 
 | Packet | Planned test focus |
 | --- | --- |
-| P2-07 Availability engine | combine hours, closures, employment, qualification, shifts, buffers, overlap, and chairs into one slot computation. |
+| P2-07 Availability engine | **next.** Combine hours, closures, employment, qualification, shifts, buffers, overlap, and chairs into one slot computation. |
 | P2-08 Race gate | concurrent claim and capacity probes for the availability engine. |
 
 ---

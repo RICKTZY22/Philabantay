@@ -731,6 +731,39 @@ catalog, commits, and implementation files.
 - Reviewed `OPEN-QUESTIONS.md` end to end: Q1 through Q19 are all answered, so
   no product decision is blocking. Q4 is a delivery gap, not an open question.
 
+## 2026-07-30 — P2-06 signed off
+
+- Added the accessibility half of the pass, at the standard P2-02..P2-05 used:
+  owner `/dashboard/owner/staff` 47 visible interactive controls, 39 keyboard
+  reachable, 8 disabled, **0 unreachable, 0 unlabelled**; barber `/schedule`
+  41/40/1 with the same zeroes. All 14 shift-editor time inputs labelled and 14
+  `:focus`/`:focus-visible` rules live.
+- Reduced motion satisfied structurally rather than by emulation, and the
+  structure is the stronger argument: `BarberShiftCalendar.css` and
+  `DashboardPage.css` declare **zero** transitions or animations, so nothing
+  needs suppressing, and `OwnerStaffPanel.css` carries a blanket
+  `prefers-reduced-motion` block forcing `transition: none` and
+  `scroll-behavior: auto`.
+- **Corrected my own scoping error.** `ModalPortal` initial focus and focus
+  return had been listed as a P2-06 blocker. No P2-06 surface imports
+  `ModalPortal`: not `OwnerStaffPanel`, `BarberShiftCalendar`, `DashboardPage`,
+  or `ShopOwnerDashboard`. Its users are `Layout`'s landing auth dialog,
+  `CustomerDashboard`, and `AppointmentsPage`, so the check moved to the
+  pre-P2-07 landing/auth slice.
+- **P2-06 → ✅.** Signed off by the product owner on the strength of the
+  agent-executed functional and accessibility pass, explicitly accepted in lieu
+  of a personal visible-workflow review. Provenance recorded that way on purpose
+  rather than implying a human walked the screens.
+- Two caveats carried forward as roadmap open item 5 rather than buried: the
+  human visible-workflow review and an OS-level reduced-motion check. Neither is
+  known-broken; both are unobserved, and both must clear before the Phase 2 exit
+  gate.
+- Phase 2 now stands at P2-01 through P2-06 complete, **13 of ~39 packets
+  overall**. ROADMAP-STATUS, QA-TRACEABILITY-MATRIX, PHASE-2-TESTS,
+  CURRENT-STATE, and this log were updated together as the handoff rules require.
+- Next: **P2-07 availability engine** (AVAIL-01, AVAIL-02, BOOK-02). Forward
+  migrations only, stop before P2-08.
+
 ## 2026-07-30 — P2-06 workflow scenarios 1-4 executed and passed
 
 Run on the product owner's request, since they were mid UI-redesign. Driven
