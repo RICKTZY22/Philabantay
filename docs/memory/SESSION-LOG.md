@@ -933,3 +933,11 @@ so the packet is not being marked complete on the strength of it.
   returns to `/login` with the backend error. Runtime logs had no errors.
 - Full gate passed: all workspaces typechecked, lint and production build
   passed, and 124 fast tests passed with 41 expected integration skips.
+
+## 2026-07-30 — Auth header micro-adjustment
+
+- Removed the decorative Secure access label from both dedicated auth pages.
+- Moved Back to home from the page body into the upper-left auth header while
+  retaining the centered handwritten wordmark and right-side mode action.
+- Browser checks on `/login` and `/signup` confirmed one header back link, no
+  body duplicate, zero horizontal overflow, and no runtime warnings/errors.

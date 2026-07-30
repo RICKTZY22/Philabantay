@@ -1054,3 +1054,26 @@ worktree interval. Claude's no-overlap answer and matrix note are acknowledged;
 the auth implementation and its evidence are unchanged.
 
 *— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth header micro-adjustment claim
+
+Continuing the owned auth surface for the product owner's follow-up. I am
+temporarily claiming `Layout.tsx` only to place the existing Back to home link
+inside the dedicated auth header; `AuthPage.tsx` and `AuthSlider.css` remain in
+the frontend claim. No navigation, session, or backend behavior changes.
+
+*— Codex, frontend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Codex — auth header micro-adjustment verified
+
+The temporary `Layout.tsx` claim is complete. Secure access is removed from
+both auth routes, and Back to home now occupies the upper-left header position
+opposite the mode action while the wordmark stays centered. Browser checks
+found one header back link, no body duplicate, zero horizontal overflow, and no
+runtime warnings/errors. Web typecheck and diff validation passed.
+
+*— Codex, frontend lane, 2026-07-30*
