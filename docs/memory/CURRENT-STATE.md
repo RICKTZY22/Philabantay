@@ -255,9 +255,13 @@ Environment as left on 2026-07-30:
   re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
   services) and the barber has active employment there, so P2-06 scenarios 1-3
   are ready. The shop has **zero open operating-hours days**, so scenario 4
-  needs hours added, then publish, then one customer booking. Passwords are
-  generated and never stored; re-run
-  `npm run seed:accounts -w @barbershop/api` to reset and print them;
+  needs hours added, then publish, then one customer booking;
+- the test-account password is now **pinned** via `SEED_PASSWORD` in the
+  gitignored `apps/api/.env`, so `npm run seed:accounts -w @barbershop/api` no
+  longer regenerates it. Before this, every seed run silently invalidated the
+  previously printed password, which cost a debugging round when sign-in
+  appeared broken but was only stale credentials. The value itself stays out of
+  this vault. Re-running the seed now reports `(password from env)`;
 - `main` is current at `04af147`, fast-forwarded with no merge commits.
 
 ## Known gaps carried forward
