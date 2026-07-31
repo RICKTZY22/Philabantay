@@ -1453,3 +1453,58 @@ passed; full fast suite 127 passed (shared 59, API 28 with 53 gated skips, web
 but the in-app browser blocked localhost after an initial connection-refused
 page, so no visual result is claimed. No database/API changes and no local
 Supabase matrix rerun.
+
+## 2026-08-01 — Claude — reviewed Codex's readiness work; found the bug it exposed
+
+Codex's checklist row is correct and verified in the browser: it renders with a
+hint, shows `is-todo` while nothing is bookable, disables Publish in that state,
+and both flip back when a provider returns. Zero console errors, no overflow.
+Their `countBookableProviders` matches the SQL guard's shape, and making
+`bookableProviders` required forced every call site to be updated rather than
+defaulting to a silent zero.
+
+**Their change exposed a backend bug of mine that made the new row lie.**
+`countBookableProviders` trusts `provider.eligible`, and that field was hardcoded
+`true` for every barber in `apps/api/src/routes/qualifications.ts`. Its own type
+comment says eligibility is "derived from owner capability or active employment",
+and the query behind it filtered only `barber_employment.status = 'active'` — no
+`ended_at`, no `hired_at`, no role, no verification — while the booking gate and
+the publish guard use `private.is_active_barber_for_shop`, which requires all of
+them.
+
+A suspended barber therefore still counted. Reproduced live before the fix:
+
+```text
+verified barber   → checklist 1 bookable, publish 200   agree
+suspended barber  → checklist 1 bookable, publish 409   DISAGREE
+```
+
+The owner saw a complete checklist and a Publish button that failed every press —
+exactly what the row was added to prevent, narrowed to suspended staff. P1-02
+suspension leaves employment active, so it is reachable. `eligible` now mirrors
+`is_active_barber_for_shop` for barbers, and the extra profile columns are read
+for that rule alone rather than widened into the `profile` projection.
+
+Two follow-ups recorded rather than done here. `OwnerStaffPanel` renders
+`eligible ? 'Eligible' : 'Capability off'`, and "Capability off" is now reachable
+for a barber where the words are wrong — that is frontend copy. And the
+"How publishing works" paragraph still lists only details, hours, and a service.
+
+**Anti-drift test added.** The readiness rule now exists twice, in TypeScript for
+the checklist and in SQL for enforcement, which is the shape this packet spent its
+time removing everywhere else. The matrix now asserts the two give the same answer
+in both directions, suspending every employed barber so a leftover provider cannot
+make it vacuous. Falsified before being trusted: restoring `eligible: true` makes
+it fail.
+
+**Docstring corrected.** `shopPublicationReadiness` claimed it was "shared by the
+owner UI and the backend (to enforce it before flipping to published)". Nothing in
+`apps/api` has ever imported it; `api_publish_owner_shop` is the authority. That
+false claim is why the drift went unnoticed, and Codex had finished, so I took it.
+It now says plainly that this is a preview kept in step by hand, and points at the
+test that pins the two together.
+
+Gate on a database replayed from empty through all 53 migrations: typecheck, lint,
+both production builds, 129 fast tests (shared 61, api 28, web 40), **matrix 82/82
+twice back to back with no reset**, DB lint clean, `git diff --check` clean.
+Browser re-verified after the fix.
