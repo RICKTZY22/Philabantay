@@ -226,12 +226,29 @@ async function requireAppointmentOwner(dependencies: ApiDependencies, request: R
   await requireOwnedShop(dependencies, request, appointment.shop_id)
 }
 
-async function requireAssignedBarber(dependencies: ApiDependencies, request: Request, appointment: AppointmentRecord): Promise<void> {
-  requireRole(request, 'barber')
+/**
+ * The person actually performing the visit. Since Q20 that is either the
+ * assigned employed barber or an owner who performs services at their own shop,
+ * so this can no longer require the `barber` role: an owner-provider who could
+ * be booked but could not start or finish the visit would strand the
+ * appointment at `checked_in`.
+ *
+ * The database is still the authority. `api_transition_appointment` recomputes
+ * the same predicate through `private.is_bookable_provider_for_shop`, so this
+ * check is a fast, useful error rather than the security boundary.
+ */
+async function requireAssignedProvider(dependencies: ApiDependencies, request: Request, appointment: AppointmentRecord): Promise<void> {
   if (appointment.barber_id !== request.auth.profile.id) {
-    throw new ApiError(403, 'forbidden', 'Only the assigned barber may perform this action.')
+    throw new ApiError(403, 'forbidden', 'Only the assigned provider may perform this action.')
   }
-  await requireActiveEmployment(dependencies, request, appointment.shop_id)
+  if (request.auth.profile.role === 'barber') {
+    await requireActiveEmployment(dependencies, request, appointment.shop_id)
+    return
+  }
+  // An owner-provider reaches this only for their own shop's appointment, and
+  // requireOwnedShop raises when the shop is not theirs.
+  requireRole(request, 'shop_owner')
+  await requireOwnedShop(dependencies, request, appointment.shop_id)
 }
 
 function requireCustomer(request: Request, appointment: AppointmentRecord): void {
@@ -414,7 +431,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const { id } = parseParams(request, idParamsSchema)
     const input = parseBody(request, appointmentVersionInputSchema)
     const appointment = await getAppointment(dependencies, id)
-    if (request.auth.profile.role === 'barber') await requireAssignedBarber(dependencies, request, appointment)
+    if (request.auth.profile.role === 'barber') await requireAssignedProvider(dependencies, request, appointment)
     else await requireAppointmentOwner(dependencies, request, appointment)
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
     const { data, error } = await dependencies.database.rpc('api_issue_appointment_check_in_code', {
@@ -447,7 +464,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const { id } = parseParams(request, idParamsSchema)
     const input = parseBody(request, appointmentVersionInputSchema)
     const appointment = await getAppointment(dependencies, id)
-    await requireAssignedBarber(dependencies, request, appointment)
+    await requireAssignedProvider(dependencies, request, appointment)
     response.json({ data: await transitionAppointment(dependencies, id, input.expected_version, 'start', request.auth.profile.id) })
   })
 
@@ -455,7 +472,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const { id } = parseParams(request, idParamsSchema)
     const input = parseBody(request, appointmentVersionInputSchema)
     const appointment = await getAppointment(dependencies, id)
-    await requireAssignedBarber(dependencies, request, appointment)
+    await requireAssignedProvider(dependencies, request, appointment)
     response.json({ data: await transitionAppointment(dependencies, id, input.expected_version, 'finish', request.auth.profile.id) })
   })
 
@@ -496,7 +513,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const { id } = parseParams(request, idParamsSchema)
     const input = parseBody(request, appointmentReasonInputSchema)
     const appointment = await getAppointment(dependencies, id)
-    await requireAssignedBarber(dependencies, request, appointment)
+    await requireAssignedProvider(dependencies, request, appointment)
     response.json({ data: await transitionAppointment(dependencies, id, input.expected_version, 'mark_customer_no_show', request.auth.profile.id, input.reason) })
   })
 
