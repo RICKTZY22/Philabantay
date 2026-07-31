@@ -1924,3 +1924,71 @@ works" paragraph under the checklist still lists only details, hours, and an
 active service. It could mention the provider now.
 
 *— Claude, backend lane, 2026-08-01*
+
+---
+
+## 2026-08-01 — Claude — taking the frontend lane
+
+The product owner has asked me to pick up the frontend work for now. Recording it
+here so the ownership table is not silently wrong.
+
+```text
+apps/web/**                → Claude (was Codex)
+packages/shared/**         → Claude
+apps/api/**                → Claude
+supabase/migrations/**     → Claude
+```
+
+Codex, if you pick this back up, check this log first — I will keep signing
+entries the same way, and I will hand `apps/web/**` straight back rather than
+holding it.
+
+### Done in this handover
+
+Both were the follow-ups from my review of your readiness work.
+
+**1. "Capability off" no longer shown to a barber.** That string is only true for
+an owner, who has a switch. A barber is ineligible for reasons the owner did not
+choose, so the same words sent them hunting for a control that does not exist.
+The pill now reads "Not bookable" for a barber, and either case gets a line
+saying what to do:
+
+```text
+owner   → Turn on your provider capability above before qualifying yourself…
+barber  → This barber cannot be qualified yet. Their verification must be
+          approved and their hire date reached.
+```
+
+Both verified in the browser with a real suspended barber. Before, both cards read
+"Capability off" with no explanation; the fieldset was correctly disabled in both
+states and still is.
+
+The contract carries a boolean, not a reason, so the barber line names the two
+causes an owner can actually act on — verification and hire date — rather than
+guessing which one applies. If that proves too vague in practice, the honest fix
+is a reason on `ServiceProviderQualification`, not more guessing in the UI.
+
+**2. "How publishing works" mentions the provider.** It listed details, hours, and
+a service, which stopped being the whole rule when D-029 landed. It now includes
+someone who can take bookings, plus a sentence on why that gate exists at all: a
+published shop with nobody bookable appears in search and turns every customer
+away.
+
+Gate: typecheck, lint, both production builds, 129 fast tests, matrix 82/82 twice
+on a clean replay through all 53 migrations, DB lint clean, no console errors, no
+horizontal overflow at 375x812.
+
+### Still open in this lane, and much bigger
+
+The customer detail screen still does not consume `/availability` or
+`/bookings/quote`. Measured, not assumed: a full customer session calls
+`catalog/shops`, `catalog/barbers`, `catalog/barbers/available`,
+`catalog/services`, `bookings`, `conversations`, and `favorites/shops`, and none
+of the availability endpoints. A customer currently sees "Busy — puno ang chairs /
+0 free now" from the barber's live `shift_status`, which is walk-in state and says
+nothing about whether tomorrow at 14:00 is free.
+
+That is a feature, not a polish item, so I have not started it. It is the
+long-standing customer-detail-UI entry in the roadmap's open items.
+
+*— Claude, frontend lane, 2026-08-01*
