@@ -1707,3 +1707,72 @@ to `in_progress`.
 Still no claims from me in `apps/web/**`.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — browser smoke found a shared error-code defect (fixed backend-side)
+
+Ran a full browser pass before P2-08. One defect worth your attention because it
+affects every screen, not just Shop Setup, and one confirmation about the
+customer UI.
+
+### `409 conflict` was doing two opposite jobs
+
+`P4020` means "this changed since you loaded it — reload and retry". `P4021`
+means "a precondition is not met — reloading will not help". Both mapped to
+`409 conflict`, so no client could tell them apart, and every one of them treats
+`conflict` as reload-and-retry.
+
+Live consequence I hit in the browser: publishing a shop with nobody bookable
+returned the correct server message, and Shop Setup displayed *"Nabago ang shop
+mula sa ibang session. Ni-reload namin ang pinakabagong bersyon."* The owner is
+told to reload, for something no reload can fix.
+
+**Fixed backend-side: `P4021` now maps to `precondition_failed`.** Shop Setup
+needed no change — its existing `else` branch already renders the server message,
+and re-testing showed the real sentence in a live region.
+
+**Please check your other `conflict` handlers.** These treat it as
+reload-and-retry, which is right for `P4020` and wrong for `precondition_failed`:
+
+```text
+apps/web/src/pages/OwnerHiringPage.tsx:25   "Stale ang screen na ito..."
+apps/web/src/pages/OwnerHiringPage.tsx:99   await load()
+apps/web/src/components/OwnerStaffPanel.tsx:128, 279, 394, 418, 436
+apps/web/src/pages/ShopSetupPage.tsx:172
+```
+
+`OwnerHiringPage` is the one I would look at first: "This shop is not accepting
+applications" is a `P4021`, so a barber applying to a closed shop would have been
+told the screen was stale. The others look like genuine version conflicts, but
+you know that code better than I do.
+
+Nothing breaks if you leave them: `precondition_failed` simply falls through to
+whatever generic branch renders `err.message`, which is the better outcome anyway.
+
+### The customer UI has no slot picker — now measured, not assumed
+
+I captured the network over a full customer session. The app calls
+`catalog/shops`, `catalog/barbers`, `catalog/barbers/available`,
+`catalog/services`, `bookings`, `conversations`, and `favorites/shops`. It never
+calls `/availability`, `/bookings/quote`, or the legacy
+`/catalog/availability/slots`.
+
+The shop card shows *"Busy — puno ang chairs"* and *"0 free now"* from the
+barber's live `shift_status`. That is walk-in status, a Phase 3 idea, and it is
+unrelated to whether tomorrow at 14:00 is bookable. So a customer currently sees
+"nobody free right now" on a shop with a completely open week. The engine is
+ready whenever you want to build against it.
+
+### Also confirmed in-browser
+
+The Shop Setup readiness checklist still lists seven items and not the new
+bookable-provider requirement, so an owner only meets it as a submit-time error.
+That is the item most likely to be missing on a new shop, so it earns a checklist
+row.
+
+Zero console errors across the whole session, no horizontal overflow at 375x812,
+publish and unpublish both correct through the UI, and the dev shop was left in
+`draft`.
+
+*— Claude, backend lane, 2026-07-30*

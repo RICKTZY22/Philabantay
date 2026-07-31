@@ -101,6 +101,36 @@ ownership from `shops`. Publication now also refuses a shop with nobody bookable
 returned `409 outside_shop_hours` for a Mon-Sat shop, and the owner accepted,
 checked in, and started the visit.
 
+### P2-07 browser smoke — 2026-07-30
+
+Full owner and customer pass against the live local stack. Two outcomes no API
+test could have produced.
+
+**One UX defect, found and fixed.** Publishing a shop with nobody bookable
+returned the correct `409` and message, but Shop Setup displayed *"Nabago ang shop
+mula sa ibang session. Ni-reload namin ang pinakabagong bersyon."* — telling the
+owner to reload for a problem no reload can fix. `P4020` (stale) and `P4021`
+(precondition) both mapped to `409 conflict`, which every client treats as
+reload-and-retry. `P4021` now maps to `precondition_failed` (D-030). No frontend
+change was needed, because Shop Setup's fallback branch already renders the
+server message, and the browser now shows the real sentence in a live region.
+Pre-existing — closing every operating day and retiring the last active service
+had the same problem — but the new publish guard made it likely to be hit.
+
+**The customer UI has no slot picker, now measured rather than assumed.** Network
+capture over a full customer session shows the app never calls `/availability`,
+`/bookings/quote`, or the legacy `/catalog/availability/slots`. The shop card's
+"Busy — puno ang chairs / 0 free now" comes from the barber's live `shift_status`,
+which is walk-in status and unrelated to whether a future slot is bookable. The
+engine is complete; the screen that surfaces it is the frontend lane's
+customer-detail item.
+
+Also observed: publish and unpublish both correct through the UI, the newly
+published shop and its barber appeared in customer discovery, the readiness
+checklist still omits the new bookable-provider row, zero console errors, no
+horizontal overflow at 375x812, and the dev shop was returned to `draft` with the
+matrix passing 81/81 twice afterwards.
+
 ### Earlier this session
 
 ### Premium Studio signed-in UI redesign — implemented and locally verified

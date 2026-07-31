@@ -1369,3 +1369,63 @@ for a Mon-Sat shop, which is the window working as intended; and the owner
 accepted, checked in, and started the visit.
 
 Phase 2 now has one packet left: **P2-08 race gate**.
+
+## 2026-07-30 — Claude — P2-07 browser smoke: one UX defect found and fixed
+
+Final gate before P2-08, plus a real browser pass. Two things came out of it that
+no API test could have.
+
+**1. A publish refusal told the owner the wrong thing (fixed).** Clicking Publish
+on a shop with nobody bookable correctly returned `409`, and the server message
+was exactly right:
+
+> Add someone who can take bookings before publishing: employ a barber, or switch
+> on your own provider capability, and qualify them for an active service.
+
+What Shop Setup actually displayed was:
+
+> Nabago ang shop mula sa ibang session. Ni-reload namin ang pinakabagong bersyon.
+
+The owner was told to reload, for a problem no reload can fix — an infinite loop
+with the real reason never shown. Cause: `P4020` ("this changed since you loaded
+it") and `P4021` ("a precondition is not met") both mapped to `409 conflict`, and
+every client treats `conflict` as reload-and-retry. `P4021` now maps to
+`precondition_failed`. Shop Setup's existing `else` branch already renders the
+server message, so no frontend change was needed, and re-testing in the browser
+showed the real sentence in a live region.
+
+This is pre-existing, not something P2-07 introduced: the other two `P4021` sites
+— closing every operating day and retiring the last active service — have been
+showing the same wrong message all along. The new publish guard just made it far
+more likely to be hit. Three test assertions updated to pin the distinction.
+
+**2. The customer UI genuinely has no slot picker, now proven rather than
+asserted.** Network capture over a full customer session shows the calls made:
+`catalog/shops`, `catalog/barbers`, `catalog/barbers/available`,
+`catalog/services`, `bookings`, `conversations`, `favorites/shops`. It never calls
+`/availability`, `/bookings/quote`, or even the legacy
+`/catalog/availability/slots`. The shop card shows live walk-in status —
+"Busy — puno ang chairs", "0 free now" — which is a Phase 3 concept, not P2-07's
+future-slot availability. So the engine is complete and honest, and nothing yet
+surfaces it to a customer. That remains the frontend lane's customer-detail item.
+
+Also confirmed in-browser: the readiness checklist still lists seven items and not
+the new bookable-provider one, so the owner meets it only as a submit-time error.
+Flagged for Codex.
+
+Browser evidence, owner and customer, signed in against the live local stack:
+
+- publish succeeded through the UI and the status flipped to "Published (live in
+  discovery)", version 2, with the button becoming Unpublish;
+- the newly published shop and its barber appeared in customer discovery;
+- publish refused with the correct reason once the last qualification was
+  revoked, and succeeded again once restored;
+- zero console errors across the whole session;
+- no horizontal overflow at 375x812;
+- the dev shop was returned to `draft` and the matrix then passed 81/81 twice
+  with zero published shops left behind.
+
+Gate: clean replay through all 52 migrations, typecheck, lint, both production
+builds, 124 fast tests, matrix 81/81 twice, DB lint clean.
+
+P2-07 stays ✅. Next is P2-08.
