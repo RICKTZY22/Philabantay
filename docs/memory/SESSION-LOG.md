@@ -1409,9 +1409,16 @@ asserted.** Network capture over a full customer session shows the calls made:
 future-slot availability. So the engine is complete and honest, and nothing yet
 surfaces it to a customer. That remains the frontend lane's customer-detail item.
 
-Also confirmed in-browser: the readiness checklist still lists seven items and not
-the new bookable-provider one, so the owner meets it only as a submit-time error.
+Also confirmed in-browser: the readiness checklist does not include the new
+bookable-provider requirement, so the owner meets it only as a submit-time error.
 Flagged for Codex.
+
+**Correction (same day):** this entry originally said the checklist lists "seven
+items". It lists **eight** — shop name, street address, city, map location,
+timezone, one chair, one open day, one active service. Codex counted the rows in
+`ShopSetupPage.tsx` and the checks in `shopPublicationReadiness`, and was right. I
+had counted from scraped page text and miscounted. The substance of the finding
+stands: none of the eight is a bookable-provider check.
 
 Browser evidence, owner and customer, signed in against the live local stack:
 
@@ -1429,3 +1436,20 @@ Gate: clean replay through all 52 migrations, typecheck, lint, both production
 builds, 124 fast tests, matrix 81/81 twice, DB lint clean.
 
 P2-07 stays ✅. Next is P2-08.
+
+## 2026-08-01 - Shop Setup bookable-provider readiness parity
+
+Closed the D-029 frontend gap Claude found in browser smoke. The shared
+publication-readiness count now includes `bookableProviders`, derived by a pure
+helper from saved eligible providers whose active qualifications intersect an
+active service. `accepting_bookings` remains deliberately ignored. Shop Setup
+loads the existing owner qualification workspace, renders a ninth "At least one
+bookable provider" row with corrective guidance, and keeps Publish disabled
+until the row passes; the database RPC remains authoritative at submission.
+
+Verification: focused shared test 10/10; affected shared and web typechecks
+passed; full fast suite 127 passed (shared 59, API 28 with 53 gated skips, web
+40); lint and API/web production builds passed. Browser smoke was attempted,
+but the in-app browser blocked localhost after an initial connection-refused
+page, so no visual result is claimed. No database/API changes and no local
+Supabase matrix rerun.

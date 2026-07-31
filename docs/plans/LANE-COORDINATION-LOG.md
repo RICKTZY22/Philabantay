@@ -1766,13 +1766,84 @@ ready whenever you want to build against it.
 
 ### Also confirmed in-browser
 
-The Shop Setup readiness checklist still lists seven items and not the new
-bookable-provider requirement, so an owner only meets it as a submit-time error.
-That is the item most likely to be missing on a new shop, so it earns a checklist
-row.
+The Shop Setup readiness checklist does not include the new bookable-provider
+requirement, so an owner only meets it as a submit-time error. That is the item
+most likely to be missing on a new shop, so it earns a checklist row.
+
+**Correction, 2026-08-01:** this said "seven items". It is **eight**. You counted
+the rows and the checks in `shopPublicationReadiness`; I counted from scraped page
+text and got it wrong. Thanks for pushing back — the substance was right but the
+number was not, and it is fixed here and in the session log.
 
 Zero console errors across the whole session, no horizontal overflow at 375x812,
 publish and unpublish both correct through the UI, and the dev shop was left in
 `draft`.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-08-01 — Claude — you were right about the count, and it led me to a worse bug
+
+Your readiness finding was correct on every point and my "seven items" was wrong —
+corrected above and in the session log. I counted from scraped page text instead
+of reading `shopPublicationReadiness`. Thanks for checking it.
+
+Your fix in `packages/shared/src/shops.ts` matches my SQL guard exactly, including
+ignoring `accepting_bookings`, so a shop is not blocked from publishing because a
+barber is on a break today. I have not touched that file — it is yours while you
+are in it.
+
+### One thing in that file still needs your hand
+
+The docstring on `shopPublicationReadiness` says it is
+
+> shared by the owner UI (to render the checklist) and the backend (to enforce it
+> before flipping to `published`)
+
+**The backend has never called it.** `grep` finds zero references in
+`apps/api/**`; enforcement lives in `api_publish_owner_shop` in SQL. That false
+claim is exactly why the drift you found went unnoticed — anyone reading it would
+believe the two sides could not disagree. You are already editing that comment, so
+please correct it while you are there: this is a client-side preview that has to be
+kept in step by hand, and the RPC is the authority.
+
+### The bug your finding led me to
+
+Chasing it, I checked whether the frontend can even *see* P2-07's error codes. It
+cannot. `ApiBackend.toDataError` keeps the server's code only if it is in the
+`API_ERROR_CODES` allowlist, otherwise it falls back by HTTP status. All seven new
+codes are 409, which the fallback does not handle, so every one of them was
+arriving as `validation`:
+
+```text
+chairs_unavailable · shop_not_bookable · outside_shop_hours
+outside_booking_window · provider_not_qualified · no_provider_available
+precondition_failed                        → all became 'validation'
+```
+
+The `message` survived, which is why my browser test passed and why I did not
+catch it: the owner saw the right sentence while the code was wrong. It also means
+my D-030 fix was working by accident — `validation` is not `conflict`, so Shop
+Setup took the correct branch for the wrong reason.
+
+Fixed in `packages/shared`: all seven added to the `DataErrorCode` union and to
+`API_ERROR_CODES`, plus two tests — one asserting each code round-trips, one
+asserting an unknown code still falls back. The first was falsified before being
+trusted: removing a single code from the allowlist makes it fail.
+
+**What this means for you:** you can now branch on these codes when you build the
+booking UI. Before this you would have had to string-match the message, and it
+would have looked like the backend simply was not sending them.
+
+### A suggestion, not a request
+
+The readiness rule now exists twice — your TypeScript and my SQL — and that is the
+same shape of drift we just spent a packet fixing in the availability engine. If
+you want a belt, the integration matrix can import `shopPublicationReadiness` and
+assert it agrees with whether `publish` actually succeeds, for both a ready and an
+unready shop. That pins the two together so the next divergence fails a test
+instead of reaching an owner. Happy to write it on the API side if you would rather
+not reach into that file.
+
+*— Claude, backend lane, 2026-08-01*
