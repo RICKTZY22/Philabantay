@@ -26,8 +26,9 @@ Draft → pending_review → published → suspended → archived, with version-
 
 `shopPublicationReadiness` gives the UI the same checklist vocabulary as the
 database command. The versioned `api_publish_owner_shop` RPC is authoritative:
-it locks the shop and rechecks identity, location, chairs, hours, services, and
-verified ownership in the same transaction before changing lifecycle state.
+it locks the shop and rechecks identity, location, chairs, hours, services,
+verified ownership, and a provider qualified for an active service in the same
+transaction before changing lifecycle state.
 
 **Verification of record:** the P2-01 slice was verified at 52/52 on a clean
 local-Supabase reset and browser-checked (Shop Setup create/edit/publish plus the
@@ -40,18 +41,24 @@ owner no-shop redirect). Committed as `f402624` and `5cc05f3`.
 Weekly operating hours, per-date closures, owner services, private signed media,
 and the exact map-pin picker are implemented and verified full stack.
 
-### `packages/shared/test/shops.test.ts` ✅ (5)
+### `packages/shared/test/shops.test.ts` ✅ (8 readiness/provider tests)
 
-The publish-readiness rule, unit-tested with an explicit `{ activeServices,
-operatingHours }` count object.
+The publish-readiness rule is unit-tested with an explicit `{ activeServices,
+bookableProviders, operatingHours }` count object. The provider count is derived
+from saved eligible providers and active qualification/service intersections;
+the momentary `accepting_bookings` toggle is deliberately irrelevant to
+publication.
 
 | Test | What it protects |
 | --- | --- |
-| is ready when identity, location, timezone, chairs, hours, and an active service are present | The happy path reports ready with an empty missing list. |
+| is ready when identity, location, chairs, hours, a service, and a provider are present | The happy path reports ready with an empty missing list. |
 | blocks publication without an active service | No sellable service means not ready. |
 | blocks publication without an operating-hours block | No open day means not ready. |
 | requires at least one chair | Zero chairs means not ready. |
 | requires shop identity, location, and timezone | Missing name / address / city / map location / timezone each block publication. |
+| blocks publication without a bookable provider | The UI cannot claim ready or enable Publish before D-029 passes. |
+| counts eligible providers qualified for an active service | Ineligible providers and qualifications only for retired services do not satisfy readiness. |
+| does not require the momentary accepting-bookings state | A temporary pause does not block publication. |
 
 ### `apps/api/test/local-supabase.integration.test.ts` ✅ (gated, added in P2-02)
 

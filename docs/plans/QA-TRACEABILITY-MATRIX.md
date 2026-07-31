@@ -19,7 +19,7 @@ automated test and the findings behind it.
 | SEC-02 | No direct appointment write bypass | 1 | Negative RLS/concurrency tests |
 | SEC-03 | Former/suspended staff lose access | 1–4 | Chat/command denial tests |
 | SHOP-01 | Owner creates/resumes/edits one private shop draft | 2 | Owner E2E |
-| SHOP-02 | Only valid published shops appear publicly | 2 | Passed: published eligibility + strict anonymous summary/detail projection + API/direct-RLS tests |
+| SHOP-02 | Only valid published shops appear publicly | 2 | Passed: published eligibility + strict anonymous summary/detail projection + API/direct-RLS tests. D-029 frontend parity added 2026-08-01: Shop Setup includes the saved-state bookable-provider row and disables Publish until it passes; the transactional RPC remains authoritative. |
 | SHOP-03 | Real location, hours, closures, media, services, policies, chairs | 2 | Setup E2E + 2026-07-28 public detail contract/API projection. Live availability landed with P2-07 on 2026-07-30: hours, closures, chairs, buffers, and the booking window are all real booking inputs now, and the public detail projection carries `min_lead_minutes`/`max_advance_days` so a UI can explain a missing slot. The customer-facing screen that consumes it is still unbuilt. |
 | HIRE-01 | Shop hiring off/open/full with optional count/note | 2 | Passed 2026-07-27: version/race + public gate + direct-RLS + authenticated UI refresh/mobile/a11y smoke |
 | HIRE-02 | Application/invitation/join code converge on request | 2 | Employment E2E |

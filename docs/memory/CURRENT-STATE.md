@@ -2,7 +2,7 @@
 tags:
   - philabantay
   - current-state
-updated: 2026-07-30
+updated: 2026-08-01
 ---
 
 # Current state
@@ -126,10 +126,13 @@ engine is complete; the screen that surfaces it is the frontend lane's
 customer-detail item.
 
 Also observed: publish and unpublish both correct through the UI, the newly
-published shop and its barber appeared in customer discovery, the readiness
-checklist still omits the new bookable-provider row, zero console errors, no
-horizontal overflow at 375x812, and the dev shop was returned to `draft` with the
-matrix passing 81/81 twice afterwards.
+published shop and its barber appeared in customer discovery, zero console
+errors, no horizontal overflow at 375x812, and the dev shop was returned to
+`draft` with the matrix passing 81/81 twice afterwards. The smoke initially
+found that the readiness checklist omitted the new bookable-provider row; the
+2026-08-01 frontend follow-up fixed that gap. Shop Setup now derives the row
+from saved provider eligibility and active-service qualifications and disables
+Publish until it passes.
 
 ### Earlier this session
 

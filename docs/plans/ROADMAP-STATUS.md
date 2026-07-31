@@ -192,10 +192,12 @@ Three follow-ups ride along rather than blocking anything:
   measured at roughly fifty savepoints for a thirteen-hour day. That is fine at
   V1 volume. If a real shop's slot query ever gets slow, add a cheap pre-filter in
   front of the gate — never a second copy of the predicates;
-- Shop Setup should show the new publish readiness item (D-029) and, once an
-  owner switches their provider capability on, make clear they are now bookable
-  during the shop's opening hours. Both are frontend-lane work and neither
-  changes backend behaviour.
+- **D-029 Shop Setup readiness row closed 2026-08-01.** The checklist now reads
+  saved provider eligibility and active-service qualifications through the
+  existing qualification workspace, and Publish stays disabled until at least
+  one provider qualifies. The remaining frontend copy follow-up is to make
+  clear that enabling the owner capability makes the owner bookable during the
+  shop's opening hours.
 
 Two P2-06 follow-ups also remain open: a human visible-workflow review of the
 owner staff panel and barber schedule, and an OS-level reduced-motion check. Both

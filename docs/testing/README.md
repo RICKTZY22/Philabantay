@@ -31,6 +31,13 @@ report as **skipped**, not failed.
 
 ## Latest authoritative run (2026-07-30)
 
+Frontend readiness follow-up on 2026-08-01: shared tests increased from 56 to
+59 and the default fast total from 124 to 127. The full fast suite passed
+(shared 59, API 28 with 53 gated skips, web 40), along with lint and both
+production builds. The gated local-Supabase matrix was not rerun because this
+follow-up changes no migration, API route, authorization rule, or database
+predicate.
+
 Measured this session against a local database carrying every migration
 through `20260728000700_p2_06_narrowed_hours_conflict_guard.sql`:
 

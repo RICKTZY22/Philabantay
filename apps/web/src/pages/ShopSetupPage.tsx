@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import {
+  countBookableProviders,
   DataError,
   shopPublicationReadiness,
+  type OwnerQualificationWorkspace,
   type OwnerShop,
   type ShopOperatingHours,
   type ShopClosure,
@@ -76,6 +78,9 @@ const STATUS_LABEL: Record<OwnerShop['lifecycle_status'], string> = {
 export function ShopSetupPage() {
   const backend = useBackend()
   const [shop, setShop] = useState<OwnerShop | null | undefined>(undefined)
+  const [qualificationWorkspace, setQualificationWorkspace] = useState<
+    OwnerQualificationWorkspace | null | undefined
+  >(undefined)
   const [savedHours, setSavedHours] = useState<ShopOperatingHours[]>([])
   const [loadError, setLoadError] = useState('')
   const [form, setForm] = useState<ShopForm>(BLANK)
@@ -96,6 +101,7 @@ export function ShopSetupPage() {
 
   const load = useCallback(async () => {
     setLoadError('')
+    setQualificationWorkspace(undefined)
     try {
       const mine = await backend.ownerShop.getMine()
       setShop(mine)
@@ -106,8 +112,10 @@ export function ShopSetupPage() {
       setClosures(mine ? await backend.ownerShop.getClosures() : [])
       setServices(mine ? await backend.ownerShop.listServices() : [])
       setMedia(mine ? await backend.ownerShop.listMedia() : [])
+      setQualificationWorkspace(mine ? await backend.qualifications.getOwnerWorkspace() : null)
     } catch (err) {
       setShop(undefined)
+      setQualificationWorkspace(undefined)
       setLoadError(err instanceof DataError ? err.message : 'Hindi ma-load ang shop setup.')
     }
   }, [backend])
@@ -117,8 +125,12 @@ export function ShopSetupPage() {
   const update = (patch: Partial<ShopForm>) => setForm((prev) => ({ ...prev, ...patch }))
   const openDays = useMemo(() => savedHours.filter((h) => !h.closed).length, [savedHours])
   const activeServices = useMemo(() => services.filter((service) => service.active).length, [services])
+  const bookableProviders = useMemo(() => countBookableProviders(
+    services,
+    qualificationWorkspace?.providers ?? [],
+  ), [services, qualificationWorkspace])
 
-  // Readiness mirrors the backend rule exactly: both counts come from SAVED
+  // Readiness mirrors the backend rule exactly: all counts come from SAVED
   // server state (not unsaved form edits), so the checklist cannot claim ready
   // while publish would still fail.
   const readiness = useMemo(() => shopPublicationReadiness({
@@ -129,7 +141,11 @@ export function ShopSetupPage() {
     lng: shop?.lng ?? Number.NaN,
     timezone: shop?.timezone ?? '',
     chair_count: shop?.chair_count ?? 0,
-  }, { activeServices, operatingHours: openDays }), [shop, activeServices, openDays])
+  }, {
+    activeServices,
+    bookableProviders,
+    operatingHours: openDays,
+  }), [shop, activeServices, bookableProviders, openDays])
 
   function buildInput() {
     return {
@@ -395,7 +411,9 @@ export function ShopSetupPage() {
     setHoursRows((prev) => prev.map((row) => (row.weekday === weekday ? { ...row, ...patch } : row)))
   }
 
-  if (shop === undefined && !loadError) return <Loading label="Binubuksan ang shop setup..." />
+  if ((shop === undefined || qualificationWorkspace === undefined) && !loadError) {
+    return <Loading label="Binubuksan ang shop setup..." />
+  }
 
   if (loadError) {
     return (
@@ -836,6 +854,11 @@ export function ShopSetupPage() {
               <ReadyItem ok={!readiness.missing.includes('at least one chair')} label="At least one chair" />
               <ReadyItem ok={!readiness.missing.includes('at least one operating-hours block')} label="At least one open day" />
               <ReadyItem ok={activeServices > 0} label="At least one active service" />
+              <ReadyItem
+                ok={!readiness.missing.includes('at least one bookable provider')}
+                label="At least one bookable provider"
+                hint="Employ a barber or enable yourself in Staff, then qualify them for an active service."
+              />
             </ul>
             {shop ? (
               isPublished ? (
