@@ -522,6 +522,16 @@ const API_ERROR_CODES = new Set([
   'media_limit',
   'schedule_has_active_bookings',
   'cooldown_active',
+  // P2-07 availability engine. Every one of these is a 409, and 409 is not
+  // handled by the status fallback below, so omitting a code here silently
+  // rewrites it to `validation` and the client loses the reason entirely.
+  'chairs_unavailable',
+  'shop_not_bookable',
+  'outside_shop_hours',
+  'outside_booking_window',
+  'provider_not_qualified',
+  'no_provider_available',
+  'precondition_failed',
   'validation',
 ] as const)
 

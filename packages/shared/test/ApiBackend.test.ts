@@ -96,6 +96,59 @@ describe('ApiBackend', () => {
     })
   })
 
+  it('preserves every availability refusal code instead of collapsing it to validation', async () => {
+    // ApiBackend drops any server code missing from its allowlist and falls back
+    // by HTTP status. All of these are 409, which the fallback does not handle,
+    // so an omitted code silently becomes `validation` and the client loses the
+    // reason. The message survives either way, which is what made the omission
+    // invisible in browser testing: the owner saw the right sentence while the
+    // code was wrong. Add a code to the union without the allowlist and this
+    // fails.
+    const codes = [
+      'chairs_unavailable',
+      'shop_not_bookable',
+      'outside_shop_hours',
+      'outside_booking_window',
+      'provider_not_qualified',
+      'no_provider_available',
+      'precondition_failed',
+    ] as const
+
+    for (const code of codes) {
+      const storage = memoryStorage({
+        'philabantay.api.session.v1': JSON.stringify({ access_token: primaryAccessToken, refresh_token: primaryRefreshToken }),
+      })
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(json({
+        error: { code, message: `Refused: ${code}.` },
+      }, 409))
+      const backend = new ApiBackend({ baseUrl: 'http://api.test/api/v1', fetch: fetchMock, storage })
+
+      await expect(backend.favorites.list()).rejects.toMatchObject({
+        name: 'DataError',
+        code,
+        message: `Refused: ${code}.`,
+      })
+    }
+  })
+
+  it('still falls back by status for a code it does not know', async () => {
+    // The allowlist is a guard, not a pass-through: an unrecognised code must not
+    // reach callers as if the contract knew about it.
+    const storage = memoryStorage({
+      'philabantay.api.session.v1': JSON.stringify({ access_token: primaryAccessToken, refresh_token: primaryRefreshToken }),
+    })
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(json({
+      error: { code: 'invented_by_a_future_migration', message: 'Something specific.' },
+    }, 409))
+    const backend = new ApiBackend({ baseUrl: 'http://api.test/api/v1', fetch: fetchMock, storage })
+
+    await expect(backend.favorites.list()).rejects.toMatchObject({
+      name: 'DataError',
+      code: 'validation',
+      message: 'Something specific.',
+    })
+  })
+
   it('surfaces the shop-media cap message instead of a generic failure', async () => {
     const storage = memoryStorage({
       'philabantay.api.session.v1': JSON.stringify({ access_token: primaryAccessToken, refresh_token: primaryRefreshToken }),

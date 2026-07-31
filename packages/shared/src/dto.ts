@@ -483,6 +483,20 @@ export type DataErrorCode =
   | 'media_limit'
   | 'schedule_has_active_bookings'
   | 'cooldown_active'
+  // P2-07 availability engine. Each names one reason a slot cannot be claimed,
+  // so a client can explain the refusal instead of showing a generic failure.
+  // They must also appear in API_ERROR_CODES: ApiBackend drops any code missing
+  // from that allowlist and falls back by HTTP status, which for these 409s
+  // means every one of them would arrive indistinguishable as `validation`.
+  | 'chairs_unavailable'
+  | 'shop_not_bookable'
+  | 'outside_shop_hours'
+  | 'outside_booking_window'
+  | 'provider_not_qualified'
+  | 'no_provider_available'
+  // Distinct from `conflict`, which means "reload and retry". This one means a
+  // requirement is unmet and reloading changes nothing. See D-030.
+  | 'precondition_failed'
   | 'validation'
   | 'network'
   | 'server'
