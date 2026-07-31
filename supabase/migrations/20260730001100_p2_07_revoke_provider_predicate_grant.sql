@@ -1,0 +1,31 @@
+-- P2-07 follow-up: take back a grant that was never needed.
+--
+-- 20260730000800 introduced private.is_bookable_provider_for_shop and granted
+-- execute to `authenticated`, copying the pattern from
+-- private.is_active_barber_for_shop. That copy was wrong. The older predicate
+-- needs the grant because roughly ten RLS policies reference it, and an RLS
+-- predicate is evaluated as the querying role, so `authenticated` genuinely has
+-- to be able to execute it.
+--
+-- The new predicate appears in no policy at all. Its only callers are
+-- private.prepare_appointment, api_transition_appointment_unlocked,
+-- api_issue_appointment_check_in_code, and api_publish_owner_shop — every one of
+-- them SECURITY DEFINER, which executes with the definer's rights and does not
+-- consult the caller's grants. Every other predicate added by this packet
+-- (require_bookable_shop, require_provider_qualified, require_chair_capacity)
+-- is revoked from all four roles and works fine, which is the proof.
+--
+-- The grant was reachable, not merely untidy: `authenticated` holds USAGE on the
+-- private schema from 20260717000300. So a signed-in user could call
+-- is_bookable_provider_for_shop(any_shop, any_user) and read back a boolean. For
+-- an employed barber that is close to public knowledge, since barbers appear in
+-- the public catalogue with their shop. For an owner it is not: owner provider
+-- capability is deliberately absent from public discovery, and this exposed it.
+--
+-- Low severity, but least privilege is the whole reason the private schema
+-- exists, and a needless grant on a fresh function is worth removing while it is
+-- still new. service_role keeps its grant, matching is_active_barber_for_shop;
+-- PostgREST exposes only `public`, so it is not reachable from a request either
+-- way.
+revoke execute on function private.is_bookable_provider_for_shop(uuid, uuid)
+  from authenticated;
