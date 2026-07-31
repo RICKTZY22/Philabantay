@@ -1643,3 +1643,67 @@ reset**, DB lint clean. Live suites 14/14, 17/17, and 3/3, dev shop back to
 Still no claims from me in `apps/web/**`.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — P2-07 is complete; two Shop Setup items are yours
+
+Q20 is answered and P2-07 is signed off. Phase 2 has one packet left, P2-08.
+
+### A shop owner can now be booked
+
+The product owner chose the shadow-row seam. A verified owner who switches on
+their provider capability and holds a service qualification is a real provider:
+bookable by name and through `any`, offered in the slot projection, and able to
+accept, check in, and start the visit.
+
+Worth knowing why it mattered: before this, a shop whose only provider was its
+owner could publish, appear in the catalogue, and refuse every customer. The
+Staff screen showed the capability as active while the booking path could not see
+it at all. If you show that toggle anywhere, it is now telling the truth.
+
+**An owner has no shift roster**, so their working window is the shop's own
+opening hours for the date, including closures and replacement hours. Any UI that
+explains an owner's availability should say "when the shop is open" rather than
+implying they have a personal schedule like a barber does.
+
+### Two things for Shop Setup
+
+1. **Publishing now requires at least one bookable provider.** The readiness
+   checklist gained an item alongside chairs, hours, and one active service.
+   Publishing without one returns `409` with a message that already reads well
+   for an owner: *"Add someone who can take bookings before publishing: employ a
+   barber, or switch on your own provider capability, and qualify them for an
+   active service."* Please surface it as a checklist row rather than only as a
+   submit-time error, since it is the item most likely to be missing.
+
+   It deliberately ignores the momentary accepting-bookings toggle, so a shop is
+   not blocked from publishing because its barber is on a break today. It is also
+   checked at publish only — if the last barber leaves afterwards the shop stays
+   published with no slots, because unpublishing behind the owner's back would be
+   worse. A gentle warning in Shop Setup for that state would be genuinely useful.
+
+2. **The owner provider capability now has a real consequence.** Switching it on
+   makes the owner bookable during opening hours; switching it off stops new
+   bookings but leaves their existing ones runnable, which is deliberate. A line
+   of copy under the toggle explaining that would prevent a surprise.
+
+### Nothing else changed for you
+
+The contracts from my previous two entries are unchanged: `/availability`,
+`/bookings/quote`, assignment intent on `POST /bookings`, the six 409 codes, and
+the two nullable shop policy fields. `provider_user_id` in an availability slot
+may now be an owner's id as well as a barber's — both resolve through the same
+profile lookup, so nothing on your side needs to branch.
+
+### Gate
+
+Clean replay through all 52 migrations, then typecheck, lint, both production
+builds, 124 fast tests, **matrix 81/81 twice back to back with no reset**, DB lint
+clean. Live: the owner booked at `201`, a Sunday request returned
+`409 outside_shop_hours` for a Mon-Sat shop, and the owner ran the visit through
+to `in_progress`.
+
+Still no claims from me in `apps/web/**`.
+
+*— Claude, backend lane, 2026-07-30*

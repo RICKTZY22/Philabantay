@@ -21,13 +21,13 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 - P2-06 Schedule authority: **verified complete, signed off 2026-07-30** on an
   agent-executed functional and accessibility pass accepted in lieu of a
   personal visible-workflow review.
-- P2-07 Availability engine: **in progress. Nine of the ten required inputs are
-  implemented and verified; owner-as-provider booking is blocked on Q20.**
-- P2-08 Race gate: not started.
+- P2-07 Availability engine: **verified complete 2026-07-30**, all ten required
+  inputs. Q20 was answered the same day (D-028).
+- P2-08 Race gate: next.
 
 ## Active packet
 
-### P2-07 availability engine — implemented and verified except one input
+### P2-07 availability engine — verified complete
 
 Two real bypasses were found by measuring the existing gate rather than trusting
 the packet description, and both were reproduced through the real HTTP API before
@@ -42,7 +42,7 @@ contained zero references to `lifecycle_status`, `shop_operating_hours`,
 `shop_closures`, `service_qualifications`, `owner_provider_profiles`,
 `chair_count`, `default_buffer_min`, or `booking_mode`.
 
-Seven forward migrations, `20260730000100` through `20260730000700`:
+Ten forward migrations, `20260730000100` through `20260730001000`:
 
 - the booking window (`min_lead_minutes`, nullable `max_advance_days`),
   per-service `buffer_min`, BOOK-02 assignment intent, and a qualification
@@ -62,20 +62,20 @@ Express gained `GET /availability`, `POST /bookings/quote`, six new error codes,
 and the booking window on the owner and public shop contracts. The old Express
 slot math is deleted, so an offered slot is a claimable slot by construction.
 
-Gate, on a database replayed from empty through all 49 migrations:
+Gate, on a database replayed from empty through all 52 migrations:
 
 ```text
 typecheck   all workspaces passed
 lint        passed
 build       API + web production build passed
 fast tests  124 (shared 56, api 28, web 40)
-matrix      79/79 twice back to back, no reset between runs
+matrix      81/81 twice back to back, no reset between runs
 DB lint     no schema errors
 diff        git diff --check clean
 ```
 
 Live end-to-end suites through the real API passed 14/14, 17/17, and 3/3 and
-restored the dev shop to `draft`. The matrix then passed 79/79 twice again with
+restored the dev shop to `draft`. The matrix then passed 81/81 twice again with
 zero published shops left behind, so there is no fixture pollution this time.
 
 A pre-push self-review found three defects that no test covered, all fixed in
@@ -88,11 +88,18 @@ and claim disagreed about *why* an `any`/`preferred` slot was refused. The
 assignment regression was falsified before being trusted — inverting the ordering
 in the live database made it fail. Detail in the session log.
 
-**Outstanding, and it is why this packet is not ✅:** owner-as-provider booking,
-required input 4. `appointments.barber_id` references `barbers(id)` and P2-05
-deliberately modelled owners without a `barbers` row, so closing the gap means
-either duplicating `accepting_bookings`/`rating` or building a real provider seam
-across roughly thirteen foreign keys. Raised as **Q20** rather than guessed.
+**Input 4 closed the same day.** A shop whose only provider was its owner could
+publish, appear in the catalogue, and refuse every customer, because the engine
+never read `owner_provider_profiles`. Q20 was answered with the shadow-row seam
+(D-028): a provider-enabled owner gets a one-way-mirrored `barbers` row as the
+foreign-key anchor, and the gate, the assignment order, and the projection treat
+the shop's own opening hours as their roster. Three pre-existing guards were
+extended rather than weakened — the appointment assignment lock, the `barbers`
+capability-enablement lock, and the provider predicate — each re-deriving
+ownership from `shops`. Publication now also refuses a shop with nobody bookable
+(D-029). Verified live: the owner booked at `201`, the same request on a Sunday
+returned `409 outside_shop_hours` for a Mon-Sat shop, and the owner accepted,
+checked in, and started the visit.
 
 ### Earlier this session
 
@@ -370,19 +377,22 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Answer Q20 in [Open questions](../plans/OPEN-QUESTIONS.md).** P2-07 needs a
-product decision, not more code: which provider seam do we want so a shop owner
-can actually be booked? Option A gives a provider-enabled owner a `barbers` row
-(cheap, but recreates `accepting_bookings`/`rating` in two places, which is what
-D-009 separated). Option B builds a real provider seam across roughly thirteen
-foreign keys (correct, and a packet of its own). Recommendation is B, sequenced
-after P2-08 so the race gate lands against the current model first.
+**Start P2-08 Race gate.** P2-07 is complete and Q20 is answered, so nothing is
+waiting on a decision.
 
-Nothing else in P2-07 is waiting on anyone. When Q20 is answered, P2-07 either
-closes or gets its final slice, then **P2-08 Race gate**.
+P2-08 does not start from zero. AVAIL-02 already proves three races end to end
+against the real database — two customers on one barber, one customer on two
+barbers, and two customers on two barbers competing for the last chair — each
+producing exactly one winner, with a two-chair control proving the refusal is the
+chair count rather than an unrelated conflict. Widen that rather than rebuild it:
+the claim and expiry boundary, holds returning to the pool, and races involving an
+owner-provider now that owners are bookable. Forward migrations only.
 
-The P2-07 work is uncommitted and unreviewed: five migrations plus the API,
-shared-contract, and test changes. The full gate is green on a clean replay.
+Two things belong to the frontend lane and change no backend behaviour: the
+customer detail screen still does not consume `/availability` or
+`/bookings/quote`, and Shop Setup should surface the new publish readiness item
+plus the fact that switching on the owner provider capability makes the owner
+bookable during the shop's opening hours.
 
 ### Prior P2-06 detail
 
@@ -408,7 +418,7 @@ Environment as left on 2026-07-30, after the P2-07 work:
 - Docker and the local Supabase stack are healthy on the moved ports
   (API/storage `54521`, database `54522`, studio `54523`);
 - the database was reset from empty and carries every migration through
-  `20260730000700`;
+  `20260730001000`;
 - **`npm run seed:accounts` now also creates shop operating hours.** Since P2-07
   the shop's own hours are a booking input, so a shop with none is closed every
   day. Without this the seeded environment signs in fine and then refuses every

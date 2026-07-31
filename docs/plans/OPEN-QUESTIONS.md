@@ -5,9 +5,9 @@ permissions, or UI behavior enough that they should be answered before their
 listed phase. Each includes a recommended default so the product owner can
 reply “all recommended” or override individual IDs.
 
-## Blocking before Phase 2 can close
+## Resolved during Phase 2
 
-### Q20 — can a shop owner actually be booked? (raised 2026-07-30, P2-07)
+### Q20 — can a shop owner actually be booked? **Answered 2026-07-30: Option A.**
 
 **Question:** The phase contract lists "active employment **or owner provider
 capability**" as an availability input, and Q2/D-009 accepted owner-as-provider
@@ -34,15 +34,33 @@ that a barber row and an owner-provider profile both point at, with
 `appointments` and the rest keyed on it. This is a packet of its own, touching
 every one of those foreign keys plus their RLS.
 
-**Recommended default:** Option B as a dedicated packet, sequenced after P2-08 so
-the race gate lands against the current model first. Until it is answered, P2-07
-stays 🔨 with nine of ten inputs implemented and verified, and only owner-provider
-booking outstanding. Everything else in AVAIL-01, AVAIL-02, and BOOK-02 is done.
+**Answered 2026-07-30: Option A**, the shadow row, implemented in
+`20260730000800` and `20260730000900`. Option A's duplicate-state objection is
+answered by mirroring one way — `owner_provider_profiles` stays the only place
+the value is authored and the `barbers` row is a read-only shadow — and by the
+measurement that owners do not leak into barber-shaped reads, because the public
+barber query filters `users.role = 'barber'`. Option B remains available later as
+a pure refactor with no behavioural change. Reasoning recorded as D-028.
 
-**Consequence of deferring:** an owner who enables their provider capability and
-grants themselves qualifications still cannot receive a booking. The Staff UI will
-show the capability as active, which is honest about the grant but misleading
-about bookability, so the deferral should be visible in that screen.
+What tipped it was measuring the cost of waiting. A shop whose only provider is
+its owner could publish, appear in the public catalogue, and then refuse every
+customer: availability returned `200` with zero slots and a booking returned
+`409 no_provider_available`. That is a common Philippine barbershop, not an edge
+case, and the engine could not even see the capability — `owner_provider_profiles`
+appeared zero times across the P2-07 migrations.
+
+**Outcome.** An owner who switches on their provider capability and holds a
+qualification is now a real provider: bookable by name or through `any`, offered
+in the slot projection against the shop's own opening hours, and able to accept,
+check in, and start the visit. Three pre-existing guards had to learn about them
+— the appointment assignment lock, the `barbers` capability-enablement lock, and
+the lifecycle predicate — each extended rather than weakened, with ownership
+re-derived from `shops` instead of trusted from the capability row.
+
+Verified live end to end: booking the owner by name returned `201`, and the same
+request on a Sunday returned `409 outside_shop_hours` because the shop trades
+Monday to Saturday, which is the window working exactly as intended. Q20 no
+longer blocks Phase 2.
 
 ## Blocking before Phase 1 implementation
 

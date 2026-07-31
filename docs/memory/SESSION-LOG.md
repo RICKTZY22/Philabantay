@@ -1301,3 +1301,71 @@ Live suites re-run: 17/17 projection and quote, 14/14 scenarios, 3/3 quote-claim
 agreement, zero published shops left behind afterwards.
 
 Q20 is unchanged and still blocks marking P2-07 complete.
+
+## 2026-07-30 — Claude — Q20 answered, P2-07 complete
+
+The product owner chose the shadow-row seam (Option A) and asked for the publish
+guard. Both are implemented, verified, and P2-07 is now ✅.
+
+Before presenting the options I measured what deferring would actually cost, and
+it changed the recommendation I had written. A shop whose only provider is its
+owner — a common Philippine barbershop — could publish, appear in the public
+catalogue, and then refuse every customer: availability returned `200` with zero
+slots and a booking returned `409 no_provider_available`. Booking the owner by
+name returned `400 "not verified, active at this shop, or accepting bookings."`
+The engine could not see the capability at all: `owner_provider_profiles`
+appeared **zero times** across the seven P2-07 migrations, so switching it on in
+Shop Setup changed nothing. That made Q20 a live product hole rather than an
+architecture nicety.
+
+Scope measured rather than estimated: 13 tables and 14 foreign keys reference
+`barbers(id)`, and the public barber query filters `users.role = 'barber'`, so an
+owner with a shadow row does not leak into the barber catalogue.
+
+`20260730000800` and `00900` implement it. The one-way mirror is what answers
+D-009's duplicate-state objection: `owner_provider_profiles` stays the only place
+the value is authored and nothing writes the shadow. An owner has no roster, so
+their working window is the shop's own opening hours and the fifteen-minute grid
+anchors to opening time instead of a shift start.
+
+Three pre-existing guards had to learn about owner-providers, and each was found
+by running the tests rather than by reading:
+
+- the appointment assignment lock refused with `23514 The assigned barber is not
+  actively verified at this shop`;
+- the `barbers` capability-enablement lock refused with `42501 A current verified
+  employment is required` — correct for a barber, impossible for an owner;
+- the lifecycle predicate gates insert, start/finish, and check-in codes.
+
+All three were extended, never weakened, each re-deriving ownership from `shops`
+rather than trusting the capability row. Deliberately **not** widened:
+`private.is_active_barber_for_shop`, which has ~25 call sites, mostly RLS on
+attendance, shift tables, staff notes, and messages. Making it true for an owner
+would hand them employee-shaped access where "staff member" is the intended
+meaning, so a separate predicate was introduced for "may perform the service".
+
+One inconsistency caught in my own new code before it shipped: the predicate
+required `accepting_bookings` for owners but not for barbers, which would have
+stopped an owner finishing a visit after pausing new bookings. The claim gate
+tests that toggle separately; the predicate now means "may perform" for both.
+
+`20260730001000` adds the publish readiness check (D-029). It ignores the
+momentary `accepting_bookings` toggle on purpose, so a shop is not blocked from
+publishing merely because its barber is on a break, and it is checked at publish
+only — unpublishing behind an owner's back when their last barber leaves would be
+worse than letting them see and fix it.
+
+Two long function bodies had to be restated to swap one predicate call. Rather
+than retype them — which is exactly how the reschedule and reassign audit events
+got dropped earlier today — they were extracted with `pg_get_functiondef`, patched
+programmatically with an assertion that exactly one call site matched, and
+embedded verbatim.
+
+Gate on a database replayed from empty through all 52 migrations: typecheck,
+lint, both production builds, 124 fast tests, **matrix 81/81 twice back to back
+with no reset**, DB lint no schema errors. Live: booking the owner by name
+returned `201`; the same request on a Sunday returned `409 outside_shop_hours`
+for a Mon-Sat shop, which is the window working as intended; and the owner
+accepted, checked in, and started the visit.
+
+Phase 2 now has one packet left: **P2-08 race gate**.
