@@ -622,7 +622,10 @@ localDescribe('local Supabase RLS and Express authorization', () => {
         blocks: [{ weekday: 1, closed: true }],
       })
     expect(closeEveryDay.status).toBe(409)
-    expect(closeEveryDay.body.error.code).toBe('conflict')
+    // A precondition, not a stale read. The two need different codes because the
+    // client's reaction is opposite: `conflict` means reload and retry, this
+    // means something is missing and reloading will not change it.
+    expect(closeEveryDay.body.error.code).toBe('precondition_failed')
 
     const hours = await request(app)
       .get('/api/v1/owner/shop/hours')
@@ -637,7 +640,7 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       .delete(`/api/v1/owner/shop/services/${fixtures.primaryServiceId}`)
       .set('Authorization', `Bearer ${owner.token}`)
     expect(retireLastService.status).toBe(409)
-    expect(retireLastService.body.error.code).toBe('conflict')
+    expect(retireLastService.body.error.code).toBe('precondition_failed')
 
     const { data: serviceRow, error: serviceError } = await service
       .from('services')
@@ -4188,6 +4191,10 @@ localDescribe('local Supabase RLS and Express authorization', () => {
         .set('Authorization', `Bearer ${owner.token}`)
         .send({ expected_version: draft?.version })
       expect(refused.status).toBe(409)
+      // Must not be `conflict`: Shop Setup answers that code by reloading and
+      // telling the owner the shop changed elsewhere, which for a readiness
+      // failure is both wrong and an infinite loop. Caught in browser smoke.
+      expect(refused.body.error.code).toBe('precondition_failed')
       expect(refused.body.error.message).toContain('take bookings before publishing')
 
       // Restoring one qualified provider is enough to publish again, which

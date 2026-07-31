@@ -29,7 +29,13 @@ export function fromDatabaseError(error: PostgrestError): ApiError {
   if (error.code === 'P4099') return new ApiError(409, 'cooldown_active', error.message)
   if (error.code === 'P4031') return new ApiError(403, 'capability_required', error.message)
   if (error.code === 'P4020') return new ApiError(409, 'conflict', error.message)
-  if (error.code === 'P4021') return new ApiError(409, 'conflict', error.message)
+  // P4021 is a precondition, not a stale read, and the two need different codes
+  // because the client's reaction to them is opposite. `conflict` means "reload
+  // and try again"; this means "something is missing, and reloading will not
+  // change that". Sharing one code made Shop Setup answer a publish blocked by
+  // an unpublishable shop with "we reloaded the latest version", which is both
+  // wrong and an infinite loop for the owner. Found in browser smoke, 2026-07-30.
+  if (error.code === 'P4021') return new ApiError(409, 'precondition_failed', error.message)
   if (error.code === 'P4022') return new ApiError(409, 'media_limit', error.message)
   if (error.code === 'P4023') return new ApiError(409, 'request_already_resolved', error.message)
   if (error.code === 'P4024') return new ApiError(409, 'hiring_full', error.message)
