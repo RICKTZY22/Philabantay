@@ -3989,6 +3989,230 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     await service.from('appointments').delete().eq('id', exactBooking.id as string)
   })
 
+  it('lets a shop owner who performs services be booked, and run the visit', async () => {
+    // Q20. Before this, a shop whose only provider was its owner could publish,
+    // appear in the catalogue, and refuse every customer: the engine never read
+    // owner_provider_profiles, and appointments.barber_id could not point at
+    // someone with no barbers row. Common shape for a Philippine barbershop.
+    // Read the live version: the P2-05 capability test enables and disables it
+    // earlier in this file, so it is not 1 by the time this runs.
+    const workspaceBefore = await request(app)
+      .get('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+    const capability = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: workspaceBefore.body.data.owner_provider.version,
+        active: true,
+        accepting_bookings: true,
+        reason: 'Owner performs services at this shop.',
+        command_id: crypto.randomUUID(),
+      })
+    expect(capability.status, JSON.stringify(capability.body)).toBe(200)
+
+    try {
+      // The shadow barbers row is what makes the foreign key satisfiable, and it
+      // must mirror the capability rather than be authored separately.
+      const { data: shadow } = await service
+        .from('barbers')
+        .select('id,accepting_bookings')
+        .eq('id', owner.id)
+        .maybeSingle()
+      expect(shadow).toMatchObject({ id: owner.id, accepting_bookings: true })
+
+      // Owners must not leak into the public barber catalogue, which filters on
+      // users.role = 'barber'.
+      const publicBarbers = await request(app).get('/api/v1/catalog/barbers')
+      expect(publicBarbers.body.data.some((row: { id: string }) => row.id === owner.id)).toBe(false)
+
+      const { data: ownerQualification } = await service
+        .from('service_qualifications')
+        .select('active')
+        .eq('shop_id', fixtures.primaryShopId)
+        .eq('service_id', fixtures.primaryServiceId)
+        .eq('provider_user_id', owner.id)
+        .maybeSingle()
+      expect(ownerQualification?.active).toBe(true)
+
+      // 2030-04-08 is a Monday: shop hours 09:00-18:00, and the owner has no
+      // shift roster, so those hours are their working window.
+      const booked = await book(customer.id, owner.id, '2030-04-08T01:00:00.000Z')
+      expect(booked.error, JSON.stringify(booked.error)).toBeNull()
+      const appointment = booked.data as Record<string, unknown>
+      expect(appointment.barber_id).toBe(owner.id)
+
+      try {
+        // Outside the shop's hours there is no owner slot, because the shop's
+        // own hours are the roster.
+        const outside = await book(otherCustomer.id, owner.id, '2030-04-08T11:00:00.000Z')
+        expect(outside.error?.code).toBe('P4028')
+
+        // The projection offers the owner too.
+        const { data: slots } = await service.rpc('api_availability_slots', {
+          p_shop_id: fixtures.primaryShopId,
+          p_service_id: fixtures.primaryServiceId,
+          p_date: '2030-04-08',
+          p_customer_id: null,
+          p_barber_id: owner.id,
+        })
+        const offered = (slots ?? []) as Array<{ provider_user_id: string; starts_at: string }>
+        expect(offered.length).toBeGreaterThan(0)
+        expect(offered.every((slot) => slot.provider_user_id === owner.id)).toBe(true)
+
+        // An owner-provider must also be able to RUN the visit, otherwise a
+        // booking they can take strands at checked_in. Check-in only opens
+        // thirty minutes before the start, so this needs a near-now appointment
+        // rather than the 2030 one above; a five-minute service keeps the whole
+        // window inside one local day at any hour.
+        const soon = new Date(Math.ceil((Date.now() + 5 * 60_000) / (15 * 60_000)) * (15 * 60_000))
+        const soonDate = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(soon)
+
+        // The owner's working window is the shop's own hours, so open the shop
+        // for that date the same way the lifecycle test opens the barber's roster.
+        const { data: openToday } = await service.from('shop_closures').insert({
+          shop_id: fixtures.primaryShopId,
+          local_date: soonDate,
+          closed: false,
+          replacement_open_time: '00:00',
+          replacement_close_time: '23:59',
+          reason: 'Owner-provider lifecycle window.',
+        }).select('id').single()
+
+        const { data: quickService } = await service.from('services').insert({
+          shop_id: fixtures.primaryShopId,
+          name: `Owner Express ${fixtureNamespace}`,
+          duration_min: 5,
+          price_cents: 12000,
+        }).select('id').single()
+        await qualifyProvider({
+          shopId: fixtures.primaryShopId,
+          serviceId: quickService!.id,
+          providerId: owner.id,
+          grantedBy: owner.id,
+        })
+
+        const live = await service.rpc('api_create_appointment', {
+          p_customer_id: otherCustomer.id,
+          p_barber_id: owner.id,
+          p_service_id: quickService!.id,
+          p_starts_at: soon.toISOString(),
+          p_notes: null,
+        })
+        expect(live.error, JSON.stringify(live.error)).toBeNull()
+        const visit = live.data as Record<string, unknown>
+
+        try {
+          const accepted = await acceptAppointment(visit, owner.id)
+          const checkedIn = await service.rpc('api_transition_appointment', {
+            p_appointment_id: visit.id as string,
+            p_expected_version: accepted.version as number,
+            p_action: 'check_in',
+            p_actor_id: owner.id,
+            p_reason: 'Customer identity checked at the counter.',
+            p_check_in_code: null,
+          })
+          expect(checkedIn.error, JSON.stringify(checkedIn.error)).toBeNull()
+
+          const started = await service.rpc('api_transition_appointment', {
+            p_appointment_id: visit.id as string,
+            p_expected_version: (checkedIn.data as { version: number }).version,
+            p_action: 'start',
+            p_actor_id: owner.id,
+            p_reason: null,
+            p_check_in_code: null,
+          })
+          expect(started.error, JSON.stringify(started.error)).toBeNull()
+          expect((started.data as { status: string }).status).toBe('in_progress')
+        } finally {
+          await service.from('appointment_events').delete().eq('appointment_id', visit.id as string)
+          await service.from('appointments').delete().eq('id', visit.id as string)
+          await service.from('service_qualifications').delete().eq('service_id', quickService!.id)
+          await service.from('services').delete().eq('id', quickService!.id)
+          await service.from('shop_closures').delete().eq('id', openToday?.id as string)
+        }
+      } finally {
+        await service.from('appointment_events').delete().eq('appointment_id', appointment.id as string)
+        await service.from('appointments').delete().eq('id', appointment.id as string)
+      }
+    } finally {
+      const workspace = await request(app)
+        .get('/api/v1/owner/service-qualifications')
+        .set('Authorization', `Bearer ${owner.token}`)
+      await request(app)
+        .patch('/api/v1/owner/provider-capability')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({
+          expected_version: workspace.body.data.owner_provider.version,
+          active: false,
+          accepting_bookings: false,
+          reason: 'Restoring the shared fixture state.',
+          command_id: crypto.randomUUID(),
+        })
+    }
+  })
+
+  it('refuses to publish a shop nobody can be booked at', async () => {
+    // The readiness checklist covered identity, pin, hours, chairs, and one
+    // active service, but never that a provider existed, so a shop could publish
+    // into the catalogue and turn away every customer.
+    const { data: before } = await service
+      .from('shops')
+      .select('lifecycle_status,published_at,version')
+      .eq('id', fixtures.primaryShopId)
+      .single()
+
+    // Park the qualifications rather than deleting them, so the exact prior set
+    // is restored regardless of what earlier tests left behind.
+    const { data: parked } = await service
+      .from('service_qualifications')
+      .select('id')
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('active', true)
+    const parkedIds = (parked ?? []).map((row) => row.id as string)
+
+    await service.from('shops')
+      .update({ lifecycle_status: 'draft', published_at: null })
+      .eq('id', fixtures.primaryShopId)
+    await service.from('service_qualifications')
+      .update({ active: false, revoked_by: owner.id, revoked_at: new Date().toISOString() })
+      .in('id', parkedIds)
+
+    try {
+      const { data: draft } = await service
+        .from('shops').select('version').eq('id', fixtures.primaryShopId).single()
+      const refused = await request(app)
+        .post('/api/v1/owner/shop/publish')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: draft?.version })
+      expect(refused.status).toBe(409)
+      expect(refused.body.error.message).toContain('take bookings before publishing')
+
+      // Restoring one qualified provider is enough to publish again, which
+      // proves the refusal was about bookability and not something else.
+      await service.from('service_qualifications')
+        .update({ active: true, revoked_by: null, revoked_at: null })
+        .in('id', parkedIds)
+      const accepted = await request(app)
+        .post('/api/v1/owner/shop/publish')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: draft?.version })
+      expect(accepted.status, JSON.stringify(accepted.body)).toBe(200)
+    } finally {
+      await service.from('service_qualifications')
+        .update({ active: true, revoked_by: null, revoked_at: null })
+        .in('id', parkedIds)
+      await service.from('shops')
+        .update({
+          lifecycle_status: before?.lifecycle_status,
+          published_at: before?.published_at,
+        })
+        .eq('id', fixtures.primaryShopId)
+    }
+  })
+
   it('refuses to store a shop timezone the engine cannot evaluate', async () => {
     // Since P2-07 every wall-clock rule runs `at time zone shop.timezone`, so an
     // unrecognised zone is not a cosmetic problem: it raises inside the gate and
