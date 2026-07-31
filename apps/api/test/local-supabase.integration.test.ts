@@ -3988,4 +3988,192 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(exactBooking.requested_barber_id).toBe(barber.id)
     await service.from('appointments').delete().eq('id', exactBooking.id as string)
   })
+
+  it('refuses to store a shop timezone the engine cannot evaluate', async () => {
+    // Since P2-07 every wall-clock rule runs `at time zone shop.timezone`, so an
+    // unrecognised zone is not a cosmetic problem: it raises inside the gate and
+    // makes the shop completely unbookable with a 500. The only prior constraint
+    // was a length check, which 'Manila/NotAZone' passes.
+    const { error: rejected } = await service
+      .from('shops')
+      .update({ timezone: 'Manila/NotAZone' })
+      .eq('id', fixtures.primaryShopId)
+    expect(rejected?.code).toBe('22023')
+
+    // Even the service role cannot store it, which is the point of putting the
+    // guard in the database rather than in Express.
+    const { data: unchanged } = await service
+      .from('shops')
+      .select('timezone')
+      .eq('id', fixtures.primaryShopId)
+      .single()
+    expect(unchanged?.timezone).toBe('Asia/Manila')
+
+    // A real zone still round-trips, and the shop stays bookable afterwards.
+    const { error: accepted } = await service
+      .from('shops')
+      .update({ timezone: 'Asia/Singapore' })
+      .eq('id', fixtures.primaryShopId)
+    expect(accepted).toBeNull()
+    const { error: restored } = await service
+      .from('shops')
+      .update({ timezone: 'Asia/Manila' })
+      .eq('id', fixtures.primaryShopId)
+    expect(restored).toBeNull()
+  })
+
+  it('sends `any` to the provider with the lightest day and agrees on retry', async () => {
+    // BOOK-02's actual rule, which had no coverage until this test: `any` picks
+    // the qualified provider with the fewest assigned service minutes on the
+    // shop's local date. Asserting only that *some* eligible provider was chosen
+    // would pass even with the candidate list in arbitrary order, which is
+    // exactly the defect 20260730000600 fixes.
+    const lightEmail = fixtureEmail('barber-load-balance')
+    const lightBarberId = await createFixtureUser(lightEmail, 'Load Balance Barber')
+    const { error: roleError } = await service.from('users').upsert({
+      id: lightBarberId,
+      email: lightEmail,
+      full_name: 'Load Balance Barber',
+      role: 'barber',
+      requested_role: 'barber',
+      verification_status: 'verified',
+      onboarding_completed: true,
+    })
+    expect(roleError).toBeNull()
+    const { error: barberRowError } = await service.from('barbers').insert({
+      id: lightBarberId,
+      accepting_bookings: true,
+    })
+    expect(barberRowError).toBeNull()
+    const { data: employment, error: employmentError } = await service
+      .from('barber_employment')
+      .insert({
+        barber_id: lightBarberId,
+        shop_id: fixtures.primaryShopId,
+        status: 'active',
+        hired_at: '2026-01-01',
+      })
+      .select('id')
+      .single()
+    expect(employmentError).toBeNull()
+    const { error: patternError } = await service.from('shift_patterns').insert({
+      employment_id: employment?.id,
+      barber_id: lightBarberId,
+      shop_id: fixtures.primaryShopId,
+      weekday: 1,
+      start_time: '09:00',
+      end_time: '17:00',
+    })
+    expect(patternError).toBeNull()
+
+    // Earlier tests leave several barbers employed at this shop, all idle on the
+    // probe date, so "pick the lightest" would be satisfied by luck. A service
+    // qualified to exactly two providers makes the eligible set deterministic
+    // however big the roster grows, because ordered_shop_providers filters on
+    // the qualification for the requested service.
+    const { data: duoService, error: duoServiceError } = await service.from('services').insert({
+      shop_id: fixtures.primaryShopId,
+      name: `Balance Probe ${fixtureNamespace}`,
+      duration_min: 30,
+      price_cents: 21000,
+    }).select('id').single()
+    expect(duoServiceError).toBeNull()
+    for (const providerId of [barber.id, lightBarberId]) {
+      await qualifyProvider({
+        shopId: fixtures.primaryShopId,
+        serviceId: duoService!.id,
+        providerId,
+        grantedBy: owner.id,
+      })
+    }
+    const { data: eligible } = await service
+      .from('service_qualifications')
+      .select('provider_user_id')
+      .eq('service_id', duoService!.id)
+      .eq('active', true)
+    expect((eligible ?? []).map((row) => row.provider_user_id as string).sort())
+      .toEqual([barber.id, lightBarberId].sort())
+
+    // 2030-04-01 is a Monday, four weeks clear of every other fixture date.
+    const created: string[] = []
+    const bookDuo = async (
+      customerId: string,
+      barberId: string | null,
+      startsAt: string,
+      extra: Record<string, unknown> = {},
+    ) => {
+      const result = await service.rpc('api_create_appointment', {
+        p_customer_id: customerId,
+        p_barber_id: barberId,
+        p_service_id: duoService!.id,
+        p_starts_at: startsAt,
+        p_notes: null,
+        ...extra,
+      })
+      const row = result.data as { id?: string } | null
+      if (row?.id) created.push(row.id)
+      return result
+    }
+
+    try {
+      // Give the fixture barber thirty minutes that morning and the new hire
+      // none. Both are free at the probe slot, so load is the only difference.
+      const loadA = await bookDuo(customer.id, barber.id, '2030-04-01T01:00:00.000Z')
+      expect(loadA.error).toBeNull()
+
+      const lighter = await bookDuo(otherCustomer.id, null, '2030-04-01T04:00:00.000Z', {
+        p_barber_preference: 'any',
+        p_requested_barber_id: null,
+      })
+      expect(lighter.error).toBeNull()
+      expect((lighter.data as Record<string, unknown>).barber_id).toBe(lightBarberId)
+
+      // Tip it the other way: the new hire now carries sixty minutes to the
+      // fixture barber's thirty, so the next `any` must swing back.
+      const loadB = await bookDuo(customer.id, lightBarberId, '2030-04-01T02:00:00.000Z')
+      expect(loadB.error).toBeNull()
+
+      const swung = await bookDuo(customer.id, null, '2030-04-01T06:00:00.000Z', {
+        p_barber_preference: 'any',
+        p_requested_barber_id: null,
+      })
+      expect(swung.error).toBeNull()
+      expect((swung.data as Record<string, unknown>).barber_id).toBe(barber.id)
+
+      // "Tie-break ... so retries agree": while nothing changes, the read-only
+      // quote must name the same provider every time.
+      const quoteArgs = {
+        p_customer_id: otherCustomer.id,
+        p_barber_id: null,
+        p_service_id: duoService!.id,
+        p_starts_at: '2030-04-01T07:00:00.000Z',
+        p_barber_preference: 'any',
+      }
+      const quotes = await Promise.all([
+        service.rpc('api_quote_appointment', quoteArgs),
+        service.rpc('api_quote_appointment', quoteArgs),
+      ])
+      const [first, second] = quotes.map(
+        (result) => (result.data as Array<{ bookable: boolean; provider_user_id: string }>)[0],
+      )
+      expect(first?.bookable).toBe(true)
+      expect(second?.provider_user_id).toBe(first?.provider_user_id)
+
+      // And the quote must name whoever the claim actually assigns.
+      const claimed = await bookDuo(otherCustomer.id, null, '2030-04-01T07:00:00.000Z', {
+        p_barber_preference: 'any',
+        p_requested_barber_id: null,
+      })
+      expect(claimed.error).toBeNull()
+      expect((claimed.data as Record<string, unknown>).barber_id).toBe(first?.provider_user_id)
+    } finally {
+      for (const id of created) {
+        await service.from('appointments').delete().eq('id', id)
+      }
+      await service.from('service_qualifications').delete().eq('service_id', duoService!.id)
+      await service.from('services').delete().eq('id', duoService!.id)
+      await service.from('shift_patterns').delete().eq('employment_id', employment?.id as string)
+      await service.from('barber_employment').delete().eq('id', employment?.id as string)
+    }
+  })
 })

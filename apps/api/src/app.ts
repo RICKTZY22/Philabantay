@@ -89,6 +89,13 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use(requireOperationalAccess)
   api.use('/admin', requireAal2, createAdminVerificationRouter(dependencies))
   api.use(createCatalogRouter(dependencies))
+  // Same ceiling as the anonymous slot route, and for the same reason. Since
+  // P2-07 these two ask the claim gate about every candidate on the grid, so one
+  // request can cost dozens of gate evaluations per provider. Being signed in
+  // does not make that cheaper, and the general 120/min limiter would let one
+  // account amplify a single click into thousands of them.
+  api.use('/availability', slotLimiter)
+  api.use('/bookings/quote', slotLimiter)
   api.use(createAvailabilityRouter(dependencies))
   api.use(createBookingsRouter(dependencies))
   api.use(createChatRouter(dependencies))

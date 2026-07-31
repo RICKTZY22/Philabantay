@@ -361,7 +361,12 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
       p_barber_preference: input.barber_preference ?? 'exact',
     })
     if (error) throw fromDatabaseError(error)
-    response.json({ data })
+    // The command is set-returning, so PostgREST hands back a one-row array. A
+    // quote is a single answer about a single slot, so unwrap it rather than
+    // making every caller remember to read index zero.
+    const quote = Array.isArray(data) ? data[0] : data
+    if (!quote) throw new ApiError(500, 'database_error', 'Quote returned no row.')
+    response.json({ data: quote })
   })
 
   router.patch('/bookings/:id', async (request, response) => {
