@@ -52,6 +52,9 @@
 .owner-provider-card legend { margin-bottom: 5px; font-weight: 800; }
 .owner-provider-card fieldset label { display: flex; gap: 8px; align-items: start; }
 .owner-provider-card .is-retired { color: var(--muted); }
+/* Explains a disabled qualification panel. The card is already a grid with its
+   own gap, so this only needs to reset the paragraph's default margin. */
+.owner-provider-blocked { margin: 0; font-size: .92rem; line-height: 1.4; }
 .owner-qualification-requests { display: grid; gap: 7px; }
 .owner-qualification-request {
   display: flex;

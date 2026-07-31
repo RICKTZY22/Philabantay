@@ -290,9 +290,24 @@ function ProviderQualificationCard({
           <span className="muted">{provider.provider_kind === 'owner' ? 'Owner provider' : 'Employed barber'}</span>
         </div>
         <span className={`pill ${provider.eligible ? 'pill-green' : 'pill-yellow'}`}>
-          {provider.eligible ? 'Eligible' : 'Capability off'}
+          {provider.eligible
+            ? 'Eligible'
+            /* "Capability off" is only true for an owner, who turns their own
+               provider capability on and off. A barber is ineligible for reasons
+               the owner did not choose, so saying the same thing would send them
+               looking for a switch that does not exist. */
+            : provider.provider_kind === 'owner' ? 'Capability off' : 'Not bookable'}
         </span>
       </header>
+      {!provider.eligible && (
+        /* The contract carries a boolean, not a reason, so this names the two
+           causes an owner can actually act on rather than guessing which applies. */
+        <p className="muted owner-provider-blocked">
+          {provider.provider_kind === 'owner'
+            ? 'Turn on your provider capability above before qualifying yourself for services.'
+            : 'This barber cannot be qualified yet. Their verification must be approved and their hire date reached.'}
+        </p>
+      )}
       <fieldset disabled={!provider.eligible || busy}>
         <legend>Qualified services</legend>
         {services.length === 0 && <p className="muted">Add a service in Shop Setup first.</p>}

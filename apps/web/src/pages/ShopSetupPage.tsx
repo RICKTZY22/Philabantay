@@ -883,8 +883,14 @@ export function ShopSetupPage() {
           <article className="shop-setup-panel shop-setup-help" aria-labelledby="setup-help-title">
             <h2 id="setup-help-title">How publishing works</h2>
             <p className="shop-setup-muted">
-              A draft is private. Once your details, weekly hours, and at least one active service
-              are ready, publishing lists the shop in customer discovery. You can unpublish anytime.
+              A draft is private. Once your details, weekly hours, at least one active service, and
+              someone who can take bookings are ready, publishing lists the shop in customer
+              discovery. You can unpublish anytime.
+            </p>
+            <p className="shop-setup-muted">
+              The last one matters most: a published shop with nobody bookable would appear in
+              search and then turn every customer away, so publishing waits for a barber or for
+              your own provider capability.
             </p>
           </article>
         </aside>
