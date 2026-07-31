@@ -15,6 +15,7 @@ import type {
   StoredService,
 } from '@barbershop/shared'
 import type { ApiDependencies } from '../lib/supabase'
+import { manilaDateTimeParts } from '../lib/manila-time'
 import { requireActiveEmployment, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody } from '../http/validation'
@@ -97,7 +98,9 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
       await Promise.all([
         dependencies.database.from('services').select(SERVICE_COLUMNS).eq('shop_id', shopId).order('created_at'),
         dependencies.database.from('owner_provider_profiles').select('*').eq('shop_id', shopId).maybeSingle(),
-        dependencies.database.from('barber_employment').select('barber_id').eq('shop_id', shopId).eq('status', 'active'),
+        // ended_at and hired_at feed the eligibility rule below; `status` alone
+        // is not the same test the booking gate applies.
+        dependencies.database.from('barber_employment').select('barber_id,ended_at,hired_at').eq('shop_id', shopId).eq('status', 'active'),
         dependencies.database.from('provider_qualification_revisions').select('*').eq('shop_id', shopId),
         dependencies.database.from('service_qualifications').select('provider_user_id,service_id').eq('shop_id', shopId).eq('active', true),
         dependencies.database.from('service_qualification_requests').select(REQUEST_COLUMNS).eq('shop_id', shopId)
@@ -117,7 +120,13 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
     const barberIds = ((employmentResult.data ?? []) as Row[]).map((row) => row.barber_id as string)
     const providerIds = [ownerId, ...barberIds]
     const [profilesResult, barberRowsResult] = await Promise.all([
-      dependencies.database.from('users').select('id,full_name,avatar_url').in('id', providerIds),
+      // The extra columns feed the eligibility rule below. They are read here
+      // rather than in a third round trip, and deliberately not forwarded into
+      // the `profile` object, which stays the public three fields.
+      dependencies.database
+        .from('users')
+        .select('id,full_name,avatar_url,role,requested_role,verification_status,onboarding_completed')
+        .in('id', providerIds),
       barberIds.length
         ? dependencies.database.from('barbers').select('id,accepting_bookings').in('id', barberIds)
         : Promise.resolve({ data: [], error: null }),
@@ -141,6 +150,40 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
     }
     const capability = ownerCapability(shopId, ownerId, capabilityResult.data as Row | null)
 
+    /**
+     * Mirrors `private.is_active_barber_for_shop`, which is what the booking
+     * gate and the publish readiness check actually consult.
+     *
+     * This used to be hardcoded `true` for every barber in the list, on the
+     * strength of `barber_employment.status = 'active'` alone. That is not the
+     * same rule: it ignores `ended_at`, a future `hired_at`, and the whole P1-02
+     * professional lock. A suspended barber kept their employment row, so they
+     * still counted as eligible here while the database refused to book them —
+     * and once the readiness checklist started counting eligible providers, the
+     * owner got a complete checklist and a Publish button that failed every
+     * press. Reproduced live before this fix.
+     *
+     * `accepting_bookings` is deliberately not part of this: it governs new
+     * bookings, not whether the person is a provider at all, and folding it in
+     * would block an owner from publishing while a barber is on a break.
+     */
+    const today = manilaDateTimeParts().date
+    const employmentById = new Map(((employmentResult.data ?? []) as Row[]).map((row) => [
+      row.barber_id as string,
+      row,
+    ]))
+    const barberIsEligible = (providerId: string): boolean => {
+      const employment = employmentById.get(providerId)
+      const profile = profiles.get(providerId)
+      if (!employment || !profile) return false
+      return employment.ended_at === null
+        && String(employment.hired_at) <= today
+        && profile.role === 'barber'
+        && profile.requested_role === 'barber'
+        && profile.verification_status === 'verified'
+        && profile.onboarding_completed === true
+    }
+
     const provider = (
       providerId: string,
       providerKind: ServiceProviderQualification['provider_kind'],
@@ -151,8 +194,14 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
         shop_id: shopId,
         provider_user_id: providerId,
         provider_kind: providerKind,
-        profile: profile as unknown as ServiceProviderQualification['profile'],
-        eligible: providerKind === 'owner' ? capability.active : true,
+        // Only the public three fields cross the seam, even though the row
+        // carries the eligibility columns read above.
+        profile: {
+          id: profile.id,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
+        } as unknown as ServiceProviderQualification['profile'],
+        eligible: providerKind === 'owner' ? capability.active : barberIsEligible(providerId),
         accepting_bookings: providerKind === 'owner'
           ? capability.accepting_bookings
           : accepting.get(providerId) === true,

@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { countBookableProviders, shopPublicationReadiness } from '@barbershop/shared'
 import { createApp } from '../src/app'
 import { processStaleShopMedia, SHOP_MEDIA_BUCKET } from '../src/lib/shop-media'
 import { processDueAppointmentTransitions } from '../src/routes/bookings'
@@ -4215,6 +4216,111 @@ localDescribe('local Supabase RLS and Express authorization', () => {
         .update({
           lifecycle_status: before?.lifecycle_status,
           published_at: before?.published_at,
+        })
+        .eq('id', fixtures.primaryShopId)
+    }
+  })
+
+  it('keeps the readiness checklist and the publish command agreeing', async () => {
+    // The readiness rule now exists twice: shopPublicationReadiness in TypeScript
+    // renders the owner's checklist, and api_publish_owner_shop enforces it in
+    // SQL. Two implementations of one rule is the drift shape this packet spent
+    // its time removing, so this pins them together — the checklist saying
+    // "ready" and publish succeeding must always be the same answer.
+    //
+    // It has already caught one divergence. The workspace reported every
+    // employed barber as `eligible` regardless of verification, so a suspended
+    // barber still satisfied the checklist while the database refused to publish,
+    // and the owner got a full checklist with a Publish button that failed every
+    // press.
+    async function checklistReady(): Promise<boolean> {
+      const workspace = await request(app)
+        .get('/api/v1/owner/service-qualifications')
+        .set('Authorization', `Bearer ${owner.token}`)
+      expect(workspace.status).toBe(200)
+      const shopRow = await request(app)
+        .get('/api/v1/owner/shop')
+        .set('Authorization', `Bearer ${owner.token}`)
+      const services = await request(app)
+        .get('/api/v1/owner/shop/services')
+        .set('Authorization', `Bearer ${owner.token}`)
+      const hours = await request(app)
+        .get('/api/v1/owner/shop/hours')
+        .set('Authorization', `Bearer ${owner.token}`)
+      const shop = shopRow.body.data
+      return shopPublicationReadiness(shop, {
+        activeServices: services.body.data.filter((row: { active: boolean }) => row.active).length,
+        bookableProviders: countBookableProviders(services.body.data, workspace.body.data.providers),
+        operatingHours: hours.body.data.filter((row: { closed: boolean }) => !row.closed).length,
+      }).ready
+    }
+
+    async function publishSucceeds(): Promise<boolean> {
+      const before = await request(app)
+        .get('/api/v1/owner/shop')
+        .set('Authorization', `Bearer ${owner.token}`)
+      const attempt = await request(app)
+        .post('/api/v1/owner/shop/publish')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({ expected_version: before.body.data.version })
+      if (attempt.status === 200) {
+        const live = await request(app)
+          .get('/api/v1/owner/shop')
+          .set('Authorization', `Bearer ${owner.token}`)
+        await request(app)
+          .post('/api/v1/owner/shop/unpublish')
+          .set('Authorization', `Bearer ${owner.token}`)
+          .send({ expected_version: live.body.data.version })
+        return true
+      }
+      expect(attempt.body.error.code).toBe('precondition_failed')
+      return false
+    }
+
+    const { data: shopBefore } = await service
+      .from('shops')
+      .select('lifecycle_status,published_at')
+      .eq('id', fixtures.primaryShopId)
+      .single()
+    await service.from('shops')
+      .update({ lifecycle_status: 'draft', published_at: null })
+      .eq('id', fixtures.primaryShopId)
+
+    try {
+      expect(await checklistReady()).toBe(await publishSucceeds())
+      expect(await checklistReady()).toBe(true)
+
+      // Suspension leaves the employment row untouched and revokes the
+      // professional's verification, which is precisely the state that diverged.
+      // Every employed barber has to go, not just the fixture one: earlier tests
+      // leave several at this shop, and one remaining eligible provider is enough
+      // for both sides to say ready, which would make the assertion vacuous.
+      const { data: employed } = await service
+        .from('barber_employment')
+        .select('barber_id')
+        .eq('shop_id', fixtures.primaryShopId)
+        .eq('status', 'active')
+      const employedIds = (employed ?? []).map((row) => row.barber_id as string)
+      expect(employedIds.length).toBeGreaterThan(0)
+
+      await service.from('users')
+        .update({ verification_status: 'suspended' })
+        .in('id', employedIds)
+      try {
+        expect(await checklistReady()).toBe(await publishSucceeds())
+        expect(await checklistReady()).toBe(false)
+      } finally {
+        await service.from('users')
+          .update({ verification_status: 'verified' })
+          .in('id', employedIds)
+      }
+
+      expect(await checklistReady()).toBe(true)
+    } finally {
+      await service.from('shops')
+        .update({
+          lifecycle_status: shopBefore?.lifecycle_status,
+          published_at: shopBefore?.published_at,
         })
         .eq('id', fixtures.primaryShopId)
     }
