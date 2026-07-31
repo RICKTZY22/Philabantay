@@ -42,7 +42,7 @@ contained zero references to `lifecycle_status`, `shop_operating_hours`,
 `shop_closures`, `service_qualifications`, `owner_provider_profiles`,
 `chair_count`, `default_buffer_min`, or `booking_mode`.
 
-Five forward migrations, `20260730000100` through `20260730000500`:
+Seven forward migrations, `20260730000100` through `20260730000700`:
 
 - the booking window (`min_lead_minutes`, nullable `max_advance_days`),
   per-service `buffer_min`, BOOK-02 assignment intent, and a qualification
@@ -62,21 +62,31 @@ Express gained `GET /availability`, `POST /bookings/quote`, six new error codes,
 and the booking window on the owner and public shop contracts. The old Express
 slot math is deleted, so an offered slot is a claimable slot by construction.
 
-Gate, on a database replayed from empty through all 47 migrations:
+Gate, on a database replayed from empty through all 49 migrations:
 
 ```text
 typecheck   all workspaces passed
 lint        passed
 build       API + web production build passed
 fast tests  124 (shared 56, api 28, web 40)
-matrix      77/77 twice back to back, no reset between runs
+matrix      79/79 twice back to back, no reset between runs
 DB lint     no schema errors
 diff        git diff --check clean
 ```
 
-Two live end-to-end suites through the real API passed 14/14 and 16/16 and
-restored the dev shop to `draft`. The matrix then passed 77/77 twice again with
+Live end-to-end suites through the real API passed 14/14, 17/17, and 3/3 and
+restored the dev shop to `draft`. The matrix then passed 79/79 twice again with
 zero published shops left behind, so there is no fixture pollution this time.
+
+A pre-push self-review found three defects that no test covered, all fixed in
+`20260730000600`/`20260730000700` and regression-tested: automatic assignment was
+never actually ordered, because a sub-select's sort does not survive a `UNION
+ALL`; an unrecognised `shops.timezone` had become a 500 that made a shop entirely
+unbookable, since the engine now evaluates wall-clock rules in the shop's own
+zone while nothing had ever validated it beyond a length check (D-027); and quote
+and claim disagreed about *why* an `any`/`preferred` slot was refused. The
+assignment regression was falsified before being trusted — inverting the ordering
+in the live database made it fail. Detail in the session log.
 
 **Outstanding, and it is why this packet is not ✅:** owner-as-provider booking,
 required input 4. `appointments.barber_id` references `barbers(id)` and P2-05
@@ -398,7 +408,7 @@ Environment as left on 2026-07-30, after the P2-07 work:
 - Docker and the local Supabase stack are healthy on the moved ports
   (API/storage `54521`, database `54522`, studio `54523`);
 - the database was reset from empty and carries every migration through
-  `20260730000500`;
+  `20260730000700`;
 - **`npm run seed:accounts` now also creates shop operating hours.** Since P2-07
   the shop's own hours are a booking input, so a shop with none is closed every
   day. Without this the seeded environment signs in fine and then refuses every

@@ -1590,3 +1590,56 @@ honest about the grant and currently misleading about bookability.
 I hold nothing in `apps/web/**`. The frontend is entirely yours.
 
 *— Claude, backend lane, 2026-07-30*
+
+---
+
+## 2026-07-30 — Claude — P2-07 self-review: two contract corrections before you build against it
+
+I reviewed my own P2-07 work before pushing and found three defects no test
+covered. Two of them change what I told you in the previous entry, so please read
+these before wiring the customer detail screen.
+
+**1. `POST /bookings/quote` returns an object, not an array.** I documented it as
+returning a single quote, but the command is set-returning, so PostgREST was
+handing back a one-row array and callers would have had to read index zero. Now
+unwrapped. The shape in my previous entry is correct as written; the
+implementation now matches it.
+
+**2. A refused `any`/`preferred` quote now reports `no_provider_available`.** It
+previously reported the last candidate's own reason, usually `slot_taken`, while
+the claim for the same request returned `no_provider_available`. So quote and
+claim disagreed about *why* — exactly the drift the one-gate design is supposed to
+prevent, just in the reason string rather than the verdict. If you were planning
+copy keyed on the reason, `no_provider_available` is the one to expect when a
+shop has nobody free, and `slot_taken` now means specifically that the named
+provider is busy.
+
+**3. Not customer-facing, but worth knowing:** automatic assignment was never
+actually ordered. The fallback candidate list came out of a `UNION ALL`, and a
+sub-select's sort does not survive that, so `any` could pick an arbitrary free
+provider instead of the least-loaded one, and two identical requests were not
+guaranteed to agree. Fixed. If you show "assigned automatically" copy, it is now
+truthful that the choice is the balanced one.
+
+Two other changes that may affect you:
+
+- **`GET /availability` and `POST /bookings/quote` are rate-limited at 60/min**,
+  the same ceiling as the anonymous slot route, because P2-07 made slot
+  computation genuinely expensive. If the calendar refetches on every keystroke or
+  hover it will hit that; debounce date changes and cache a day's slots rather
+  than re-requesting per render. Normal browsing is nowhere near the limit.
+- **An invalid `timezone` on a shop is now rejected at the database.** Previously
+  storable and harmless; since P2-07 the engine evaluates wall-clock rules in the
+  shop's own zone, so a bad value made the shop entirely unbookable with a 500. If
+  Shop Setup ever exposes a timezone field, it needs a picker of real IANA names
+  rather than free text, and it should surface the `validation` 400 rather than
+  swallowing it.
+
+Gate after the fixes: clean replay through all 49 migrations, typecheck, lint,
+both production builds, 124 fast tests, matrix **79/79 twice back to back with no
+reset**, DB lint clean. Live suites 14/14, 17/17, and 3/3, dev shop back to
+`draft`, zero published shops left behind.
+
+Still no claims from me in `apps/web/**`.
+
+*— Claude, backend lane, 2026-07-30*

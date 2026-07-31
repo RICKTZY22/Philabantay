@@ -1234,3 +1234,70 @@ introducing a real provider seam across roughly thirteen foreign keys. That is a
 architecture decision, not an implementation detail, so it is raised as an open
 question rather than guessed. Everything else in AVAIL-01, AVAIL-02, and BOOK-02
 is implemented and verified.
+
+## 2026-07-30 — Claude — P2-07 self-review before sign-off, three defects fixed
+
+Pre-push adversarial review of my own P2-07 work. Re-running the green suite
+would have proved nothing, so this was a read of the SQL looking for what the
+tests did not cover. Three real defects, none of which any existing test caught.
+
+**1. Automatic assignment was not actually ordered (logic error).** Both the
+create command and the quote built their candidate list as a `UNION ALL` of the
+requested provider and `private.ordered_shop_providers(...)`, then sorted with
+`order by ranked.priority`. That function sorts internally, but the ordering does
+not survive a UNION ALL, and ordering by priority alone leaves every fallback
+candidate tied. Postgres happened to return them usefully on this data, which is
+precisely why the tests passed. Two BOOK-02 requirements were therefore
+unenforced: `any` could pick an arbitrary free provider rather than the one with
+the fewest assigned minutes, and the tie-break exists specifically "so retries
+agree", which it could not guarantee. Fixed in `20260730000600` by carrying the
+rank out of the function as a value and ordering by `(priority, ordinal)`.
+
+Balanced assignment had **no test at all** — the existing assertion only checked
+that *some* eligible provider was chosen, which passes under any ordering. The
+new regression pins the eligible set to exactly two providers by qualifying only
+those two for a purpose-built service, so it stays deterministic however large
+the shop roster grows. It was falsified before being trusted: inverting the
+ordering in the live database made it fail, and restoring the fix made it pass.
+
+**2. An unrecognised shop timezone took the whole shop down (regression I
+introduced).** `20260730000200` correctly made the engine evaluate wall-clock
+rules in the shop's own timezone instead of a hardcoded Asia/Manila, but nothing
+has ever validated that column beyond a length check, so `'Manila/NotAZone'` was
+always storable. Previously inert; now every booking, quote, and slot query runs
+`at time zone shop.timezone` and raises `time zone "..." not recognized`, which
+surfaces as a 500 and makes the shop unbookable with no actionable message.
+`20260730000700` adds a `shops` trigger validating against `pg_timezone_names`,
+plus a repair pass for anything already stored. It is a trigger rather than
+Express validation because service-role writes bypass Express, and not a CHECK
+constraint because recognising a zone is not immutable.
+
+**3. Quote and claim disagreed about why (contract drift).** When no provider
+could take an `any`/`preferred` slot, the claim reported `P4033`
+(`no_provider_available`) but the quote reported the last candidate's own reason,
+typically `slot_taken`. That is exactly the quote/claim drift the one-gate design
+exists to prevent, just in the reason string rather than the verdict. Fixed and
+verified live: both now say `no_provider_available`.
+
+Two smaller hardening items in the same pass:
+
+- `POST /bookings/quote` returned PostgREST's one-row array, so callers had to
+  read index zero for what is a single answer. Now unwrapped to an object.
+- the new `GET /availability` and `POST /bookings/quote` were only under the
+  120/min general limiter. The anonymous slot route has a 60/min limiter
+  precisely because slot computation is expensive, and P2-07 made it far more
+  expensive — one subtransaction and a full gate evaluation per candidate. Both
+  now carry the same slot limiter, so one signed-in account cannot amplify a
+  click into thousands of gate evaluations.
+- `private.slot_is_bookable` swallowed `42501` alongside the gate's own refusals.
+  Nothing in the gate raises it, so the only source would be a genuine grant or
+  RLS fault, and turning that into a quietly empty day would hide the fault
+  behind a plausible answer. It now propagates.
+
+Gate after the fixes, on a database replayed from empty through all 49
+migrations: typecheck, lint, API and web production builds, 124 fast tests,
+**matrix 79/79 twice back to back with no reset**, DB lint no schema errors.
+Live suites re-run: 17/17 projection and quote, 14/14 scenarios, 3/3 quote-claim
+agreement, zero published shops left behind afterwards.
+
+Q20 is unchanged and still blocks marking P2-07 complete.
