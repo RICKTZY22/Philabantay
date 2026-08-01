@@ -1744,3 +1744,64 @@ WebSocket probe against Vite 7's HMR endpoint always fails because clients need
 a token — the page's own "[vite] connected." log is the real signal.
 
 Typecheck clean, ESLint 0/0. Config-only change; the matrix does not touch it.
+
+## 2026-08-01 — Claude — P2-08 race gate: backend proven, no migrations needed
+
+Pushed the three pending commits after re-running the matrix I had flagged as not
+re-run (82/82 twice), then started P2-08.
+
+**Measured before building, and the measurement was the packet.** P2-07 already
+proved three races. The phase contract asks for "parallel last-vacancy,
+provider-slot and chair-slot claims produce one valid winner and stable
+conflicts", so the work was to widen coverage into the classes nothing had
+touched, and **every one of them already held. No migration was written.**
+
+Four new probes, all against the live database:
+
+- a hold released by a decline returns the slot to the pool, and two customers
+  then contesting that freed slot produce exactly one winner;
+- the claim/expiry boundary never yields two live rows, and its refusal is
+  transient — after the sweeper finishes, a retry succeeds;
+- two customers racing an owner-provider give one winner on `23P01`;
+- an owner-provider and an employed barber racing the shop's single chair give
+  one winner on `P4026`.
+
+The last two matter because owners only became bookable in P2-07 (D-028), and
+every race proved before that involved employed barbers exclusively. Chair
+capacity in particular is an advisory-lock count rather than an exclusion
+constraint, so it needed its own proof for the owner path.
+
+**The probe corrected me, which is the point of writing it first.** I asserted
+"exactly one live appointment" at the claim/expiry boundary and it failed with
+zero. That is legitimate: a claim can read a hold while it is still `requested`,
+lose on the exclusion constraint, and then watch the sweeper retire that same
+hold — leaving the slot free and the customer told it was taken. The real
+invariant is **never two**, not always one. A transient false refusal is not a
+lost booking, and making the claim block on the sweeper would be a worse trade.
+The regression now pins the part that actually matters: after the sweep, a retry
+succeeds, so a slot can never be stranded by an expiring hold. Worth a Phase 3 UI
+affordance (offer a retry, not a dead end) rather than a backend change.
+
+**All three regressions falsified before being trusted**, each reproducing the
+exact failure it exists to catch: skipping the decline gave
+`expected [] to have a length of 1 but got 0`; two chairs instead of one gave
+`expected [ …2 items ] to have a length of 1 but got 2`; never running the
+sweeper left the hold `requested` instead of `expired`.
+
+**One process lesson.** The sweeper falsification left a stale `requested` hold
+behind, because the test failed before its cleanup ran, and that pollution then
+broke two unrelated tests — including a `500` on the discovery test that looked
+alarming until a clean replay cleared it. This suite shares fixtures: reset the
+database after any deliberate sabotage run, and do not read collateral failures
+as findings.
+
+Gate on a database replayed from empty through all 53 migrations: DB lint clean,
+typecheck clean, ESLint 0/0, both builds clean, 129 fast tests, **matrix 85/85
+twice back to back with no reset**, `git diff --check` clean.
+
+**Phase 2 is not closed yet.** P2-08's frontend half — responsive owner, barber
+and customer smoke journeys — is untouched. It needs an authenticated browser
+session, and signing in means typing a real account password, which I must not
+do. So it needs the product owner at the keyboard, or a session I am permitted to
+install. In the meantime the same authorization surface was exercised over real
+HTTP for all three seeded roles, ten calls, all 200.

@@ -4525,4 +4525,195 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       await service.from('barber_employment').delete().eq('id', employment?.id as string)
     }
   })
+
+  // ---- P2-08 race gate -----------------------------------------------------
+  // P2-07 already proves three races: two customers on one barber, one customer
+  // on two barbers, and two customers on two barbers for the last chair. This
+  // widens that to the classes it never touched, per the phase contract's
+  // "parallel last-vacancy, provider-slot and chair-slot claims produce one
+  // valid winner and stable conflicts".
+  //
+  // 2030-05-06, -13, -20 and -27 are Mondays, matching the fixture weekday-1
+  // shift pattern and opening hours, and are clear of every other fixture date.
+
+  it('returns a slot to the pool when its hold ends, and still admits one winner', async () => {
+    // A refused or withdrawn booking must free the slot: the exclusion
+    // constraints are filtered on live statuses, so this is behaviour worth
+    // pinning rather than assuming. The second half is the part that matters --
+    // a freed slot is exactly where two waiting customers collide.
+    const slot = '2030-05-06T02:00:00.000Z'
+    const held = await book(customer.id, barber.id, slot)
+    expect(held.error, JSON.stringify(held.error)).toBeNull()
+    const heldRow = held.data as Record<string, unknown>
+
+    // While the hold is live the slot is genuinely taken.
+    const blocked = await book(otherCustomer.id, barber.id, slot)
+    expect(blocked.error?.code).toBe('23P01')
+
+    const declined = await service.rpc('api_transition_appointment', {
+      p_appointment_id: heldRow.id as string,
+      p_expected_version: heldRow.version as number,
+      p_action: 'decline',
+      p_actor_id: owner.id,
+      p_reason: 'Freeing the slot for the race probe.',
+      p_check_in_code: null,
+    })
+    expect(declined.error, JSON.stringify(declined.error)).toBeNull()
+    expect((declined.data as { status: string }).status).toBe('declined')
+
+    // Freed, and contested by two customers at once: exactly one may take it.
+    const race = await Promise.all([
+      book(customer.id, barber.id, slot),
+      book(otherCustomer.id, barber.id, slot),
+    ])
+    const winners = race.filter((result) => result.error === null)
+    expect(winners).toHaveLength(1)
+    expect(race.filter((result) => result.error?.code === '23P01')).toHaveLength(1)
+
+    for (const won of winners) {
+      const id = (won.data as { id: string }).id
+      await service.from('appointment_events').delete().eq('appointment_id', id)
+      await service.from('appointments').delete().eq('id', id)
+    }
+    await service.from('appointment_events').delete().eq('appointment_id', heldRow.id as string)
+    await service.from('appointments').delete().eq('id', heldRow.id as string)
+  })
+
+  it('never lets expiry and a fresh claim both own the same slot', async () => {
+    // The claim/expiry boundary. `api_expire_due_appointments` walks requested
+    // rows with `for update skip locked`; a customer claiming the same slot in
+    // the same instant must not end up alongside a row the sweeper is still
+    // releasing. Either the claim loses to the live hold or it wins the freed
+    // slot, never both.
+    const slot = '2030-05-13T02:00:00.000Z'
+    const held = await book(customer.id, barber.id, slot)
+    expect(held.error, JSON.stringify(held.error)).toBeNull()
+    const heldId = (held.data as { id: string }).id
+
+    // Force the hold due without touching status, so the sweeper is the only
+    // thing that may retire it.
+    const { error: dueError } = await service
+      .from('appointments')
+      .update({ expires_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', heldId)
+    expect(dueError).toBeNull()
+
+    const [sweep, claim] = await Promise.all([
+      service.rpc('api_expire_due_appointments'),
+      book(otherCustomer.id, barber.id, slot),
+    ])
+    expect(sweep.error, JSON.stringify(sweep.error)).toBeNull()
+
+    const liveForSlot = async () => {
+      const { data } = await service
+        .from('appointments')
+        .select('id,status')
+        .eq('barber_id', barber.id)
+        .eq('starts_at', slot)
+        .in('status', ['requested', 'confirmed', 'checked_in', 'in_progress', 'awaiting_confirmation'])
+      return data ?? []
+    }
+
+    // The invariant is "never two", not "always one". Both orderings are
+    // legitimate and the empty one is the interesting case: the claim reads the
+    // hold while it is still `requested`, loses on the exclusion constraint, and
+    // the sweeper then retires that hold. Nobody holds the slot and the customer
+    // was told it was taken. That is a transient false refusal, not a lost
+    // booking, and forcing the claim to wait on the sweeper instead would be a
+    // worse trade. What must never happen is two live rows on one slot.
+    expect((await liveForSlot()).length).toBeLessThanOrEqual(1)
+
+    if (claim.error === null) {
+      const { data: swept } = await service
+        .from('appointments').select('status').eq('id', heldId).single()
+      expect(swept?.status).toBe('expired')
+    } else {
+      expect(claim.error?.code).toBe('23P01')
+    }
+
+    // The refusal must be transient, and that is the part worth pinning: once
+    // the sweeper has finished, the freed slot is claimable again. If this ever
+    // fails, a slot has been stranded by an expiring hold.
+    const { data: afterSweep } = await service
+      .from('appointments').select('status').eq('id', heldId).single()
+    expect(afterSweep?.status).toBe('expired')
+    const retry = await book(otherCustomer.id, barber.id, slot)
+    const claimedId = (claim.data as { id?: string } | null)?.id
+    if (claimedId) {
+      // The first claim already won it, so the retry must be refused, not
+      // silently allowed to double-book the same customer onto the same slot.
+      expect(retry.error?.code).toBe('23P01')
+    } else {
+      expect(retry.error, JSON.stringify(retry.error)).toBeNull()
+    }
+
+    const retryId = (retry.data as { id?: string } | null)?.id
+    for (const id of [heldId, claimedId, retryId].filter(Boolean) as string[]) {
+      await service.from('appointment_events').delete().eq('appointment_id', id)
+      await service.from('appointments').delete().eq('id', id)
+    }
+  })
+
+  it('serializes concurrent claims on an owner-provider to one winner', async () => {
+    // Owners became bookable in P2-07 (Q20/D-028) through a shadow `barbers`
+    // row, and every race proved before that change involved employed barbers
+    // only. The provider exclusion has to cover the owner identically.
+    const workspace = await request(app)
+      .get('/api/v1/owner/service-qualifications')
+      .set('Authorization', `Bearer ${owner.token}`)
+    const enabled = await request(app)
+      .patch('/api/v1/owner/provider-capability')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: workspace.body.data.owner_provider.version,
+        active: true,
+        accepting_bookings: true,
+        reason: 'Owner-provider race probe.',
+        command_id: crypto.randomUUID(),
+      })
+    expect(enabled.status, JSON.stringify(enabled.body)).toBe(200)
+
+    try {
+      const slot = '2030-05-20T02:00:00.000Z'
+      const race = await Promise.all([
+        book(customer.id, owner.id, slot),
+        book(otherCustomer.id, owner.id, slot),
+      ])
+      const winners = race.filter((result) => result.error === null)
+      expect(winners).toHaveLength(1)
+      expect(race.filter((result) => result.error?.code === '23P01')).toHaveLength(1)
+
+      // And an owner-provider competing with an employed barber for the shop's
+      // single chair is still one winner: chair capacity is an advisory-lock
+      // count, not an exclusion constraint, so it needs its own proof.
+      const chairSlot = '2030-05-20T04:00:00.000Z'
+      const chairRace = await Promise.all([
+        book(customer.id, owner.id, chairSlot),
+        book(otherCustomer.id, barber.id, chairSlot),
+      ])
+      const chairWinners = chairRace.filter((result) => result.error === null)
+      expect(chairWinners).toHaveLength(1)
+      expect(chairRace.filter((result) => result.error?.code === 'P4026')).toHaveLength(1)
+
+      for (const won of [...winners, ...chairWinners]) {
+        const id = (won.data as { id: string }).id
+        await service.from('appointment_events').delete().eq('appointment_id', id)
+        await service.from('appointments').delete().eq('id', id)
+      }
+    } finally {
+      const after = await request(app)
+        .get('/api/v1/owner/service-qualifications')
+        .set('Authorization', `Bearer ${owner.token}`)
+      await request(app)
+        .patch('/api/v1/owner/provider-capability')
+        .set('Authorization', `Bearer ${owner.token}`)
+        .send({
+          expected_version: after.body.data.owner_provider.version,
+          active: false,
+          accepting_bookings: false,
+          reason: 'Restoring the shared fixture state.',
+          command_id: crypto.randomUUID(),
+        })
+    }
+  })
 })

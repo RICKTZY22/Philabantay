@@ -23,7 +23,9 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
   personal visible-workflow review.
 - P2-07 Availability engine: **verified complete 2026-07-30**, all ten required
   inputs. Q20 was answered the same day (D-028).
-- P2-08 Race gate: next.
+- P2-08 Race gate: **backend race gate proven 2026-08-01, no migrations needed.**
+  Its responsive owner/barber/customer smoke journeys are the last piece of
+  Phase 2.
 
 ## Active packet
 
@@ -410,16 +412,29 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Start P2-08 Race gate.** P2-07 is complete and Q20 is answered, so nothing is
-waiting on a decision.
+**Close P2-08, and with it Phase 2.** The backend race gate is done as of
+2026-08-01 and needed no migrations: holds returning to the pool, the
+claim/expiry boundary, owner-provider slot contention, and owner-provider versus
+barber for the last chair all hold, each falsified before being trusted. Matrix
+82 → 85, green twice on a database replayed from empty.
 
-P2-08 does not start from zero. AVAIL-02 already proves three races end to end
-against the real database — two customers on one barber, one customer on two
-barbers, and two customers on two barbers competing for the last chair — each
-producing exactly one winner, with a two-chair control proving the refusal is the
-chair count rather than an unrelated conflict. Widen that rather than rebuild it:
-the claim and expiry boundary, holds returning to the pool, and races involving an
-owner-provider now that owners are bookable. Forward migrations only.
+**The one thing left is the packet's frontend half: responsive owner/barber/
+customer smoke journeys.** It needs an authenticated browser session, and signing
+in means typing a real account password, which the agent must not do. So it needs
+the product owner at the keyboard, or a session the agent is permitted to
+install. In the meantime the same authorization surface was exercised over real
+HTTP for all three roles.
+
+Two follow-ups from the P2-08 work, neither blocking:
+
+- At the claim/expiry boundary a customer can be told a slot is taken and find it
+  free a moment later, because their claim lost to a hold the sweeper then
+  retired. Correct and transient, and the regression pins that a retry succeeds.
+  Worth a UI affordance in Phase 3 (retry rather than a dead end) rather than a
+  backend change.
+- A falsification run left a stale hold behind and broke two unrelated tests,
+  which is a reminder that this suite shares fixtures. Reset the database after
+  any deliberate sabotage run.
 
 One frontend item is still open and changes no backend behaviour: **the customer
 detail screen does not consume `/availability` or `/bookings/quote`.** That is a

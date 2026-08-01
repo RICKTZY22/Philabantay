@@ -1,10 +1,11 @@
 # Phase 2 tests - shops, workforce, availability
 
-Covers packets P2-01 through P2-08. P2-01 through P2-06 are verified complete
-and signed off. P2-07 is next and P2-08 is not started. Test names are quoted
+Covers packets P2-01 through P2-08. P2-01 through P2-07 are verified complete
+and signed off. P2-08's backend race gate is proven as of 2026-08-01; its
+frontend smoke journeys are the one piece still open. Test names are quoted
 verbatim.
 
-Jump to: [P2-01](#p2-01) · [P2-02](#p2-02) · [P2-03](#p2-03) · [P2-04](#p2-04) · [P2-05](#p2-05) · [P2-06](#p2-06) · [P2-07…P2-08](#not-started) ·
+Jump to: [P2-01](#p2-01) · [P2-02](#p2-02) · [P2-03](#p2-03) · [P2-04](#p2-04) · [P2-05](#p2-05) · [P2-06](#p2-06) · [P2-08](#p2-08) ·
 [Findings](#findings)
 
 ---
@@ -328,12 +329,44 @@ Verified locally on 2026-07-29 without changing P2-06/P2-07 status.
 | Reduced motion | Scene crossfade duration resolved to `0s`. Existing auth/workflow reduced-motion behavior remains intact. (The device-UI animation claim was removed with the laptop/phone correction above.) |
 | Runtime and gates | **Re-measured 2026-07-30:** no browser errors, no horizontal overflow at the measured desktop auth viewport, all workspaces typechecked, 124 fast tests passed with 41 expected skips, and lint/API/web production builds plus `git diff --check` passed. |
 
-## P2-07 … P2-08 - not started {#not-started}
+## P2-08 race gate — backend proven 2026-08-01 {#p2-08}
 
-| Packet | Planned test focus |
-| --- | --- |
-| P2-07 Availability engine | **next.** Combine hours, closures, employment, qualification, shifts, buffers, overlap, and chairs into one slot computation. |
-| P2-08 Race gate | concurrent claim and capacity probes for the availability engine. |
+P2-07 is verified complete (see [roadmap status](../plans/ROADMAP-STATUS.md)).
+P2-08 widened the race coverage rather than rebuilding it, and **needed no
+migrations: every race class already held.** The matrix moved 82 → 85.
+
+| Race class | Probe | Result |
+| --- | --- | --- |
+| Provider slot, two customers, one barber | pre-existing (P2-07) | one winner, loser `23P01` |
+| Customer overlap, one customer, two barbers | pre-existing (P2-07) | one winner, loser `23P01` |
+| Chair capacity, two barbers, one chair | pre-existing (P2-07), with a two-chair control | one winner, loser `P4026` |
+| Last vacancy + one-active-employment | pre-existing (P2-04) | one winner |
+| **Hold released, then contested** | decline the hold, then two customers claim the freed slot at once | slot returns to the pool; exactly one winner |
+| **Claim/expiry boundary** | force a hold due, then run the sweeper and a fresh claim concurrently | never two live rows; refusal is transient and a retry after the sweep succeeds |
+| **Owner-provider slot, two customers** | both claim the owner's slot at once | one winner, loser `23P01` |
+| **Owner-provider vs barber, one chair** | owner-provider and employed barber claim the same instant | one winner, loser `P4026` |
+
+**All three new regressions were falsified before being trusted**, each
+reproducing the exact failure it exists to catch:
+
+- skipping the decline so the slot never frees → `expected [] to have a length of 1 but got 0`;
+- two chairs instead of one → `expected [ …2 items ] to have a length of 1 but got 2`;
+- never running the sweeper → `expected 'requested' to be 'expired'`.
+
+**One behaviour worth recording, found by the probe rather than assumed.** At the
+claim/expiry boundary the correct invariant is *never two*, not *always one*. A
+claim can read a hold while it is still `requested`, lose on the exclusion
+constraint, and then watch the sweeper retire that same hold — leaving the slot
+free and the customer told it was taken. That is a transient false refusal, not a
+lost booking, and the regression now pins the part that matters: after the sweep,
+a retry succeeds. Making the claim wait on the sweeper instead would be a worse
+trade.
+
+**Still open for P2-08:** the packet's frontend half, "responsive owner/barber/
+customer smoke journeys". Not done here. Driving those needs an authenticated
+browser session, and signing in requires typing a real account password, which
+this agent must not do. The equivalent authorization surface was instead verified
+over real HTTP for all three roles.
 
 ---
 
