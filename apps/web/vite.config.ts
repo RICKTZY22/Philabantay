@@ -22,7 +22,10 @@ function contentSecurityPolicy(
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'wasm-unsafe-eval'",
+    // No 'wasm-unsafe-eval': Rive was the only thing compiling WebAssembly and
+    // it was deleted on 2026-08-01. Nothing in the app evaluates strings as
+    // code either, so script-src stays at bare 'self'.
+    "script-src 'self'",
     "script-src-attr 'none'",
     "style-src 'self'",
     "style-src-attr 'unsafe-inline'",
@@ -82,7 +85,7 @@ export default defineConfig(({ mode }) => {
       headers: {
         ...commonSecurityHeaders,
         'Content-Security-Policy': productionCsp
-          .replace("script-src 'self' 'wasm-unsafe-eval'", "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'")
+          .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
           .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
           .replace("connect-src 'self'", "connect-src 'self' ws: wss:"),
       },

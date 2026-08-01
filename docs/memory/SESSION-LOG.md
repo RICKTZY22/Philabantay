@@ -1653,3 +1653,61 @@ Gate: **ESLint 0 errors 0 warnings**, typecheck clean, both builds clean, 129
 fast tests, **matrix 82/82 twice back to back with no reset**, browser
 re-verified — the same 27-element computed-style comparison from this morning
 still shows zero differences against the pre-prune baseline, no console errors.
+
+## 2026-08-01 — Claude — read the roadmap first, then closed what was safe to close
+
+Product owner handed over the seven open sweep findings and said to decide, but
+to read the roadmap first so nothing already planned got overwritten. That was
+the right instruction and it changed the plan twice.
+
+**`trust proxy` is already tracked as P5-RL-01**, raised 2026-07-30 with a full
+spec in [Phase 5](../plans/05-PHASE-5-PRODUCTION-ROLLOUT.md), alongside P5-RL-02
+for the per-process rate-limit store. Fixing it here would have duplicated
+scheduled work and pre-empted a topology decision nobody has made. **Left alone
+deliberately.**
+
+**The customer detail screen is tracked too**, as open item 6 and in "Next up",
+and it is explicitly the frontend lane's. It is a real feature, not polish, so
+starting it unilaterally is exactly the collision the product owner warned about.
+**Left alone**, and the entry sharpened to say what a customer actually sees
+today.
+
+Done instead:
+
+- **P5-CSP-01 registered** in Phase 5, next to the two rate-limit items. The
+  `_headers` `connect-src` landmine had no ticket anywhere. Written up with the
+  real failure mode: dev, preview, and the whole matrix stay green while
+  production blocks every API call and every signed photo. Suggested fix is to
+  generate `_headers` from the same function `vite.config.ts` uses, so the two
+  definitions cannot drift again.
+- **Rive deleted (D-032)** and `'wasm-unsafe-eval'` dropped from both CSPs.
+  Nothing referenced it after D-031: component, stylesheet, 2.0 MB `rive.wasm`,
+  81 KB `.riv`, and the `@rive-app/canvas` dependency. `script-src` is back to a
+  bare `'self'`, which permanently retires the DevTools eval notice that started
+  this whole thread.
+- **The roadmap was stale in three places and is now correct.** The "Latest
+  automated gate" block still claimed 81/81, 124 fast tests, and an uncommitted
+  tree; the landing description still described the pre-D-031 page; and four
+  findings had no ticket. All fixed, with an explicit warning that
+  "Lint: passed" in any block dated before today means nothing.
+
+**A blank page cost real time and the lesson is worth keeping.** After the CSP
+edit the landing rendered nothing, with no console error. It was not the code.
+`vite.config.ts` builds the dev policy by rewriting the production string by
+exact match, so during the window between editing the production directive and
+editing the override, the override stopped matching and dev silently lost
+`'unsafe-inline'`. Vite's inline preamble is then blocked, React never boots, and
+the browser cached that document together with its broken CSP — so it stayed
+blank through a config fix, a `node_modules/.vite` purge, an `npm install`, and
+three server restarts. `/?cachebust=1` rendered immediately. Recorded in D-032.
+
+Two process notes from that hunt. A `git stash` test was **inconclusive and
+nearly misleading**: it restored `RiveScene.tsx`, which imports a package already
+uninstalled, so the blank page reproduced for a second unrelated reason and
+looked like exculpation. And the computed-style comparison reported
+"0 differences" against an empty page, because it loops `min(before, after)`
+times; it now returns `comparisonValid` and that flag is what gets read.
+
+Gate: ESLint 0/0, typecheck clean, both builds clean, 129 fast tests, matrix
+**82/82 twice back to back with no reset**, landing re-verified at 27 elements
+with 0 differences against the pre-prune baseline and `comparisonValid: true`.

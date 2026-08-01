@@ -76,7 +76,11 @@ and adds the operator tools needed at PH scale:
 4a. **P5-RL-01 `trust proxy` is not set (raised 2026-07-30).** `apps/api/src/app.ts` rate-limits on client IP and its own comment says to set `app.set('trust proxy', <hops>)` in production, but it is not set. Behind any proxy or CDN, `req.ip` becomes the proxy address and all traffic shares one bucket, so per-IP limits stop working and one abusive client can exhaust everyone's. Numeric hop count only, never `true`. Detail in [Phase 5](05-PHASE-5-PRODUCTION-ROLLOUT.md).
 4b. **P5-RL-02 rate-limit store is per-process (raised 2026-07-30).** `express-rate-limit` uses its default `MemoryStore`, so N API instances allow roughly N times the intended limit. Fine on one instance. Not a security hole on its own: join-code brute-force protection lives in the `employment_join_attempts` Postgres table and is already shared across instances. Decide the store before scaling out, preferring edge rate limiting over introducing Redis, which would be the project's first non-Postgres dependency.
 5. **P2-06 follow-up carried past sign-off (updated 2026-07-30).** Browser media emulation now confirms the real `prefers-reduced-motion: reduce` path: the media query matches, the Rive canvas is not displayed, and its static fallback remains visible at full opacity. The remaining Phase 2 exit check is a human visible-workflow review of the owner staff panel and barber schedule; it is unobserved, not known-broken.
-6. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07.
+6. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07. **Still open as of 2026-08-01.** The engine is honest and the screen is not built: a customer reads "Busy — puno ang chairs" off the barber's live shift status, which says nothing about whether tomorrow at 14:00 is free. `/availability` and `/bookings/quote` have no consumer. Frontend lane.
+8. **No automated tests exist for the web app (raised 2026-08-01).** 62 files and 11,690 lines of React, covered by three test files that all exercise pure helpers (`access`, `appointmentStatus`, `philippineHeroTime`). There is no `@testing-library/react` and no jsdom, so not one component or page has ever been rendered in a test. The API has an 82-case matrix; the frontend has zero. Every UI regression to date has been caught by a manual browser pass or not at all. ESLint now covers `rules-of-hooks` and `exhaustive-deps`, which is a real slice of this but cannot tell you a booking screen renders the right thing. Standing up the harness is a packet of its own; decide whether it lands before or after P2-08.
+9. **Three pre-existing high-severity `npm audit` advisories (raised 2026-08-01).** `postcss` path traversal via source-map auto-loading, and `react-router` / `react-router-dom` RSC-mode CSRF bypass. None were introduced by the ESLint install. We do not use RSC mode, so the router pair looks inert here, but both want a version bump with its own gate. Deliberately not bundled into an unrelated change.
+10. **`ARCHITECTURE.md` needs a real rewrite (raised 2026-08-01).** Every false statement of current fact is corrected and the mock sections are labelled history, but the narrative still walks through a `~1,500-line MockBackend`, a `bsh_mock_db_v1` localStorage blob, and `BroadcastChannel` realtime — all deleted 2026-07-24. It is one of the seven files `CLAUDE.md` orders every agent to read before changing code, so the rot has a real cost.
+11. **`public/_headers` ships a local-only `connect-src` — tracked as P5-CSP-01.** Deploying it unchanged CSP-blocks every API call and every signed shop photo in production while dev, preview, and the whole matrix stay green. Detail in [Phase 5](05-PHASE-5-PRODUCTION-ROLLOUT.md).
 7. **Q4 first-publication admin review — resolved 2026-07-30 by reversing the decision, not by building the queue.** Found the same day: the 2026-07-22 acceptance ("first publication requires a lightweight admin review of shop control/address/location") was never implemented. `api_publish_owner_shop` in `20260726000100` has always set `lifecycle_status = 'published'` directly, and although `pending_review` exists in the enum from `20260722001800` and is referenced in `types.ts` and `ShopSetupPage.tsx`, nothing ever set it and no admin shop-review route existed. V1 now matches the code: **publication is self-service** for a verified owner whose readiness checklist passes. See D-019 and the dated Q4 reversal in [Open questions](OPEN-QUESTIONS.md). The transactional publish command still rechecks verified ownership, identity/address/pin/timezone, one operating-hours block, `chair_count >= 1`, and one active service, and only `published` shops are publicly visible. `pending_review` is retained so re-enabling costs one lifecycle branch, one admin route, and one queue screen; schedule that with the Phase 4 staff admin console. Revisit when the first real shop publishes or that console lands. **This no longer blocks closing Phase 2.**
 
 ## Verification approach (decided 2026-07-24)
@@ -106,6 +110,15 @@ Agreed improvements intentionally postponed so the team can focus on backend and
 security first (decision 2026-07-23). Schedule these in the Phase 4 experience
 pass or a dedicated pre-launch polish slice, not mid-packet.
 
+- **Superseded 2026-08-01 by D-031: the landing is now the hero and nothing
+  else.** `#how`, `#services`, `#contact`, and the footer are deleted, along with
+  the header nav's Services and Contact Us links and the hero's "Watch the
+  Video" button, since each pointed at an anchor that no longer exists.
+  `LandingPage.tsx` went 729 → 112 lines and `LandingPage.css` 3602 → 977. Of the
+  173 unreachable CSS classes only 41 were orphaned by that cut; 132 were already
+  dead. Rive was deleted with it, which removed `'wasm-unsafe-eval'` from both CSP
+  definitions. **The paragraph below describes the pre-D-031 landing and is kept
+  only as the record of what was built.**
 - **Landing + auth presentation — implemented locally 2026-07-29.** The
   landing now leads with a large doodle-forward value proposition and four
   aligned city-space scenes selected from live Philippine time. Morning shows
@@ -130,22 +143,34 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   CSS disables the crossfade and internal UI animations.
   This polish does not start P2-07 or change packet counts.
 
-## Latest automated gate (2026-07-30)
+## Latest automated gate (2026-08-01)
 
 Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 56, api 28, web 40 (124 total; 49 integration skipped)
-Lint:      passed
+Unit:      shared 61, api 28, web 40 (129 total; 54 integration skipped)
+Lint:      ESLint 9, 0 errors 0 warnings, all three workspaces
 Build:     API + web production build passed
 DB lint:   no schema errors
-Matrix:    API integration/direct-RLS workspace 81/81 twice back to back,
+Matrix:    API integration/direct-RLS workspace 82/82 twice back to back,
            no reset between runs, against a database replayed from empty
-           through every migration up to 20260730001000
+           through all 53 migrations up to 20260730001100
 Diff:      git diff --check clean
-Tree:      P2-07 migrations, API, shared, and tests uncommitted pending review
+Tree:      clean; everything through the lint packet committed
 ```
+
+**Read "Lint: passed" in any block dated before 2026-08-01 as meaning nothing.**
+Until that date `npm run lint` fanned out `--if-present`, only `apps/api` had the
+script, and it was `tsc --noEmit` — the same command as that workspace's own
+`typecheck`. `apps/web` was never linted. It is now a real
+`eslint . --max-warnings 0` over one flat config at the repo root, and its first
+run found eleven issues, all fixed.
+
+The matrix moved 81 → 82 with a regression covering an owner-provider reading the
+timeline of their own booking over HTTP. That guard bug was live: every previous
+owner-provider test called the RPC directly, so the Express guards had never been
+exercised on that path.
 
 The matrix moved 69 → 81 with P2-07's twelve new gated regressions, and the gated
 skip count moved 41 → 53 for the same reason. Fast tests stay at 124 because every

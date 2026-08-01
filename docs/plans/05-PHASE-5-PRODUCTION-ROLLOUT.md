@@ -94,6 +94,35 @@ stop meaning anything.
   failures only, catalogue 90/min, availability 60/min) still trigger correctly
   once the real client IP is in use.
 
+### P5-CSP-01 — `public/_headers` ships a local-only `connect-src`
+
+Raised 2026-08-01. There are two Content-Security-Policy definitions and they do
+not agree, in the one direction nothing can catch before a deploy.
+
+`apps/web/vite.config.ts` **derives** `connect-src` and `img-src` from
+`VITE_API_BASE_URL` and `VITE_STORAGE_ORIGIN`, so the dev server and
+`vite preview` always carry the correct origins. `apps/web/public/_headers` is a
+static file that cannot read the environment, and it hardcodes
+`connect-src 'self'`.
+
+Deploy it unchanged to a host where the API and Supabase are on other origins
+and the browser blocks **every API call and every signed shop photo**, while dev,
+preview, and the whole integration matrix stay green. There is no failing test
+between here and that outage.
+
+- Add the exact HTTPS origins for the deployed API and Supabase, plus WSS if
+  realtime is ever enabled, before the first deploy. No wildcards.
+- Better: generate `_headers` from the same function `vite.config.ts` uses, so
+  one definition cannot drift from the other again.
+- Add a release-gate check that fetches a deployed page and asserts the served
+  CSP names the real API origin.
+- A comment in the file records this, but a comment is not a fix.
+
+Related and already correct: `'wasm-unsafe-eval'` was removed from both
+definitions on 2026-08-01 when Rive was deleted. Chrome DevTools reporting "CSP
+blocks the use of eval" on the old policy was the policy working, not a defect,
+and must never be answered with `'unsafe-eval'`.
+
 ### P5-RL-02 — decide the rate-limit store before running more than one instance
 
 Raised 2026-07-30. `express-rate-limit` currently uses its default in-process
