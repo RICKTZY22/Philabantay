@@ -1711,3 +1711,36 @@ times; it now returns `comparisonValid` and that flag is what gets read.
 Gate: ESLint 0/0, typecheck clean, both builds clean, 129 fast tests, matrix
 **82/82 twice back to back with no reset**, landing re-verified at 27 elements
 with 0 differences against the pre-prune baseline and `comparisonValid: true`.
+
+## 2026-08-01 — Claude — the "bugs" were the API being down plus the D-032 cache trap; the trap is now structural history
+
+Product owner reported hitting bugs in the app. Diagnosed rather than guessed:
+
+- **The API server was not running.** The web dev server was up, so every screen
+  rendered while every login and data call died against port 4000. Started it and
+  smoked all three roles over real HTTP: ten calls (owner shop/quals/hiring,
+  customer bookings/catalogue, barber bookings/exceptions, three signins), all
+  200. Also confirmed the public catalogue is an empty array right now because
+  the matrix restores the dev shop to draft — expected state that reads like a
+  bug on the discover screen.
+- **The D-032 blank page can hit the user's own browser too.** Any tab that
+  loaded the app during the broken-CSP window cached the document together with
+  its policy; a normal reload keeps it blank. One hard refresh (Ctrl+Shift+R)
+  clears it.
+
+**The `.replace()` CSP trap is now removed structurally, not patched.**
+`contentSecurityPolicy()` builds directives as a keyed record and takes an
+overrides map merged by directive NAME; an override targeting a directive that
+does not exist throws at server start instead of silently no-opping. Dev gets
+`'unsafe-inline'` (script+style) and `ws: wss:` that way; preview keeps the
+strict production policy from the same function. The dev server also now sends
+`Cache-Control: no-store`, so a momentarily-broken response can never again be
+pinned by a browser cache.
+
+Verified after restart: served dev header carries both real origins plus
+`ws: wss:`, no `wasm-unsafe-eval`, `Cache-Control: no-store`; landing and
+`/login` render; `[vite] connected.` for HMR. A note for the future: a raw
+WebSocket probe against Vite 7's HMR endpoint always fails because clients need
+a token — the page's own "[vite] connected." log is the real signal.
+
+Typecheck clean, ESLint 0/0. Config-only change; the matrix does not touch it.
