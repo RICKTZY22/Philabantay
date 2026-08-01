@@ -120,7 +120,7 @@ export interface PublicBarber {
 }
 
 /** Backwards-compatible UI name for the public barber card shape. */
-export interface BarberWithProfile extends PublicBarber {}
+export type BarberWithProfile = PublicBarber
 
 export interface PublicService {
   id: string
@@ -132,7 +132,7 @@ export interface PublicService {
 }
 
 /** Backwards-compatible UI name for an active public service. */
-export interface Service extends PublicService {}
+export type Service = PublicService
 
 /** Stored/private service row used by backend implementations. */
 export interface StoredService extends PublicService {
@@ -142,7 +142,7 @@ export interface StoredService extends PublicService {
 }
 
 /** Owner-only service-menu row, including inactive entries. */
-export interface OwnerService extends StoredService {}
+export type OwnerService = StoredService
 
 export type ServiceProviderKind = 'owner' | 'barber'
 

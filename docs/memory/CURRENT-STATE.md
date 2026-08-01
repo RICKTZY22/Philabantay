@@ -434,9 +434,15 @@ Carried out of the 2026-08-01 full-repo sweep, none of them blocking P2-08:
   files that only cover pure helpers, no `@testing-library/react`, no jsdom.
   Adding the harness is a packet of its own; decide whether it goes before or
   after P2-08.
-- **`npm run lint` is not a linter.** No ESLint exists here; the script is
-  `tsc --noEmit` over `apps/api` only. Either add ESLint or stop counting "lint
-  clean" as evidence.
+- ~~`npm run lint` is not a linter.~~ **Fixed 2026-08-01.** ESLint 9 flat config
+  at the repo root covers every workspace, `npm run lint` is
+  `eslint . --max-warnings 0`, and the misleading `lint` script on `apps/api`
+  is gone. Eleven findings across the repo, all resolved.
+- **Three pre-existing high-severity advisories** in `npm audit`, none from the
+  ESLint install: `postcss` (path traversal via source-map auto-loading) and
+  `react-router` / `react-router-dom` (RSC-mode CSRF bypass). We do not use RSC
+  mode, so the router one looks inert here, but both want a version bump. Not
+  touched, because a router upgrade is its own change with its own gate.
 - **`public/_headers` will break production.** `connect-src 'self'` is a
   local-only value and the file cannot see `VITE_API_BASE_URL`. Must be edited
   before the first deploy; a comment in the file now says so.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   DataError,
@@ -117,7 +117,7 @@ export function AdminVerificationDetailPage() {
   const [reason, setReason] = useState<VerificationApplicantReasonCode>('missing_information')
   const [informationField, setInformationField] = useState<Extract<VerificationInformationItem, { target: 'field' }>['field']>('legal_name')
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -127,9 +127,9 @@ export function AdminVerificationDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [backend, submissionId])
 
-  useEffect(() => { void load() }, [backend, submissionId])
+  useEffect(() => { void load() }, [load])
 
   async function run(label: string, action: () => Promise<AdminVerificationDetail>, success: string) {
     if (working) return

@@ -90,13 +90,10 @@ export function DoodleDefs() {
   )
 }
 
-const KNOWN = [
-  'scissors', 'comb', 'razor', 'chair', 'clock', 'calendar',
-  'chat', 'search', 'user', 'star', 'check', 'plus', 'arrow', 'x', 'send', 'pole',
-  'home', 'gear', 'heart',
-] as const
-
-export type DoodleIconName = (typeof KNOWN)[number]
+export type DoodleIconName =
+  | 'scissors' | 'comb' | 'razor' | 'chair' | 'clock' | 'calendar'
+  | 'chat' | 'search' | 'user' | 'star' | 'check' | 'plus' | 'arrow' | 'x' | 'send' | 'pole'
+  | 'home' | 'gear' | 'heart'
 
 export function DoodleIcon({
   name,

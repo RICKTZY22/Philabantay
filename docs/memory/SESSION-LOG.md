@@ -1594,3 +1594,62 @@ Gate on a database replayed from empty through all 53 migrations: DB lint clean,
 typecheck clean, both production builds clean, 129 fast tests (shared 61, api 28,
 web 40), **matrix 82/82 twice back to back with no reset**, `git diff --check`
 clean, browser re-verified at 1280 and 375 with no console errors.
+
+## 2026-08-01 — Claude — `npm run lint` is now a real linter
+
+Picked this off the sweep list first because it was the only finding that made us
+believe something false. Every "lint clean" line above this entry means
+`tsc --noEmit` over `apps/api`, which `npm run typecheck` already did, and
+`apps/web` was never linted at all.
+
+ESLint 9 flat config at the repo root (`eslint.config.mjs`) covering all three
+workspaces, with `typescript-eslint` recommended and `eslint-plugin-react-hooks`
+on `apps/web`. Root `lint` is now `eslint . --max-warnings 0`, so warnings fail
+it. The misleading `lint` script on `apps/api` is deleted, leaving one entry
+point. Note `@eslint/js` must be pinned to `^9`; unpinned it resolves to 10 and
+the peer range conflicts with eslint 9.
+
+**Eleven findings on the whole repo, which is a good result for 21,699 lines**
+(web 11,690 + api 5,090 + shared 4,919, plus tests and scripts). All
+resolved, none by blanket suppression:
+
+- Three empty marker interfaces in `packages/shared/src/types.ts` converted to
+  type aliases (`BarberWithProfile`, `Service`, `OwnerService`).
+- `DoodleDefs` kept a `KNOWN` array used only to derive a type; it is now the
+  type union directly.
+- `lib/security.ts` was flagged by `no-control-regex` for a regex whose entire
+  purpose is rejecting control characters in redirect targets. Suppressed with
+  the reason on the line above.
+- `apps/api/src/http/errors.ts` reported an unused `_next`, which Express
+  *requires*: it detects error middleware by arity. Fixed at the config level
+  with `argsIgnorePattern: '^_'`, matching the convention the codebase already
+  used.
+- `ShopMap` read `markersRef.current` inside a teardown; now captured at setup.
+  Its viewport effect depends on `shopSignature` rather than `shops` on purpose,
+  since the signature is built from every field the effect reads, so depending on
+  the array would re-fly the map on every parent render. Suppressed with that
+  reasoning written down.
+- `AppMenu` reads `burgerRef.current` in cleanup to restore focus. Kept
+  deliberately: the copy-to-a-variable fix the rule suggests would capture the
+  node as it was when the drawer *opened*, and focusing a detached element drops
+  focus to `<body>`. First attempt put the disable comment on the deps line and
+  ESLint correctly reported it as an unused directive, because the rule fires on
+  the ref read, not the array.
+- `AdminVerificationPage` had `load` missing from its effect deps; wrapped in
+  `useCallback` rather than suppressed.
+- `no-constant-binary-expression` caught `{false && ...}` in `LandingPage.tsx`,
+  the ~60-line legacy street scene left behind by this morning's trim. The
+  linter was right that unreachable JSX should not sit in a render tree, so it
+  is deleted along with the `Building` import and `INK` constant that only it
+  used. `LandingPage.tsx` is now 112 lines, from 729 this morning.
+
+**Not fixed, recorded:** `npm audit` reports three pre-existing high-severity
+advisories, none introduced by this install — `postcss` path traversal via
+source-map auto-loading, and `react-router`/`react-router-dom` RSC-mode CSRF
+bypass. We do not use RSC mode. A router upgrade is its own change with its own
+gate, so it is not being smuggled in here.
+
+Gate: **ESLint 0 errors 0 warnings**, typecheck clean, both builds clean, 129
+fast tests, **matrix 82/82 twice back to back with no reset**, browser
+re-verified — the same 27-element computed-style comparison from this morning
+still shows zero differences against the pre-prune baseline, no console errors.

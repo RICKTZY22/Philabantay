@@ -137,11 +137,16 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
     const ro = new ResizeObserver(() => map.invalidateSize())
     ro.observe(el)
 
+    // Read the marker store now rather than in the cleanup. The ref itself is
+    // stable, but reading `.current` at teardown is the pattern that silently
+    // clears the wrong Map once a component is remounted.
+    const markers = markersRef.current
+
     return () => {
       ro.disconnect()
       map.remove()
       mapRef.current = null
-      markersRef.current.clear()
+      markers.clear()
     }
   }, [])
 
@@ -255,6 +260,11 @@ export default function ShopMap({ shops, selectedId, onSelect, scope, resetKey, 
     }
 
     map.fitBounds(PH_BOUNDS, { padding: [24, 24], animate: !reduced })
+    // `shopSignature` stands in for `shops` on purpose. It is built from every
+    // field these effects read (id, lat, lng, status, barber count, name), so it
+    // changes exactly when the viewport should move, while depending on the
+    // array itself would re-run and re-fly the map on every parent render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusLat, focusLng, resetKey, scope, selectedId, shopSignature])
 
   return <div ref={containerRef} className="shop-map" role="application" aria-label="Barbershop map ng Pilipinas" />

@@ -223,10 +223,15 @@ export function ExamplePage() {
 - No duplicated business rule exists in multiple UI files.
 - Loading, empty, error, success, and busy states are covered.
 - Mouse, keyboard, narrow viewport, and reduced-motion behavior are checked.
-- `npm run typecheck`, `npm run test`, `npm run build`, and `git diff --check`
-  pass. `npm run lint` is currently only a second `tsc --noEmit` over
-  `apps/api`: there is no ESLint in this repo, so it proves nothing typecheck
-  has not already proved, and it never looks at `apps/web` at all.
+- `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, and
+  `git diff --check` pass. Since 2026-08-01 `npm run lint` is a real ESLint run
+  (`eslint . --max-warnings 0`) over every workspace from one flat config at the
+  repo root, and warnings fail it. Before that date it was `tsc --noEmit` over
+  `apps/api` alone, so any "lint clean" recorded earlier means only that.
+- The rules that matter here are the ones a typechecker cannot see:
+  `react-hooks/rules-of-hooks` and `exhaustive-deps` across roughly 11.7k lines
+  of React with no component tests behind them. If you suppress one, say why on
+  the line above it; a bare `eslint-disable` is not acceptable.
 - Anything touching the database also passes the local Supabase matrix
   (`RUN_LOCAL_SUPABASE_TESTS=1`), run twice back to back with no reset.
 - New behavior is reflected in this guide when it introduces a new pattern.

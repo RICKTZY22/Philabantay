@@ -78,6 +78,11 @@ export function AppMenu({ onOpenChange }: AppMenuProps) {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previousOverflow
       inertTargets.forEach((element, index) => { element.inert = previousInert[index] })
+      // Read `burgerRef.current` here, not at setup. Focus restoration has to
+      // land on whatever the trigger is when the drawer closes; a copy taken
+      // when it opened could point at a node React has since replaced, and
+      // focusing a detached element silently drops focus to <body>.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       window.requestAnimationFrame(() => burgerRef.current?.focus())
     }
   }, [open])

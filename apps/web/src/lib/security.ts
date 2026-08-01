@@ -1,3 +1,6 @@
+// The control characters are the point: this pattern exists to reject them
+// in redirect targets, so no-control-regex is flagging the feature itself.
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/
 
 /**
