@@ -421,11 +421,34 @@ chair count rather than an unrelated conflict. Widen that rather than rebuild it
 the claim and expiry boundary, holds returning to the pool, and races involving an
 owner-provider now that owners are bookable. Forward migrations only.
 
-Two things belong to the frontend lane and change no backend behaviour: the
-customer detail screen still does not consume `/availability` or
-`/bookings/quote`, and Shop Setup should surface the new publish readiness item
-plus the fact that switching on the owner provider capability makes the owner
-bookable during the shop's opening hours.
+One frontend item is still open and changes no backend behaviour: **the customer
+detail screen does not consume `/availability` or `/bookings/quote`.** That is a
+feature, not polish. A customer currently reads "Busy — puno ang chairs" from the
+barber's live shift status, which says nothing about whether tomorrow at 14:00 is
+free. The Shop Setup readiness row and the owner-provider copy that used to sit
+here were both delivered on 2026-08-01.
+
+Carried out of the 2026-08-01 full-repo sweep, none of them blocking P2-08:
+
+- **The web app has no automated tests.** 62 files, 11,743 lines, three test
+  files that only cover pure helpers, no `@testing-library/react`, no jsdom.
+  Adding the harness is a packet of its own; decide whether it goes before or
+  after P2-08.
+- **`npm run lint` is not a linter.** No ESLint exists here; the script is
+  `tsc --noEmit` over `apps/api` only. Either add ESLint or stop counting "lint
+  clean" as evidence.
+- **`public/_headers` will break production.** `connect-src 'self'` is a
+  local-only value and the file cannot see `VITE_API_BASE_URL`. Must be edited
+  before the first deploy; a comment in the file now says so.
+- **`app.set('trust proxy')` is unset**, so behind a proxy every request shares
+  the proxy's IP for rate limiting.
+- **`ARCHITECTURE.md` needs a real rewrite.** The false statements are corrected
+  and the mock sections are labelled history, but the narrative still describes a
+  system that no longer exists.
+- **Rive is now referenced by nothing** after the landing trim: `RiveScene`,
+  `public/rive/rive.wasm` (2.0 MB), and `character-follow.riv`. Deleting them
+  also makes `'wasm-unsafe-eval'` removable from both CSP definitions. Left in
+  place pending your call.
 
 ### Prior P2-06 detail
 

@@ -1508,3 +1508,89 @@ Gate on a database replayed from empty through all 53 migrations: typecheck, lin
 both production builds, 129 fast tests (shared 61, api 28, web 40), **matrix 82/82
 twice back to back with no reset**, DB lint clean, `git diff --check` clean.
 Browser re-verified after the fix.
+
+## 2026-08-01 — Claude — landing trimmed to the hero, full-repo sweep, one live authorization bug
+
+Two jobs in one turn: the product owner's landing-page cut, and a whole-repo
+regression sweep before P2-08.
+
+**Landing page reduced to the hero (D-031).** `#how`, `#services`, `#contact`,
+and the footer are gone, with the header nav's Services/Contact Us links and the
+hero's "Watch the Video" button removed in the same pass because each pointed at
+an anchor that no longer exists. `LandingPage.tsx` 729 → 179 lines. Verified in
+the browser: one `section[id]` left, no footer, `deadAnchors` empty, no
+horizontal overflow at 1280 or 375.
+
+**2625 lines of dead CSS removed, and proven inert before removing it.**
+`LandingPage.css` targeted 228 classes; 173 were unreachable, but only 41 of
+those were killed by today's edit — **132 were already dead before it**, going
+back to the redesign (`phil-auth-mock`, `phil-billboard`, `phil-pile-*`,
+`phil-space-*`). Deleted with a brace-matching parser that drops a rule only when
+every class in its selector appears nowhere in any source file. The risk this
+repo actually has is dynamic class names, since `is-${status}` is used in about
+thirty places, so the pruner listed every deleted selector not anchored to a
+`.phil-` class: three, all `badge-*`, all with zero references anywhere.
+Falsified rather than eyeballed: computed styles for 27 rendered elements across
+26 properties each were captured before and after, **0 differences**. The first
+attempt showed 55 differences that turned out to be webfont loading, so the
+comparison was redone with `await document.fonts.ready` on both sides.
+
+**Live bug found and fixed: an owner-provider was locked out of their own
+booking.** `requireParticipantOrOwner` in the bookings router tested
+`appointment.barber_id === userId` *before* the shop-owner branch, and that
+branch ends in `requireActiveEmployment`, which hard-requires the `barber` role.
+So for an owner running a visit at their own shop the guard answered "you are the
+barber on this booking" and then refused them for not being a barber. Reproduced
+over HTTP: `GET /bookings/:id/timeline` returned
+`403 {"code":"forbidden","message":"This action requires one of these roles: barber."}`.
+Cancel goes through the same helper. Q20 taught `requireAssignedProvider` about
+owner-providers and stopped there, so the owner could start and finish a visit
+but could not read its timeline or cancel it.
+
+Why no test caught it: **every existing owner-provider test calls the RPC
+directly**, so the Express guards were never on the path. The matrix now drives
+the timeline over HTTP. Falsified in both directions — fails with 403 before the
+fix, passes after.
+
+The same shape existed in `requireConversationAccess`. Fixed for consistency, but
+recorded honestly as **not currently reachable**: `chat.ts` only ever sets
+`conversations.barber_id` from a `barber_employment` row, and an owner has none.
+
+**Documentation rot corrected.** `CODE-PATTERNS.md` and `ARCHITECTURE.md` are two
+of the seven files `CLAUDE.md` orders every agent to read before changing code,
+and both still described the localStorage `MockBackend` as live — deleted
+2026-07-24. `ARCHITECTURE.md` documented a "~1,500-line" mock, a
+`bsh_mock_db_v1` localStorage blob, `BroadcastChannel` realtime, and a backend
+*choice* in `backend.tsx`. Both now match the code; the mock narrative is kept
+but clearly labelled history, and a full `ARCHITECTURE.md` rewrite is still owed.
+
+**Two deploy-time landmines recorded, neither fixable from here.**
+`public/_headers` hardcodes `connect-src 'self'` while `vite.config.ts` derives
+it from `VITE_API_BASE_URL`/`VITE_STORAGE_ORIGIN`, so dev and `vite preview` pass
+while production would CSP-block every API call and every signed photo, with
+nothing failing first to warn anyone. A loud comment now sits in the file. And
+`app.set('trust proxy')` is still unset, so behind a proxy the rate limiter keys
+every request to the proxy's IP.
+
+**`npm run lint` proves nothing.** There is no ESLint anywhere in this repo. Root
+`lint` fans out `--if-present`; only `apps/api` has the script and it is
+`tsc --noEmit`, identical to its own `typecheck`. `apps/web` is never linted.
+Recorded in the definition of done rather than silently relied on again.
+
+**Frontend has no automated tests at all.** 62 files and 11,743 lines of React,
+covered by three test files that all exercise pure helpers. No
+`@testing-library/react`, no jsdom. The API's 82-case matrix has no counterpart
+on the web side, so every UI regression is caught only by a manual browser pass.
+Flagged for the product owner, not fixed here.
+
+Checked and found clean, so the sweep is not all bad news: all **152** live SQL
+functions pin `search_path`; every SQLSTATE the migrations raise is handled in
+`errors.ts` (the earlier gap was my audit regex, not the code); the shared
+`API_ERROR_CODES` allowlist and the `DataErrorCode` union agree; no `.env` is
+tracked; the one-shop-per-owner and one-active-employment-per-barber indexes make
+the bare `.maybeSingle()` calls in the authorization helpers safe.
+
+Gate on a database replayed from empty through all 53 migrations: DB lint clean,
+typecheck clean, both production builds clean, 129 fast tests (shared 61, api 28,
+web 40), **matrix 82/82 twice back to back with no reset**, `git diff --check`
+clean, browser re-verified at 1280 and 375 with no console errors.

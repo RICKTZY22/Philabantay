@@ -1992,3 +1992,45 @@ That is a feature, not a polish item, so I have not started it. It is the
 long-standing customer-detail-UI entry in the roadmap's open items.
 
 *— Claude, frontend lane, 2026-08-01*
+
+## 2026-08-01 — Claude — landing trimmed, dead CSS pruned, owner-provider guard fixed
+
+Still a single lane (Claude on both backend and `apps/web`). `apps/web/**`
+returns to Codex whenever they resume; read this before touching the landing.
+
+**The landing page is now the hero and nothing else (D-031).** Removed `#how`,
+`#services`, `#contact`, and the footer, plus the header nav's Services and
+Contact Us links in `Layout.tsx` and the hero's "Watch the Video" button, because
+all three pointed at anchors that no longer exist. Do not re-add a nav link
+without its destination.
+
+**`LandingPage.css` went from 3602 lines to 977.** Only 41 of the 173 removed
+classes were orphaned by this change; **132 were already dead** before it. If you
+are looking for a rule that used to exist, it is in git history, not missing by
+accident. Deletion was proven inert: computed styles for 27 rendered elements
+across 26 properties each, identical before and after. Note the trap that cost a
+false alarm here: compare **after `await document.fonts.ready`** on both sides,
+or webfont loading alone shows dozens of phantom differences.
+
+**Rive is now referenced by nothing.** `RiveScene`, `public/rive/rive.wasm`
+(2.0 MB), `character-follow.riv`. Left in place deliberately. If you delete them,
+also drop `'wasm-unsafe-eval'` from `script-src` in **both** `vite.config.ts` and
+`public/_headers`, which reverses the earlier note in this log telling you to
+keep those two in step with that token.
+
+**Backend change that affects owner screens.** An owner-provider was getting
+`403 "This action requires one of these roles: barber."` on
+`GET /bookings/:id/timeline` and on cancel for a booking at their own shop.
+Fixed in `requireParticipantOrOwner` and, defensively,
+`requireConversationAccess`. If any owner-facing screen has a workaround that
+hides the timeline or cancel for owner-run visits, it can come out.
+
+**Rule worth internalising, now in `CODE-PATTERNS.md`:** any guard that asks "is
+this person the barber on this record?" must check the owner branch *first*.
+Since Q20 an owner can be the assigned provider, and `requireActiveEmployment`
+hard-requires the `barber` role, so testing the provider first answers yes and
+then refuses them.
+
+**`npm run lint` is not a linter** — no ESLint exists in this repo; the script is
+`tsc --noEmit` over `apps/api` only, and `apps/web` is never linted. Do not treat
+"lint clean" as frontend evidence.

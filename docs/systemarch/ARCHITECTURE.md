@@ -8,6 +8,16 @@ Pair this with [FEATURES.md](../mdfiles/FEATURES.md) (what each screen does) and
 existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](../security/SECURITY.md), and
 [ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md).
 
+> **Partly historical, flagged 2026-08-01.** The localStorage `MockBackend` was
+> deleted on 2026-07-24. `apps/web/src/services/` now contains only
+> `backend.tsx`, and `ApiBackend` (Express + Supabase) is the sole
+> implementation. Every mention below of `services/mock`, `MockBackend.ts`,
+> `seed.ts`, `bsh_mock_db_v1`, `BroadcastChannel` realtime, or a backend
+> *choice* describes code that no longer exists. The tech-stack table and the
+> folder map have been corrected; the narrative sections further down, including
+> "Inside the mock backend", are kept as history and are **not** a description
+> of the current system. A full rewrite is still owed.
+
 ---
 
 ## Tech stack
@@ -19,8 +29,8 @@ existing [CODE-PATTERNS.md](CODE-PATTERNS.md), [SECURITY.md](../security/SECURIT
 | Build/dev | Vite (`apps/web/vite.config.ts`) |
 | Routing | `react-router-dom` v7 (`BrowserRouter`, declared in `App.tsx`) |
 | State management | React Context + local component state. No Redux/Zustand/RTK. |
-| Server data | `VITE_DATA_BACKEND` selects the in-app mock or the Express-backed `ApiBackend`; UI components use the same interface for both. |
-| Realtime | Mock: `BroadcastChannel`. API: authenticated HTTP polling behind `chat.subscribe`. |
+| Server data | `ApiBackend` (Express + Supabase) only. `VITE_DATA_BACKEND` survives as a vestigial switch: `api` and `supabase` are both accepted and both build the same `ApiBackend`; anything else throws at startup. |
+| Realtime | Authenticated HTTP polling behind `chat.subscribe`. |
 | Maps | Leaflet + OpenStreetMap tiles |
 | Animation | CSS transitions/keyframes only. GSAP was removed with the 2026-07-29 landing redesign; `useJourneyScroll` now just pauses off-screen scenes via `IntersectionObserver`. |
 | Styling | Plain CSS, one colocated stylesheet per component/page, with `theme/doodle.css` as the base/public layer and signed-in workspace overrides in `theme/studio.css` |
@@ -72,8 +82,7 @@ workspaces.
 | `pages/settings/` | The five settings panels rendered inside the settings shell. |
 | `components/` | Reusable and route-specific UI (dashboards, map, chat pieces, avatars, modal, curtain). |
 | `features/auth/` | `AuthContext` - the signed-in profile + auth actions. |
-| `services/` | The data layer. `backend.tsx` is the provider/switchboard; `services/mock/` is the current implementation. |
-| `services/mock/` | `MockBackend.ts` (all service logic), `seed.ts` (initial data + schema), `availability.ts` (slot math), `passwords.ts` (PBKDF2). |
+| `services/` | The data layer, and now a single file. `backend.tsx` builds one `ApiBackend` and exposes it through `useBackend()`. The service logic itself lives in `packages/shared/src/services.ts`. |
 | `hooks/` | Reusable lifecycle behavior: `useLiveLocation`, `useCurrentTime`. |
 | `lib/` | Pure utilities: `date`, `geo`, `format`, `security`, `profile`. |
 | `config/` | Static metadata: `navigation` and `discovery` (nearby radius). |
@@ -102,33 +111,32 @@ export interface DataBackend {
 }
 ```
 
-Pages and components **only ever call this interface**. They never import
-anything from `services/mock`. That is the seam that lets Phase 2 replace the
-mock with a Supabase adapter without editing a single screen.
+Pages and components **only ever call this interface**. They never import a
+concrete backend. That seam is what let the localStorage mock be deleted in July
+2026 without editing a single screen, and it is what a second adapter would plug
+into if one is ever needed again.
 
 ```mermaid
 flowchart TD
   Pages[pages + components] -->|useBackend()| Contract[DataBackend interface\npackages/shared]
   Pages -->|useAuth()| AuthCtx[AuthContext]
   AuthCtx -->|delegates auth.* to| Contract
-  Contract -.implemented by.-> Mock[createMockBackend\nservices/mock]
   Contract -.implemented by.-> Api[ApiBackend\nExpress HTTP]
-  Mock --> LS[(localStorage + sessionStorage)]
   Api --> Express[apps/api]
   Express --> Supabase[(Supabase Auth + Postgres)]
 ```
 
-The switchboard is `services/backend.tsx`:
+`services/backend.tsx` builds it:
 
 ```ts
-const kind = import.meta.env.VITE_DATA_BACKEND ?? 'mock'
-// 'mock'     -> createMockBackend()
+const kind = import.meta.env.VITE_DATA_BACKEND ?? 'api'
 // 'api'      -> new ApiBackend({ baseUrl: VITE_API_BASE_URL })
 // 'supabase' -> alias of 'api' for existing deployments
+// anything else throws
 ```
 
-The API cases fail closed when `VITE_API_BASE_URL` is missing. No Supabase
-service-role value is accepted through a browser `VITE_` variable.
+It fails closed when `VITE_API_BASE_URL` is missing. No Supabase service-role
+value is accepted through a browser `VITE_` variable.
 
 ---
 
@@ -293,10 +301,16 @@ The "what reads from what / calls what" table. Auth actions (`signIn`, `signUp`,
 
 ---
 
-## Inside the mock backend
+## Inside the mock backend (deleted 2026-07-24 — history only)
 
-`services/mock/MockBackend.ts` is the single ~1,500-line implementation of
-`DataBackend`. Worth understanding because it stands in for the whole server.
+**None of this section describes running code.** `services/mock/` and every file
+named in it were deleted. It is kept because the behaviour it documents was
+reimplemented in SQL and Express, so it still explains *why* several rules exist.
+For what runs today, read `packages/shared/src/services.ts`, `apps/api/src/`, and
+`supabase/migrations/`.
+
+`services/mock/MockBackend.ts` was the single ~1,500-line implementation of
+`DataBackend`. It stood in for the whole server.
 
 - **Storage:** the entire DB is one JSON blob in `localStorage` under
   `bsh_mock_db_v1`. Shape is `MockDB` in `seed.ts`.
@@ -463,8 +477,10 @@ The implemented path is:
 
 1. `ApiBackend` in `packages/shared/src/services.ts` calls the Express API,
    persists only the user's access/refresh session, and satisfies `DataBackend`.
-2. `services/backend.tsx` selects `mock`, `api`, or the `supabase` alias.
-3. Flip `VITE_DATA_BACKEND=api` and set `VITE_API_BASE_URL`.
+2. `services/backend.tsx` builds that one adapter; `api` and `supabase` are the
+   only accepted values and both mean the same thing.
+3. Set `VITE_API_BASE_URL`. The swap is done, not pending: the mock is gone and
+   there is nothing left to flip between.
 4. The Express API and Postgres/RLS enforce roles, ownership, status transitions,
    and slot validation because the browser is never the authority. Follow
    [ROLE-AND-LOCATION-GUARDRAILS.md](../security/ROLE-AND-LOCATION-GUARDRAILS.md) and

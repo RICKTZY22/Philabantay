@@ -1,8 +1,14 @@
 # Philabantay Code Patterns
 
 This guide records the architecture and coding conventions already used by the
-repository. New work should follow these patterns so the mock backend can later
-be replaced without rewriting the React application.
+repository. New work should follow these patterns so the React application stays
+independent of any single backend implementation.
+
+> The localStorage `MockBackend` was retired on 2026-07-24. `ApiBackend`
+> (Express + Supabase) is the only implementation, and `apps/web/src/services/`
+> contains nothing but `backend.tsx`. This guide described the mock as live
+> until 2026-08-01; the seam it protected is still real, but there is no second
+> adapter to keep parity with today.
 
 ## Dependency direction
 
@@ -11,7 +17,7 @@ Dependencies point inward toward stable contracts and pure rules:
 ```text
 pages -> components -> hooks/lib/config
   |          |
-  +------> DataBackend interface <----- MockBackend or ApiBackend
+  +------> DataBackend interface <----- ApiBackend
                          |
                   packages/shared
 ```
@@ -22,7 +28,7 @@ Rules:
   pure business rules that must agree across UI and backend implementations.
 - `apps/web/src/services` implements or provides those contracts.
 - Pages and components call `useBackend()` and must not import a concrete
-  backend implementation from `services/mock`.
+  backend implementation.
 - `lib` contains pure browser-app utilities such as local-date parsing, route
   safety, display formatting, and map URL construction.
 - `hooks` contains reusable React lifecycle behavior such as clocks or browser
@@ -37,7 +43,8 @@ Implement a feature from the inside out:
 
 1. Add or update domain types and DTO validation in `packages/shared`.
 2. Extend the appropriate service interface in `packages/shared/src/services.ts`.
-3. Implement the interface in the mock backend and later in every real adapter.
+3. Implement the interface in `ApiBackend`, and add the Express route and the
+   SQL command it calls. The database is the authority; the route is a guard.
 4. Put reusable business decisions in a pure shared function. Do not duplicate
    the same status/date rule in several pages.
 5. Let the route page orchestrate loading and mutations.
@@ -198,17 +205,28 @@ export function ExamplePage() {
 ## Security boundaries
 
 - Render user content as React text. Do not use raw HTML APIs.
-- The browser mock is demo storage, not an authentication boundary.
-- Role and ownership checks in `RequireAuth` are UX only; a real backend must
-  enforce them with authorization and RLS.
+- Role and ownership checks in `RequireAuth` are UX only. Express must enforce
+  them with an explicit guard, and SQL must re-check inside the transaction.
+- Express runs on the Supabase service role, which bypasses RLS. Every query in
+  a route therefore has to scope itself; RLS is the backstop for direct client
+  access, not for the API.
+- A guard that asks "is this person the barber on this record?" must be written
+  so an owner-provider passes it. Since Q20 an owner can be the assigned
+  provider, and `requireActiveEmployment` hard-requires the `barber` role, so
+  check the owner branch first. See `requireParticipantOrOwner`.
 - Follow `docs/security/SECURITY.md` and `docs/security/ROLE-AND-LOCATION-GUARDRAILS.md` for the
   production backend.
 
 ## Definition of done
 
-- No page imports `services/mock`.
+- No page imports a concrete backend; everything goes through `useBackend()`.
 - No duplicated business rule exists in multiple UI files.
 - Loading, empty, error, success, and busy states are covered.
 - Mouse, keyboard, narrow viewport, and reduced-motion behavior are checked.
-- `npm run typecheck`, `npm run build`, and `git diff --check` pass.
+- `npm run typecheck`, `npm run test`, `npm run build`, and `git diff --check`
+  pass. `npm run lint` is currently only a second `tsc --noEmit` over
+  `apps/api`: there is no ESLint in this repo, so it proves nothing typecheck
+  has not already proved, and it never looks at `apps/web` at all.
+- Anything touching the database also passes the local Supabase matrix
+  (`RUN_LOCAL_SUPABASE_TESTS=1`), run twice back to back with no reset.
 - New behavior is reflected in this guide when it introduces a new pattern.
