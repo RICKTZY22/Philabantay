@@ -174,8 +174,6 @@ export function Layout() {
               !profile && (onLanding ? (
                 <>
                   <a href="#home" className="nav-link">Home</a>
-                  <a href="#services" className="nav-link">Services</a>
-                  <a href="#contact" className="nav-link">Contact Us</a>
                   {/* Auth lives at /login and /signup only. Those routes are also
                       where RequireAuth sends a signed-out visitor, so keeping one
                       surface means the `from` round-trip has a single code path. */}
