@@ -4047,6 +4047,18 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       expect(appointment.barber_id).toBe(owner.id)
 
       try {
+        // Express guards are a second authority, separate from the SQL command,
+        // and Q20 only taught `requireAssignedProvider` about owner-providers.
+        // Everything else that asks "is this person the barber on the booking?"
+        // answers yes for an owner-provider and then demands the `barber` role.
+        // These two go through `requireParticipantOrOwner`, and every
+        // owner-provider test above this line calls the RPC directly, so no
+        // test had ever driven this path over HTTP.
+        const ownerTimeline = await request(app)
+          .get(`/api/v1/bookings/${appointment.id}/timeline`)
+          .set('Authorization', `Bearer ${owner.token}`)
+        expect(ownerTimeline.status, JSON.stringify(ownerTimeline.body)).toBe(200)
+
         // Outside the shop's hours there is no owner slot, because the shop's
         // own hours are the roster.
         const outside = await book(otherCustomer.id, owner.id, '2030-04-08T11:00:00.000Z')

@@ -136,12 +136,16 @@ export async function requireConversationAccess(
 
   const userId = request.auth.profile.id
   if (conversation.kind === 'customer_shop' && conversation.customer_id === userId) return conversation
-  if (conversation.barber_id === userId) {
-    await requireActiveEmployment(dependencies, request, conversation.shop_id as string)
-    return conversation
-  }
+  // Owners first, for the same reason as `requireParticipantOrOwner` in the
+  // bookings router: an owner-provider is a legitimate `conversations.barber_id`
+  // via their shadow `barbers` row, and the barber branch below requires the
+  // `barber` role, so checking it first locks an owner out of their own thread.
   if (request.auth.profile.role === 'shop_owner') {
     await requireOwnedShop(dependencies, request, conversation.shop_id as string)
+    return conversation
+  }
+  if (conversation.barber_id === userId) {
+    await requireActiveEmployment(dependencies, request, conversation.shop_id as string)
     return conversation
   }
   throw new ApiError(403, 'forbidden', 'You are not a participant in this conversation.')

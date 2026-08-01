@@ -265,12 +265,18 @@ async function requireParticipantOrOwner(
 ): Promise<void> {
   const userId = request.auth.profile.id
   if (appointment.customer_id === userId) return
-  if (appointment.barber_id === userId) {
-    await requireActiveEmployment(dependencies, request, appointment.shop_id)
-    return
-  }
+  // The owner branch has to come before the provider branch. Since Q20 an owner
+  // can BE the assigned provider on their own shop's booking, and the provider
+  // branch below ends in `requireActiveEmployment`, which hard-requires the
+  // `barber` role. Checking the provider first therefore answered "you are the
+  // barber here" and then refused them for not being a barber, so an owner who
+  // could start and finish a visit could not read its timeline or cancel it.
   if (request.auth.profile.role === 'shop_owner') {
     await requireAppointmentOwner(dependencies, request, appointment)
+    return
+  }
+  if (appointment.barber_id === userId) {
+    await requireActiveEmployment(dependencies, request, appointment.shop_id)
     return
   }
   throw new ApiError(403, 'forbidden', 'You are not a participant in this appointment.')
