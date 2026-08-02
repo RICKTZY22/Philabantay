@@ -29,7 +29,6 @@ const ShopMap = lazy(() => import('./ShopMap'))
 interface BarberDashboardProps {
   barberId: string
   barberName: string
-  barberAvatarId: string | null
   pending: boolean
 }
 
@@ -59,7 +58,7 @@ const emptyData: BarberHomeData = {
   shiftRequests: [],
 }
 
-export function BarberDashboard({ barberId, barberName, barberAvatarId, pending }: BarberDashboardProps) {
+export function BarberDashboard({ barberId, barberName, pending }: BarberDashboardProps) {
   const backend = useBackend()
   const [data, setData] = useState<BarberHomeData | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -102,7 +101,6 @@ export function BarberDashboard({ barberId, barberName, barberAvatarId, pending 
     return (
       <BarberJobBoard
         barberName={barberName}
-        barberAvatarId={barberAvatarId}
         pending={pending}
         hiringShops={data.hiringShops}
         requests={data.requests}
@@ -115,7 +113,6 @@ export function BarberDashboard({ barberId, barberName, barberAvatarId, pending 
   return (
     <EmployedBarberHome
       barberName={barberName}
-      barberAvatarId={barberAvatarId}
       shop={data.shop}
       appointments={data.appointments}
       conversations={data.conversations}
@@ -131,7 +128,6 @@ export function BarberDashboard({ barberId, barberName, barberAvatarId, pending 
 
 function BarberJobBoard({
   barberName,
-  barberAvatarId,
   pending,
   hiringShops,
   requests,
@@ -139,7 +135,6 @@ function BarberJobBoard({
   onRefresh,
 }: {
   barberName: string
-  barberAvatarId: string | null
   pending: boolean
   hiringShops: HiringShop[]
   requests: EmploymentRequest[]
@@ -235,13 +230,7 @@ function BarberJobBoard({
   }
 
   return (
-    <DoodleBoard
-      userName={barberName}
-      userAvatarId={barberAvatarId}
-      userAvatarRole="barber"
-      centerLabel="Barber hiring map"
-      liveTone={location ? 'green' : 'yellow'}
-    >
+    <DoodleBoard>
       <div className="barber-jobs-page">
       <header className="barber-jobs-hero barber-paper-stack">
         <div>
@@ -388,9 +377,8 @@ function BarberJobBoard({
   )
 }
 
-function EmployedBarberHome({ barberName, barberAvatarId, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests, loadError }: {
+function EmployedBarberHome({ barberName, shop, appointments, conversations, rules, overrides, employment, absences, shiftRequests, loadError }: {
   barberName: string
-  barberAvatarId: string | null
   shop: ShopWithStatus
   appointments: AppointmentDetailed[]
   conversations: ConversationDetailed[]
@@ -411,13 +399,7 @@ function EmployedBarberHome({ barberName, barberAvatarId, shop, appointments, co
   const unread = conversations.reduce((total, conversation) => total + conversation.unread_count, 0)
 
   return (
-    <DoodleBoard
-      userName={barberName}
-      userAvatarId={barberAvatarId}
-      userAvatarRole="barber"
-      centerLabel={shop.name}
-      liveTone={shop.status === 'open' ? 'green' : shop.status === 'busy' ? 'yellow' : 'red'}
-    >
+    <DoodleBoard>
       <div className="barber-home-page">
       <header className="barber-home-hero barber-paper-stack">
         <div>

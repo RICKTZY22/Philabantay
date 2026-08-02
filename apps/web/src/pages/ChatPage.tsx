@@ -382,11 +382,6 @@ function MessageComposer({ conversationId, disabled }: { conversationId: string;
 
   return (
     <div className="thread-compose">
-      <div className="chat-quick-replies" aria-label="Quick replies">
-        {['May available slot?', 'Magkano ang haircut?', 'On the way na ako'].map((reply) => (
-          <button type="button" key={reply} disabled={disabled} onClick={() => setDraft(reply)}>{reply}</button>
-        ))}
-      </div>
       <form className="thread-input" onSubmit={send}>
         <input
           value={draft}

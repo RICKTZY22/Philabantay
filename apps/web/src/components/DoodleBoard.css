@@ -1,4 +1,4 @@
-/* Shared framed "board" shell — decorative teal rail + top bar. Keeps the
+/* Shared framed "board" shell — decorative teal rail + content. Keeps the
    customer, barber, and owner dashboards on one hand-drawn visual language. */
 
 .doodle-board-wrap { width: 100%; margin: 4px 0 48px; }
@@ -81,23 +81,15 @@
 }
 
 .doodle-board-wrap.is-owner .doodle-workspace { padding: 22px 24px 26px; }
-.doodle-board-wrap.is-owner .doodle-topbar { margin-bottom: 18px; }
-.doodle-board-wrap.is-owner .doodle-search,
-.doodle-board-wrap.is-owner .doodle-chip > span { border-color: #424271; }
-.doodle-board-wrap.is-owner .doodle-chip > span { background: #ffcfaa; }
+.doodle-board-wrap.is-owner .doodle-search { border-color: #424271; }
 
-/* ---- Workspace + top bar ---- */
+/* ---- Workspace + optional search ---- */
 .doodle-workspace { min-width: 0; padding: 20px; }
 
-.doodle-topbar {
-  display: grid;
-  grid-template-columns: minmax(180px, 330px) 1fr auto;
-  align-items: center;
-  gap: 16px;
+.doodle-search-row {
+  width: min(100%, 330px);
   margin-bottom: 22px;
 }
-
-.doodle-topbar-spacer { display: block; }
 
 /* Anchor ng optional results dropdown sa ilalim ng search box. */
 .doodle-search-slot { position: relative; min-width: 0; }
@@ -114,23 +106,6 @@
 }
 
 .doodle-search input { width: 100%; border: 0; outline: 0; background: transparent; font: inherit; }
-.doodle-live { display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); }
-.doodle-live-dot { width: 10px; height: 10px; border: 2px solid var(--ink); border-radius: 50%; background: #55c77a; }
-.doodle-live-dot.is-yellow { background: var(--yellow); }
-.doodle-live-dot.is-red { background: var(--danger); }
-.doodle-chip { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
-
-.doodle-chip > span {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--yellow);
-  font-family: 'Kalam', cursive;
-  font-weight: 700;
-}
 
 @media (max-width: 960px) {
   .doodle-board { grid-template-columns: 1fr; }
@@ -144,14 +119,9 @@
   .doodle-rail-scissors { margin: 0; }
   .doodle-owner-rail-stack { display: none; }
   .doodle-workspace { padding: 16px; }
-  .doodle-topbar { grid-template-columns: 1fr auto; }
-  .doodle-live { display: none; }
-  .doodle-topbar-spacer { display: none; }
 }
 
 @media (max-width: 640px) {
   .doodle-workspace { padding: 12px; }
-  .doodle-topbar { grid-template-columns: 1fr; }
-  .doodle-chip { grid-row: 1; justify-content: flex-end; }
-  .doodle-search { grid-row: 2; }
+  .doodle-search-row { width: 100%; }
 }

@@ -2059,3 +2059,28 @@ Runtime verified: Supabase gateway, API `:4000`, and Vite
 `http://localhost:5174` are live. All three demo accounts were reseeded and
 their real API sign-ins passed. Browser acceptance remains with the product
 owner.
+
+## 2026-08-02 — Codex — shared role-dashboard top strip removed
+
+Product-owner direction removed the duplicate `DoodleBoard` live-shop and
+profile identity strip across customer, barber, and owner dashboards. The
+global header remains the profile/navigation surface. Discovery and reservation
+search remain functional as standalone search rows.
+
+Only `apps/web` and coordination documentation changed. Typecheck, ESLint, 129
+fast tests, production build, and diff check passed. Browser review remains with
+the product owner; backend matrix not rerun.
+
+## 2026-08-02 — Codex — auth back-home control removed
+
+Product-owner direction removed the standalone “Back to home” link from both
+dedicated auth modes and pruned its dead CSS/import. Auth switching and the
+sanitized post-login return path remain unchanged. Focused web gate and diff
+check passed; visual acceptance remains with the product owner.
+
+## 2026-08-02 — Codex — preset chat replies removed
+
+Product-owner direction removed the shared chat composer's three automatic
+quick-reply chips for all roles. Base/notebook/mobile/studio styling for those
+chips is also deleted; typed sending is unchanged. Focused web gate and diff
+check passed, with visual acceptance left to the product owner.

@@ -360,9 +360,6 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
 
   return (
     <DoodleBoard
-      userName={firstName}
-      centerLabel="Philabantay live map"
-      showUserChip={false}
       search={{
         value: query,
         onChange: setQuery,

@@ -1191,14 +1191,6 @@ body:has(.app-shell.is-workspace) {
   border-top: 1px solid var(--studio-line);
 }
 
-.app-shell.is-workspace .chat-quick-replies button,
-.app-shell.is-workspace .chat-layout[data-notebook] .chat-quick-replies button {
-  min-height: 34px;
-  background: var(--studio-surface-soft);
-  border: 1px solid var(--studio-line);
-  border-radius: 999px;
-}
-
 .app-shell.is-workspace .thread-input input,
 .app-shell.is-workspace .chat-layout[data-notebook] .thread-input input {
   background: var(--studio-surface);

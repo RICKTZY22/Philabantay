@@ -1,4 +1,4 @@
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { AuthSlider } from '../components/AuthSlider'
 import { useAuth } from '../features/auth/AuthContext'
 import { safeInternalPath } from '../lib/security'
@@ -18,11 +18,6 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
 
   return (
     <div className={`auth-page is-${mode}`}>
-      <Link to="/" className="auth-page-back">
-        <span aria-hidden="true">←</span>
-        Back to home
-      </Link>
-
       <AuthSlider mode={mode} from={from} />
     </div>
   )

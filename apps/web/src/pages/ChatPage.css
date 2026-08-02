@@ -147,17 +147,6 @@
 .bubble-time { align-self: flex-end; color: var(--faint); font-size: 11px; }
 
 .thread-compose { border-top: 3px solid var(--ink); background: color-mix(in srgb, var(--yellow) 18%, var(--paper-soft)); }
-.chat-quick-replies { display: flex; gap: 7px; padding: 10px 16px 0; overflow-x: auto; }
-.chat-quick-replies button {
-  flex: none;
-  padding: 4px 9px;
-  color: var(--muted);
-  background: var(--paper-soft);
-  border: 1.5px solid var(--ink);
-  border-radius: 9px 12px 8px 11px;
-  cursor: pointer;
-}
-.chat-quick-replies button:hover { color: var(--ink); background: var(--yellow); }
 .thread-input { display: flex; gap: 9px; padding: 10px 16px 14px; }
 .thread-input input {
   flex: 1;
@@ -306,8 +295,6 @@
   background: rgba(255, 253, 247, .92);
   border-radius: 10px 14px 9px 13px / 13px 9px 14px 10px;
 }
-.chat-layout[data-notebook] .chat-quick-replies button { border-style: dashed; background: rgba(255, 253, 247, .9); }
-
 @media (prefers-reduced-motion: reduce) {
   .chat-layout[data-notebook] .convo-item,
   .chat-layout[data-notebook] .bubble { transform: none; }
@@ -324,6 +311,4 @@
   .chat-layout[data-notebook] .chat-inbox { padding-left: 46px; }
   .chat-layout[data-notebook] .thread-body { padding-left: 40px; }
   .bubble { max-width: 86%; }
-  .chat-quick-replies { flex-wrap: wrap; overflow-x: visible; padding-inline: 12px; }
-  .chat-quick-replies button { flex: 1 1 130px; min-height: 44px; white-space: normal; }
 }

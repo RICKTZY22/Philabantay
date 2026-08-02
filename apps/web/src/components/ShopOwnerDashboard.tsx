@@ -21,8 +21,6 @@ import { OwnerStaffPanel } from './OwnerStaffPanel'
 import './ShopOwnerDashboard.css'
 
 interface ShopOwnerDashboardProps {
-  ownerName: string
-  ownerAvatarId: string | null
   section: OwnerDashboardSection
 }
 
@@ -99,7 +97,7 @@ function shortMoney(cents: number): string {
   return `₱${Math.round(pesos)}`
 }
 
-export function ShopOwnerDashboard({ ownerName, ownerAvatarId, section }: ShopOwnerDashboardProps) {
+export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
   const backend = useBackend()
   const nowEpochMs = useCurrentTime()
   const [query, setQuery] = useState('')
@@ -148,7 +146,6 @@ export function ShopOwnerDashboard({ ownerName, ownerAvatarId, section }: ShopOw
       appointment.id === updated.id ? { ...appointment, ...updated } : appointment
     )) ?? null)
   }
-  const shopName = joinCode?.shop.name ?? appointments?.[0]?.shop.name ?? 'Your barbershop'
   const loaded = appointments !== null
 
   // ---- Derived analytics (lahat galing sa totoong bookings) ----
@@ -189,10 +186,6 @@ export function ShopOwnerDashboard({ ownerName, ownerAvatarId, section }: ShopOw
 
   return (
     <DoodleBoard
-      userName={ownerName}
-      userAvatarId={ownerAvatarId}
-      userAvatarRole="shop_owner"
-      centerLabel={shopName}
       variant="owner"
       search={section === 'reservations' ? {
         value: query,
