@@ -137,9 +137,9 @@ Two carried items that are the same kind of work:
 3. **Start the API.** `apps/api` on port 4000 must be running or every screen
    renders while every call dies. This exact thing was reported as an app bug
    on 2026-08-01.
-4. **`VITE_STORAGE_ORIGIN` must be `http://127.0.0.1:54521`.** It feeds
-   `connect-src` and `img-src`; the old `54321` CSP-blocks signed photo uploads
-   and private previews.
+4. **`VITE_STORAGE_ORIGIN` must be `http://127.0.0.1:54321`.** It feeds
+   `connect-src` and `img-src`; any value that does not match the running local
+   Supabase gateway CSP-blocks signed photo uploads and private previews.
 5. **An empty public catalogue is expected**, not a bug. The matrix archives the
    fixture shops on teardown, so discovery is empty until you publish something.
 6. **Leave no published shop behind.** The suite archives

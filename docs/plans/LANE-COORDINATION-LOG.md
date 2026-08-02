@@ -2034,3 +2034,28 @@ then refuses them.
 **`npm run lint` is not a linter** — no ESLint exists in this repo; the script is
 `tsc --noEmit` over `apps/api` only, and `apps/web` is never linted. Do not treat
 "lint clean" as frontend evidence.
+
+## 2026-08-01 — Codex — P2-08 frontend fixes handed to owner for browser acceptance
+
+Still one frontend lane. Six focused files now fix narrow appointment-calendar,
+owner filter/note, customer quick-reply, map-pin labelling, and stale hiring
+state defects. The deterministic gate is green: typecheck, real ESLint with zero
+warnings, 129 fast tests, production build, and diff check. No API, Supabase,
+migration, or SQL file changed, so the backend matrix was not rerun.
+
+The product owner will run the final responsive owner/barber/customer browser
+acceptance. Do not mark P2-08 or Phase 2 complete before their result is recorded.
+The customer slot picker remains open item 6 and is outside this smoke-polish
+scope. Fixture state is draft/unpublished; leave no published shop behind.
+
+## 2026-08-02 — Codex — local Supabase ports moved after Windows exclusion
+
+Windows dynamically reserved `54468–54967`, so the configured Supabase ports
+`54520–54527` could not bind and API data calls failed despite a green health
+route. The local stack now uses `54320–54327`; ignored API/web environment files
+were aligned. No reset, migration, SQL, or backend application code changed.
+
+Runtime verified: Supabase gateway, API `:4000`, and Vite
+`http://localhost:5174` are live. All three demo accounts were reseeded and
+their real API sign-ins passed. Browser acceptance remains with the product
+owner.

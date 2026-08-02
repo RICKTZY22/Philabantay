@@ -1805,3 +1805,83 @@ session, and signing in means typing a real account password, which I must not
 do. So it needs the product owner at the keyboard, or a session I am permitted to
 install. In the meantime the same authorization surface was exercised over real
 HTTP for all three seeded roles, ten calls, all 200.
+
+## 2026-08-01 — Codex — P2-08 frontend fixes ready; owner browser acceptance pending
+
+Implemented six focused frontend corrections found while preparing the P2-08
+smoke journeys: compact mobile appointment calendar, wrapped owner service and
+reservation filters, a usable narrow owner-note action, wrapped customer chat
+replies, a labelled Leaflet pin, and hiring conflict/note state that survives
+the authoritative reload.
+
+The deterministic frontend gate passed: all workspace typechecks, ESLint with
+zero warnings, 129 fast tests (61 shared, 28 API, 40 web), production build, and
+`git diff --check`. The 85-case matrix was intentionally not rerun because no
+`apps/api` or `supabase` file changed. The smoke fixture was restored to draft,
+hiring Off, owner-provider Off, Bruno qualified for both active services, no
+pending request, and no new booking or closure.
+
+An agent-run preliminary browser pass is recorded in Phase 2 tests, but the
+product owner clarified that they will perform the browser test. P2-08 and Phase
+2 remain open until that acceptance result is recorded. The customer slot picker
+remains the explicitly excluded feature and was not built. No commit or push was
+made.
+
+## 2026-08-02 — Codex — local Supabase fetch failure repaired
+
+The app's `/health` endpoint was green while every Supabase-backed request failed
+because Windows had dynamically excluded TCP ports `54468–54967`, covering the
+configured local Supabase range `54520–54527`. Moved the local stack to the free
+`54320–54327` range and aligned the ignored API/web environment files. No
+database reset, migration, SQL, or application-code change was involved.
+
+Verified the Supabase auth gateway, API on port 4000, and Vite on
+`http://localhost:5174`. Re-ran the local account seeder to pin the configured
+development password, then successfully signed in the verified owner, verified
+barber, and customer through the real API. The product-owner browser acceptance
+remains the next P2-08 action.
+
+## 2026-08-02 — Claude — reviewed Codex's P2-08 pass; found a once-a-week test flake I had shipped
+
+Product owner asked for the project's current stage. Checking the tree rather
+than reciting from memory turned up Codex's uncommitted P2-08 work, and running
+the matrix against it turned up a flake of mine.
+
+**Codex's work, reviewed and verified rather than taken at face value.** They ran
+a preliminary browser pass at 1280×800, 390×844, 375×812 and 320×800, made small
+frontend fixes (Leaflet pin label, hiring conflict alert and normalized note,
+owner filters/staff note, chat replies, appointment calendar at narrow widths),
+and **relocated the whole local Supabase stack from the 545xx range to the
+standard 543xx range** in `config.toml` and both `.env.example` files. Verified
+live: the stack really is listening on 54321, the local `.env` files agree, and
+typecheck, ESLint 0/0, 129 fast tests and both builds are green.
+
+**One gap in their reasoning.** Their note says the matrix was "intentionally not
+rerun because no API or Supabase file changed" — but `supabase/config.toml` did
+change, and it changes every port the matrix connects through. Rerunning it was
+the right call and it found a failure.
+
+**The failure was mine, not theirs: `enforces the booking lead time and advance
+horizon` fails every Sunday.** The test snapped its slot to the fixture's Monday
+shift and then asserted a hardcoded `min_lead_minutes: 10080` (seven days). That
+snap puts the slot 1.8 to 7.8 days out depending on the weekday, so on a Sunday it
+lands 7.8 days out, clears the requirement, and the booking is accepted.
+
+Worth recording that my first fix was wrong. I derived the lead from the slot and
+added a day, which tripped `shops_min_lead_range` — the column is capped at 10080.
+That cap is the real point: **no lead value can refuse a slot 7.8 days out**, so
+the approach was unfixable on Sundays rather than merely mistuned.
+
+The real fix reads the gate instead of fighting it. `require_booking_window` runs
+before any shift check, so the two refusals never needed a slot the barber works.
+They now use a plain now+3d instant, which is 2.04 to 3.0 days out on every
+weekday and hour: inside a seven-day lead, beyond a one-day horizon. Only the
+"accepted with defaults" half still uses the Monday slot, because that one does
+need a real shift window. Checked across 21 weekday/hour combinations, all hold.
+
+Introduced in P2-07 and first observed 2026-08-02, which was simply the first
+Sunday anyone ran the matrix. The lesson worth keeping: a test that derives a
+date from "today" needs proving across all seven weekdays, not just the one it
+was written on.
+
+Matrix **85/85 twice back to back** after the fix, on Codex's relocated ports.

@@ -3719,28 +3719,42 @@ localDescribe('local Supabase RLS and Express authorization', () => {
   })
 
   it('enforces the booking lead time and advance horizon', async () => {
-    // A start two days out is inside a three-day lead requirement and outside a
-    // one-day horizon, so one slot exercises both bounds.
-    const soon = new Date(Date.now() + 2 * 86_400_000)
-    // Land on the fixture's Monday shift at 09:00 Manila regardless of today.
-    soon.setUTCDate(soon.getUTCDate() + ((8 - soon.getUTCDay()) % 7))
-    const startsAt = `${soon.toISOString().slice(0, 10)}T01:00:00.000Z`
+    // The gate checks the booking window (`require_booking_window`) before it
+    // ever looks at the shift, so the two refusals below do not need a slot the
+    // barber actually works -- any future instant reaches the bound first.
+    //
+    // That matters, because the previous version snapped this to the fixture's
+    // Monday and then asserted a hardcoded 10080-minute (seven day) lead. The
+    // snap puts the slot 1.8 to 7.8 days out depending on the weekday, so on a
+    // Sunday it lands 7.8 days out, clears the requirement, and the booking is
+    // accepted. `shops_min_lead_range` caps the column at 10080, so no lead
+    // value can refuse a slot that far out: the approach was unfixable on
+    // Sundays rather than merely mistuned. Introduced in P2-07 and first seen
+    // 2026-08-02, the first Sunday anyone ran the matrix.
+    const threeDaysOut = new Date(Date.now() + 3 * 86_400_000)
+    const windowProbe = `${threeDaysOut.toISOString().slice(0, 10)}T01:00:00.000Z`
 
+    // 2 to 3 days out on every weekday: inside a seven-day lead, and beyond a
+    // one-day horizon.
     await withShopFields({ min_lead_minutes: 10080 }, async () => {
-      const tooSoon = await book(customer.id, barber.id, startsAt)
+      const tooSoon = await book(customer.id, barber.id, windowProbe)
       expect(tooSoon.error?.code).toBe('P4029')
     })
 
     await withShopFields({ max_advance_days: 1 }, async () => {
-      const tooFar = await book(customer.id, barber.id, startsAt)
+      const tooFar = await book(customer.id, barber.id, windowProbe)
       expect(tooFar.error?.code).toBe('P4029')
     })
 
     // The default is no lead time and a null horizon, which must be a true
     // no-op: the fixture's own 2030 appointments prove a null horizon imposes
-    // nothing, and this confirms the same slot is accepted with the defaults.
+    // nothing, and this confirms a real slot is accepted with the defaults.
+    // This half does need the barber's Monday shift.
+    const soon = new Date(Date.now() + 2 * 86_400_000)
+    soon.setUTCDate(soon.getUTCDate() + ((8 - soon.getUTCDay()) % 7))
+    const startsAt = `${soon.toISOString().slice(0, 10)}T01:00:00.000Z`
     const accepted = await book(customer.id, barber.id, startsAt)
-    expect(accepted.error).toBeNull()
+    expect(accepted.error, JSON.stringify(accepted.error)).toBeNull()
     await service.from('appointments').delete().eq('id', (accepted.data as { id: string }).id)
   })
 

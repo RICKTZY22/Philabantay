@@ -324,4 +324,6 @@
   .chat-layout[data-notebook] .chat-inbox { padding-left: 46px; }
   .chat-layout[data-notebook] .thread-body { padding-left: 40px; }
   .bubble { max-width: 86%; }
+  .chat-quick-replies { flex-wrap: wrap; overflow-x: visible; padding-inline: 12px; }
+  .chat-quick-replies button { flex: 1 1 130px; min-height: 44px; white-space: normal; }
 }

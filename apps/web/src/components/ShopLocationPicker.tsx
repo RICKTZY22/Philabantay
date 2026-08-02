@@ -77,7 +77,12 @@ export function ShopLocationPicker({ lat, lng, onChange }: ShopLocationPickerPro
         draggable: true,
         keyboard: true,
         alt: 'Selected shop location',
+        title: 'Selected shop location pin',
       }).addTo(map)
+      marker.getElement()?.setAttribute(
+        'aria-label',
+        'Selected shop location pin. Drag to adjust the exact location.',
+      )
       marker.on('dragend', () => {
         const point = marker.getLatLng()
         onChangeRef.current(point.lat, point.lng)

@@ -188,5 +188,15 @@
 .cut-calendar-more { padding-left: 3px; color: var(--faint); font-size: 11px; }
 
 @media (max-width: 760px) {
-  .cut-calendar.is-large { min-width: 720px; padding: 14px; }
+  .cut-calendar.is-large { min-width: 0; padding: 14px 8px; }
+  .cut-calendar.is-large .cut-calendar-head h2 { font-size: 1.35rem; }
+  .cut-calendar.is-large .cut-calendar-nav { width: 100%; }
+  .cut-calendar.is-large .cut-calendar-today { position: static; min-height: 44px; margin: 8px auto; }
+  .cut-calendar.is-large .cut-calendar-grid { gap: 2px; }
+  .cut-calendar.is-large .cut-calendar-weekday { font-size: 11px; }
+  .cut-calendar.is-large .cut-calendar-day { height: 44px; padding: 1px; }
+  .cut-calendar.is-large .cut-calendar-date-button { min-height: 40px; font-size: .9rem; }
+  .cut-calendar.is-large .cut-calendar-day.is-today .cut-calendar-date-button::after { display: none; }
+  .cut-calendar.is-large .cut-calendar-event { grid-template-columns: 1fr; padding-inline: 2px; }
+  .cut-calendar.is-large .cut-calendar-event span { display: none; }
 }

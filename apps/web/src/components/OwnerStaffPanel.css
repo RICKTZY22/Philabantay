@@ -195,6 +195,8 @@
   .owner-shift-editor-row { grid-template-columns: 1fr 1fr; }
   .owner-shift-editor-row label { grid-column: 1 / -1; }
   .owner-exception-form { grid-template-columns: 1fr; }
+  .owner-note-form { flex-direction: column; }
+  .owner-note-form .btn { width: 100%; min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

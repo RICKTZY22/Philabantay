@@ -93,10 +93,15 @@ export function OwnerHiringPage() {
       setHiring(updated)
       setStatus(updated.status)
       setPositions(updated.open_positions == null ? '' : String(updated.open_positions))
+      setNote(updated.note ?? '')
       setMessage('Na-save ang hiring status.')
     } catch (cause) {
-      setError(failureMessage(cause))
-      if (cause instanceof DataError && cause.code === 'conflict') await load()
+      if (cause instanceof DataError && cause.code === 'conflict') {
+        await load()
+        setError(failureMessage(cause))
+      } else {
+        setError(failureMessage(cause))
+      }
     } finally { setBusy('') }
   }
 

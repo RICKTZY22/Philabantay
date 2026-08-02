@@ -249,8 +249,10 @@ in [../plans/ROADMAP-STATUS.md](../plans/ROADMAP-STATUS.md).
    direct write path worth folding into a command in a later pass.
 4. **Two closeout items are not automated.** The session-restore no-flash browser
    smoke (LR-033) and an independent adversarial re-scan by fresh eyes are still
-   manual. The code author also wrote the tests, so a second set of eyes raises
-   confidence before Phase 1 is formally locked.
+   manual. An agent-run 2026-08-01 restore pass observed only the neutral shell,
+   but final product-owner browser acceptance remains pending. The code author
+   also wrote the tests, so a second set of eyes raises confidence before Phase 1
+   is formally locked.
 5. **Verification content-scan gate is proven by integration only.** The
    "blocks unscanned approval" guarantee is exercised against real Postgres, so
    it needs Docker to verify; the unit layer proves the schema shape, not the

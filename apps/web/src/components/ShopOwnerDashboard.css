@@ -565,6 +565,8 @@
   .owner-access-panel { grid-column: 1; }
   .owner-value-summary { justify-items: start; text-align: left; }
   .owner-card-heading.compact { flex-wrap: wrap; }
+  .owner-service-tabs { flex-wrap: wrap; overflow-x: visible; }
+  .owner-service-tabs button { flex: 1 1 120px; min-height: 44px; }
 }
 
 @media (max-width: 460px) {

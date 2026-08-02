@@ -1,9 +1,9 @@
 # Phase 2 tests - shops, workforce, availability
 
-Covers packets P2-01 through P2-08. P2-01 through P2-07 are verified complete
-and signed off. P2-08's backend race gate is proven as of 2026-08-01; its
-frontend smoke journeys are the one piece still open. Test names are quoted
-verbatim.
+Covers packets P2-01 through P2-08. P2-01 through P2-07 are verified complete.
+P2-08's backend race gate is proven and its frontend fixes have an agent-run
+browser/gate record below, but final product-owner browser acceptance is still
+pending. Test names are quoted verbatim.
 
 Jump to: [P2-01](#p2-01) · [P2-02](#p2-02) · [P2-03](#p2-03) · [P2-04](#p2-04) · [P2-05](#p2-05) · [P2-06](#p2-06) · [P2-08](#p2-08) ·
 [Findings](#findings)
@@ -362,11 +362,56 @@ lost booking, and the regression now pins the part that matters: after the sweep
 a retry succeeds. Making the claim wait on the sweeper instead would be a worse
 trade.
 
-**Still open for P2-08:** the packet's frontend half, "responsive owner/barber/
-customer smoke journeys". Not done here. Driving those needs an authenticated
-browser session, and signing in requires typing a real account password, which
-this agent must not do. The equivalent authorization surface was instead verified
-over real HTTP for all three roles.
+### Authenticated frontend journeys — preliminary agent pass 2026-08-01 🔨
+
+Run through the real browser UI at `http://localhost:5174` with the API on
+port 4000. The owner shop was published only for the customer discovery leg and
+was returned to `draft`; hiring was returned to `off`, the owner-provider
+capability to off, Bruno's two qualifications were restored, and the temporary
+barber change request was declined. No booking, closure, or published shop was
+left behind.
+
+| Journey | Exact browser evidence |
+| --- | --- |
+| Owner shop | Existing details, six-day hours, two active services, and the empty closure editor rendered authoritatively. Unchanged details, hours, and one active service each saved successfully. Publish made the shop discoverable; Unpublish returned it to `draft`. Removing every qualification made the bookable-provider row `is-todo` and disabled Publish; restoring Bruno's two qualifications made it `is-done` and enabled Publish again. |
+| Owner staff | Enabled the owner shop-scoped provider capability, granted an owner qualification, removed all owner/Bruno qualifications for the readiness refusal, restored Bruno's two qualifications, and returned the owner capability to off. The shift editor exposed all 14 labelled time inputs. |
+| Owner hiring/stale tab | One tab saved `open / 2 / P2-08 winning write`; a stale second tab tried to save Full, received `Stale ang screen na ito. Ni-reload ang pinakabagong data.`, and reloaded the winning Hiring/2/note values without overwriting them. The conflict alert was fixed so the authoritative reload no longer erases it. Hiring finished Off with null count/note. |
+| Owner reservations | Empty canonical reservation ledger and all four filters rendered; the mobile filter row no longer clips Completed or Cancelled/no-show. |
+| Barber | Read-only schedule rendered **0 time inputs**, six assigned weekdays, attendance **1/1 present, 0 absent**, and no exception. A real Time off request was submitted and appeared Pending; the owner declined it through the staff panel, returning the fixture to no pending request. Own bookings were empty. |
+| Customer | Published shop appeared in discovery; the detail dialog exposed real address, services/prices, barber, and live walk-in state. The customer sent `P2-08 smoke check — no action needed.` through the real shop chat, and the empty bookings calendar rendered at every width. |
+| Explicit exclusion | The detail dialog has no booking control and the web app has no `/availability` or `/bookings/quote` consumer. The customer slot picker remains roadmap open item 6 and was reported, not built or faked in this packet. |
+
+Interactive counts below are **visible/reachable**, followed by disabled count.
+Every row measured **0 unreachable, 0 unlabelled, 0 clipped controls, and 0 px
+document horizontal overflow** after the focused fixes.
+
+| Surface | 1280×800 | 390×844 | 375×812 | 320×800 |
+| --- | ---: | ---: | ---: | ---: |
+| Owner Shop Setup | 63/58 (+5) | 63/58 (+5) | 63/58 (+5) | 63/58 (+5) |
+| Owner Staff, shift editor open | 44/38 (+6) | 44/38 (+6) | 44/38 (+6) | 44/38 (+6) |
+| Owner Hiring, Off | 11/9 (+2) | 11/9 (+2) | 11/9 (+2) | 11/9 (+2) |
+| Owner Reservations | 8/8 (+0) | 8/8 (+0) | 8/8 (+0) | 8/8 (+0) |
+| Barber home | 37/37 (+0) | 37/37 (+0) | 37/37 (+0) | 37/37 (+0) |
+| Barber schedule | 39/39 (+0) | 39/39 (+0) | 39/39 (+0) | 39/39 (+0) |
+| Customer discovery | 56/56 (+0) | 56/56 (+0) | 56/56 (+0) | 56/56 (+0) |
+| Customer shop detail dialog | 4/4 (+0) | 4/4 (+0) | 4/4 (+0) | 4/4 (+0) |
+| Customer booking calendar | 37/37 (+0) | 37/37 (+0) | 37/37 (+0) | 37/37 (+0) |
+| Customer shop chat | 9/8 (+1) | 8/7 (+1) | 8/7 (+1) | 8/7 (+1) |
+
+| Cross-cutting gate | Exact evidence |
+| --- | --- |
+| Keyboard | The menu focus trap wrapped Close → Sign out with Shift+Tab and Sign out → Close with Tab. Escape dismissed it and restored focus to the burger. A physical Chrome run proved Enter activation by moving the focused native Log in link from `/` to `/login`; the tab was then restored. All enabled controls counted above remained in the native focus order. |
+| Real reduced motion | Chrome media emulation made `matchMedia('(prefers-reduced-motion: reduce)').matches === true`. Barber schedule, customer chat, owner hiring, and the open owner menu each had **0** computed animation/transition durations above 1 ms. This is preliminary agent evidence for the P2-06 structural-only caveat; product-owner confirmation remains. |
+| Visible workflow review | The agent visually reviewed Owner Staff at desktop/mobile with the capability controls separated from the roster, 14 labelled shift times, unclipped note action, attendance, and request decision controls. Barber Schedule clearly presented the roster as read-only, exposed the structured request, and showed attendance/pending state without overflow. The carried P2-06 human-review caveat remains until the product owner records their browser result. |
+| LR-033 session restore | Fresh owner deep links at all four required widths rendered only `Sandali, tinitingnan ang session...` immediately after DOMContentLoaded, then resolved to Owner Staff. No landing, login, customer, barber, verification, or owner workspace content appeared during restore. A stale session resolved through the same neutral shell to `/login`, not to a wrong workspace. |
+| Console | Clean owner, barber, and customer role journeys each recorded **0 console errors**. A final fresh owner load after the deliberate rapid-reload probe also recorded 0. |
+| Frontend fixes | Labelled the Leaflet drag pin; retained the hiring conflict alert and normalized the saved note; wrapped mobile owner filters, staff-note action, and chat replies; replaced the 720 px mobile appointment-calendar floor with a usable compact grid. |
+| Deterministic gate | `npm run typecheck`, real ESLint with zero warnings, **129 fast tests** (shared 61, API 28, web 40), production build, and `git diff --check` all passed. The 85-case matrix was intentionally **not rerun** because no `apps/api` or `supabase` file changed; its already-recorded twice-green backend proof above remains authoritative. |
+
+**Not signed off yet.** Per the product owner's 2026-08-01 clarification, the
+final browser acceptance belongs to the product owner. The measurements above
+record the agent's defect-finding pass and are not a substitute for that pass.
+Do not mark P2-08 or Phase 2 complete until the owner records the browser result.
 
 ---
 

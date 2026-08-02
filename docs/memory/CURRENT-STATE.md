@@ -11,23 +11,67 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 
 ## Active phase
 
-**Phase 2 — shops, workforce, and availability**
+**Phase 2 — shops, workforce, and availability: in progress.** P2-08's final
+product-owner browser acceptance is the only remaining closeout. Phase 3 has
+not started.
 
 - P2-01 Shop lifecycle: verified complete.
 - P2-02 Shop facts: verified complete.
 - P2-03 Hiring state: verified complete.
 - P2-04 Employment convergence: verified complete.
 - P2-05 Provider capabilities: verified complete.
-- P2-06 Schedule authority: **verified complete, signed off 2026-07-30** on an
-  agent-executed functional and accessibility pass accepted in lieu of a
-  personal visible-workflow review.
+- P2-06 Schedule authority: **verified complete, signed off 2026-07-30**; its
+  carried visible-workflow and real reduced-motion caveats have preliminary
+  agent evidence from P2-08 and await product-owner browser confirmation.
 - P2-07 Availability engine: **verified complete 2026-07-30**, all ten required
   inputs. Q20 was answered the same day (D-028).
-- P2-08 Race gate: **backend race gate proven 2026-08-01, no migrations needed.**
-  Its responsive owner/barber/customer smoke journeys are the last piece of
-  Phase 2.
+- P2-08 Race gate + frontend smoke: **in progress.** Backend matrix 85/85 twice
+  on the recorded clean replay; frontend fixes and the deterministic code gate
+  are green. Final product-owner browser acceptance remains.
 
 ## Active packet
+
+### P2-08 race gate + responsive browser smoke — fixes ready, owner acceptance pending
+
+The backend half remained untouched: its four widened race classes were already
+proven and matrix 85/85 was green twice. Before the product owner clarified that
+they would own the browser test, the agent ran a preliminary pass against the
+real local API/browser stack at 1280×800, 390×844, 375×812, and 320×800.
+
+- Owner: details/hours/service saves, publish/unpublish, provider capability and
+  qualifications, zero-provider readiness refusal, Staff, Hiring stale-tab
+  recovery, and Reservations.
+- Barber: read-only schedule with zero time inputs, structured Time off request,
+  own bookings, and attendance; the owner declined the smoke request afterward.
+- Customer: discovery, honest current detail, own bookings calendar, and real
+  shop chat. The missing slot picker remains open item 6 and was not built.
+- Every measured surface: zero horizontal overflow, clipped controls,
+  unreachable controls, and unlabelled controls. Clean role journeys had zero
+  console errors.
+- Keyboard: focus wrapped within the owner menu, Escape dismissed and restored
+  the burger, and physical Chrome Enter activation navigated the focused native
+  Log in link.
+- Preliminary real `prefers-reduced-motion: reduce` media emulation matched and produced no
+  animation/transition duration above 1 ms on representative owner, barber, and
+  customer surfaces. The agent also visually inspected owner Staff and barber
+  Schedule; final product-owner confirmation remains for both carried items.
+- Preliminary LR-033: at all four viewports, a restored owner deep link showed only the
+  neutral session shell before resolving to Owner Staff; a stale session fell
+  back to login without flashing another workspace.
+
+Frontend fixes label the Leaflet pin, preserve the hiring conflict alert and
+normalized note, and repair the owner filters/staff note, chat replies, and
+appointment calendar at narrow widths. Full gate passed: typecheck, ESLint,
+129 fast tests, production build, and `git diff --check`. The matrix was
+intentionally not rerun because no API or Supabase file changed. Fixture state
+is restored: shop draft, hiring Off with no note/count, owner provider Off,
+Bruno qualified for both active services, no pending shift request, and no
+closure or booking created.
+
+**Exact next action:** the product owner runs the responsive owner/barber/customer
+browser acceptance and records the result. Only after it is green should P2-08
+and Phase 2 be marked complete or Phase 3 begin. Do not silently absorb the
+customer slot-picker feature into this smoke-polish task.
 
 ### P2-07 availability engine — verified complete
 
@@ -412,18 +456,16 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Close P2-08, and with it Phase 2.** The backend race gate is done as of
+**Close P2-08, and with it Phase 2, after the product-owner browser pass.** The backend race gate is done as of
 2026-08-01 and needed no migrations: holds returning to the pool, the
 claim/expiry boundary, owner-provider slot contention, and owner-provider versus
 barber for the last chair all hold, each falsified before being trusted. Matrix
 82 → 85, green twice on a database replayed from empty.
 
-**The one thing left is the packet's frontend half: responsive owner/barber/
-customer smoke journeys.** It needs an authenticated browser session, and signing
-in means typing a real account password, which the agent must not do. So it needs
-the product owner at the keyboard, or a session the agent is permitted to
-install. In the meantime the same authorization surface was exercised over real
-HTTP for all three roles.
+**The one thing left is final product-owner acceptance of the responsive owner/
+barber/customer smoke journeys.** Six frontend fixes and the deterministic code
+gate are ready. The agent recorded a preliminary browser pass, but per the
+owner's 2026-08-01 clarification it is not the final acceptance result.
 
 Two follow-ups from the P2-08 work, neither blocking:
 
@@ -490,10 +532,10 @@ the product owner's call. Every technical gate for P2-06 is green and recorded.
 `ModalPortal` focus was previously listed as a P2-06 blocker in error and has
 been re-scoped to the landing/auth polish slice; no P2-06 surface imports it.
 
-Environment as left on 2026-07-30, after the P2-07 work:
+Environment updated 2026-08-02 after Windows reserved the former local port range:
 
-- Docker and the local Supabase stack are healthy on the moved ports
-  (API/storage `54521`, database `54522`, studio `54523`);
+- Docker and the local Supabase stack are healthy on the unreserved ports
+  (API/storage `54321`, database `54322`, studio `54323`);
 - the database was reset from empty and carries every migration through
   `20260730001000`;
 - **`npm run seed:accounts` now also creates shop operating hours.** Since P2-07

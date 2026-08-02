@@ -134,7 +134,7 @@ single sheet reads through them. Two details that will look like bugs if you
   and the API's `WEB_ORIGIN` allowlist trusts only that port, so any other port
   fails CORS. Recorded as **D-018**.
 - `VITE_STORAGE_ORIGIN` feeds `connect-src` and `img-src` in the dev and
-  production CSP. Point it at the local Supabase API port (`54521`), or signed
+  production CSP. Point it at the local Supabase API port (`54321`), or signed
   shop-photo uploads and private previews are CSP-blocked.
 - Local accounts: `owner@phila.test`, `barber@phila.test`,
   `customer@phila.test`. The password is pinned via `SEED_PASSWORD` in the
