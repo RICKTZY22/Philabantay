@@ -128,6 +128,19 @@ export function Layout() {
     return <Navigate to="/verification" replace />
   }
 
+  // The landing is guest-only marketing. Its body sells the product to someone
+  // with no account ("Request a Demo", "May account ka na? Log in"), while the
+  // header switched to the avatar and app menu the moment a session existed, so
+  // one page claimed two different visitors at once. The session lives in
+  // shared `localStorage`, so simply opening a second tab on `/` reproduced it.
+  //
+  // `signingOutToHome` must stay exempt: sign-out deliberately lands here while
+  // the profile is still briefly set, and redirecting then would bounce the user
+  // straight back into the app they are leaving.
+  if (profile && onLanding && !signingOutToHome) {
+    return <Navigate to={profile.onboarding_completed ? '/dashboard' : '/onboarding/role'} replace />
+  }
+
   return (
     <CurtainProvider studio={Boolean(profile)}>
     <div className={`app-shell${onLanding ? ' is-landing' : profile ? ' is-workspace' : ' is-public'}`}>

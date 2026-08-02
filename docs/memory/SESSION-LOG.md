@@ -1885,3 +1885,102 @@ date from "today" needs proving across all seven weekdays, not just the one it
 was written on.
 
 Matrix **85/85 twice back to back** after the fix, on Codex's relocated ports.
+
+## 2026-08-02 — Codex — duplicate dashboard identity strip removed
+
+Per the product owner's screenshot and explicit direction, removed the shared
+`DoodleBoard` top strip that repeated the live shop label and profile avatar/name
+on owner, barber, and customer dashboards. The global header remains the single
+profile/navigation surface. Customer discovery and owner reservation search are
+preserved as standalone controls instead of being deleted with the strip.
+
+Full deterministic gate passed: all workspace typechecks, ESLint with zero
+warnings, 129 fast tests, production build, and `git diff --check`. No browser
+acceptance was run; the product owner is testing visually. No API, Supabase,
+migration, or SQL file changed, so the matrix was not rerun.
+
+## 2026-08-02 — Codex — auth “Back to home” link removed
+
+Removed the standalone auth-canvas link shown in the product owner's screenshot,
+plus its now-dead desktop/mobile/hover/reduced-motion CSS and unused `Link`
+import. The login/signup switch and protected-route return behavior are
+unchanged. Web typecheck, real ESLint, all 40 web tests, production web build,
+and `git diff --check` passed. Browser review remains with the product owner.
+
+## 2026-08-02 — Codex — automatic chat replies removed
+
+Removed the three preset chat chips (`May available slot?`, `Magkano ang
+haircut?`, and `On the way na ako`) from the shared composer for every role, and
+pruned their base, notebook, mobile, and Premium Studio CSS. Normal typed
+message submission and recovery are unchanged. Web typecheck, ESLint, all 40
+web tests, production web build, and `git diff --check` passed. Browser review
+remains with the product owner.
+
+## 2026-08-02 — Claude — the landing "already signed in" bar: two defects, both fixed
+
+Product owner reproduced it precisely: open several tabs with different
+accounts, then open the home page, and the signed-in bar is already there. That
+reproduction is what identified the real cause. There were two defects, and the
+one they saw was the milder of the pair.
+
+**Defect A — the session is shared by every tab, and nothing keeps them in
+step.** `ApiBackend` persists to `localStorage` under
+`philabantay.api.session.v1` (`services.ts:494`), which is per-origin, not
+per-tab. Each tab reads it once in its constructor and then keeps `session` and
+`currentProfile` in memory, and **there was no `storage` listener anywhere**, so:
+
+- opening any new tab on `/` silently inherits whoever signed in last, which is
+  exactly what was reported;
+- signing in as a second account overwrites the shared key while the first tab
+  carries on displaying and *sending* the first account's token;
+- whichever tab refreshes its token next writes its own session back over the
+  other (`refreshAccessToken` → `saveSession`), so the identity flips on the
+  loser's next reload;
+- one 401 anywhere calls `clearAuth()` and signs every tab out.
+
+That divergence is the dangerous part: two tabs could hold two identities at
+once. Fixed with a `storage` listener that adopts the stored session
+immediately, re-fetches the profile, and fails closed to signed-out if the
+adopted token is unusable. The browser now holds exactly one identity and every
+tab follows it. It deliberately does **not** add multi-account support: use
+separate browser profiles or a private window for that.
+
+Worth recording as a silent regression. `ARCHITECTURE.md:317` documents that the
+retired mock kept sessions **per-tab in `sessionStorage`**. Moving to
+`ApiBackend` changed the model to a shared `localStorage` session and nothing
+recorded it, so the old doc described safer behaviour than the code had.
+
+**Defect B — the landing claimed two visitors at once.** `Layout.tsx:157` gated
+the navbar on `profile && !verificationLocked` with no landing exception, so the
+header showed the avatar and app menu while the body kept selling to a guest:
+"Request a Demo" and "May account ka na? Log in". Signed-in header, anonymous
+body, one page. Now a signed-in visitor is redirected off `/` to their dashboard
+(or `/onboarding/role`, matching `AuthPage`'s existing rule).
+
+The trap that redirect had to avoid: `signingOutToHome` is exempt. Sign-out
+deliberately lands on `/` while the profile is still briefly set, so redirecting
+unconditionally would bounce the user back into the app they were leaving.
+
+**A correction to my own first trace.** I initially said the avatar would render
+unstyled on the landing because 414 `studio.css` rules are scoped to
+`.app-shell.is-workspace` while the landing shell is `.is-landing`.
+`.app-profile-avatar` is unscoped (`studio.css:343`), so it styles fine and the
+CSS was never the problem. The defect is the state contradiction, not the paint.
+
+Also caught before it landed: I typed a Cyrillic `С` (U+0421) in
+`watchCrossTabSession`. It compiled, because it was consistent in both places,
+and would have been invisible to anyone grepping the ASCII name. Replaced.
+
+Typecheck rejected the first version too, since `StorageEvent` and
+`globalThis.addEventListener` are not in scope for every workspace that compiles
+this package. The listener is now typed structurally, which is the right shape
+for a package both Node and the browser consume.
+
+Gate: typecheck clean, ESLint 0/0, 129 fast tests, both builds clean. Guest
+landing re-verified in the browser: nav is Home / Log in / Sign up, no avatar,
+no session, no console errors, no horizontal overflow.
+
+**Not verified in a browser:** the signed-in redirect and the cross-tab
+adoption, because both need a real login and I must not type an account
+password. Both are reasoned from the code and typecheck-clean, and both are
+prime candidates for the product owner's P2-08 browser acceptance.

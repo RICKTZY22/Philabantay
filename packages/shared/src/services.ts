@@ -576,6 +576,56 @@ export class ApiBackend implements DataBackend {
       : options.storage
     this.chatPollIntervalMs = Math.max(1_000, options.chatPollIntervalMs ?? 3_000)
     this.session = this.readSession()
+    this.watchCrossTabSession()
+  }
+
+  /**
+   * `localStorage` is shared by every tab on the origin, but each tab kept its
+   * own `session`/`currentProfile` in memory and nothing listened for changes,
+   * so two tabs could hold two different identities at once. Signing in as a
+   * second account overwrote the shared key while the first tab carried on
+   * showing (and sending) the first account's token; whichever tab refreshed
+   * last then silently reclaimed the key from the other, and a single 401
+   * anywhere signed every tab out on its next reload.
+   *
+   * This makes the divergence impossible: the browser holds one identity and
+   * every tab follows it immediately. It deliberately does not try to support
+   * two accounts at once — for that, use separate browser profiles or a private
+   * window, which give you separate storage.
+   */
+  private watchCrossTabSession(): void {
+    // Typed structurally rather than through DOM globals: this package is
+    // compiled by the Node API workspace as well as the browser one, and
+    // `StorageEvent` is not in scope for both.
+    const target = globalThis as unknown as {
+      addEventListener?: (type: string, listener: (event: { key?: string | null }) => void) => void
+    }
+    if (typeof target.addEventListener !== 'function') return
+    target.addEventListener('storage', (event) => {
+      // A null key is a whole-storage clear, which also drops the session.
+      const key = event.key ?? null
+      if (key !== null && key !== API_SESSION_KEY) return
+      void this.adoptStoredSession()
+    })
+  }
+
+  private async adoptStoredSession(): Promise<void> {
+    const stored = this.readSession()
+    if (stored?.access_token === this.session?.access_token) return
+    this.session = stored
+    this.currentProfile = null
+    if (!stored) {
+      this.emitAuth(null)
+      return
+    }
+    try {
+      this.emitAuth(await this.request<Profile>('/auth/me'))
+    } catch {
+      // The adopted token is unusable; fail closed rather than leave the UI
+      // showing an identity this tab cannot actually act as.
+      this.session = null
+      this.emitAuth(null)
+    }
   }
 
   private readSession(): ApiSession | null {
