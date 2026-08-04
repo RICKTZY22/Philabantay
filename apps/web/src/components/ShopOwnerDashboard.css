@@ -574,3 +574,19 @@
   .owner-ring { width: 82px; height: 82px; }
   .owner-ring::before { width: 60px; height: 60px; }
 }
+
+.owner-reservation-assignment { margin-top: .5rem; }
+.owner-assignment-form {
+  display: grid;
+  gap: .5rem;
+  min-width: min(18rem, 70vw);
+  padding: .65rem;
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  background: #fffaf2;
+}
+.owner-assignment-form label { display: grid; gap: .2rem; }
+.owner-assignment-form label > span { font-size: .75rem; font-weight: 700; }
+.owner-assignment-form select,
+.owner-assignment-form input { width: 100%; min-height: 2.35rem; padding: .45rem .55rem; }
+.owner-assignment-buttons { display: flex; flex-wrap: wrap; gap: .4rem; }

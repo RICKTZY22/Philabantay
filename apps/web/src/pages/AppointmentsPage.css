@@ -116,6 +116,26 @@
 .booking-notebook dt { color: var(--faint); }
 .booking-notebook dd { margin: 0; font-weight: 700; }
 .booking-notebook-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 22px; padding-top: 17px; border-top: 2px dashed var(--line); }
+.appointments-inbox { margin: 0 0 16px; padding: 12px 16px; background: var(--paper); border: 2px solid var(--ink); border-radius: 12px; }
+.appointments-inbox summary { cursor: pointer; font-weight: 700; }
+.appointments-inbox ul { display: grid; gap: 7px; padding: 0; list-style: none; }
+.appointments-inbox button { display: grid; gap: 2px; width: 100%; padding: 9px; text-align: left; background: var(--paper-soft); border: 1px solid var(--line); border-radius: 8px; }
+.booking-operation-note { display: grid; gap: 5px; margin-top: 18px; padding: 13px; background: color-mix(in srgb, var(--blue) 15%, var(--paper)); border: 1.5px solid var(--line); border-radius: 11px; }
+.booking-operation-note.is-proposal { background: color-mix(in srgb, var(--yellow) 24%, var(--paper)); }
+.booking-checkin-field { display: flex; flex-wrap: wrap; align-items: end; gap: 7px; }
+.booking-checkin-field span { width: 100%; text-align: left; }
+.booking-checkin-field input { width: 10ch; font: 700 1.1rem monospace; letter-spacing: .1em; }
+.booking-timeline { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.booking-timeline summary { cursor: pointer; font-weight: 700; }
+.booking-timeline ol { display: grid; gap: 8px; padding-left: 22px; }
+.booking-timeline li { padding-left: 4px; }
+.booking-timeline li span, .booking-timeline li time { display: block; color: var(--muted); font-size: .82rem; }
+.booking-reschedule { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.booking-reschedule summary { cursor: pointer; font-weight: 700; }
+.booking-reschedule form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 10px; }
+.booking-reschedule label { display: grid; gap: 4px; }
+.booking-reschedule input, .booking-reschedule select { min-width: 0; width: 100%; }
+.booking-reschedule-slots { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 
 .booking-notebook-review { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto auto; align-items: center; gap: 14px 20px; margin-top: 22px; padding: 18px; background: color-mix(in srgb, var(--yellow) 35%, var(--paper-soft)); border: 2px solid var(--ink); border-radius: 14px 18px 13px 16px; }
 .booking-notebook-review h3 { margin: 2px 0; }
@@ -141,6 +161,7 @@
   .booking-notebook dl > div { grid-template-columns: 88px minmax(0, 1fr); }
   .booking-notebook-review { grid-template-columns: 1fr; }
   .booking-notebook-review .btn { width: 100%; }
+  .booking-reschedule form { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {

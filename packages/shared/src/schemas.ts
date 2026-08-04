@@ -10,6 +10,9 @@ import type {
   PublicShopMedia,
   ShopWithStatus,
   Slot,
+  AvailabilityDay,
+  AvailabilitySlot,
+  BookingQuote,
 } from './types'
 import type {
   AvailabilityOverrideInput,
@@ -67,6 +70,17 @@ import type {
   SetProviderQualificationsInput,
   CreateServiceQualificationRequestInput,
   ResolveServiceQualificationRequestInput,
+  CreateAppointmentChangeProposalInput,
+  RespondAppointmentChangeProposalInput,
+  ReportAppointmentDelayInput,
+  CreateNoShowAppealInput,
+  ResolveNoShowAppealInput,
+  CreateWalkInInput,
+  TransitionWalkInInput,
+  ClaimWalkInInput,
+  SetCashierCapabilityInput,
+  RecordOfflinePaymentInput,
+  ChangeOfflinePaymentInput,
 } from './dto'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
@@ -187,6 +201,26 @@ export const publicSlotSchema: z.ZodType<Slot> = z.strictObject({
   ends_at: isoTimestampSchema,
 })
 
+export const bookingQuoteSchema: z.ZodType<BookingQuote> = z.strictObject({
+  bookable: z.boolean(),
+  reason: z.string().nullable(),
+  provider_user_id: uuidSchema.nullable(),
+  requested_barber_id: uuidSchema.nullable(),
+  substituted: z.boolean(),
+  service_name: z.string().trim().min(1).nullable(),
+  duration_min: z.number().int().positive().nullable(),
+  price_cents: z.number().int().nonnegative().nullable(),
+  buffer_min: z.number().int().min(0).max(120).nullable(),
+  starts_at: isoTimestampSchema,
+  ends_at: isoTimestampSchema.nullable(),
+  booking_mode: z.enum(['manual', 'instant']),
+  effective_mode: z.enum(['manual', 'instant']),
+  request_expires_at: isoTimestampSchema.nullable(),
+  timezone: z.string().trim().min(1).max(100),
+  cancellation_cutoff_minutes: z.number().int().nonnegative(),
+  idempotency_key: uuidSchema,
+})
+
 const roleSchema = z.enum(['customer', 'barber', 'shop_owner'])
 export const canonicalAppointmentStatusSchema = z.enum([
   'requested',
@@ -282,6 +316,7 @@ export const createAppointmentInputSchema: z.ZodType<CreateAppointmentInput> = z
   starts_at: isoTimestampSchema,
   notes: z.string().trim().max(1000).optional(),
   barber_preference: z.enum(['exact', 'preferred', 'any']).optional(),
+  idempotency_key: uuidSchema,
 }).refine(
   // Omitting the preference keeps the pre-P2-07 contract, where naming a barber
   // was mandatory. Only `any` may leave it out.
@@ -296,11 +331,18 @@ export const availabilityQuerySchema = z.strictObject({
   barberId: uuidSchema.optional(),
 })
 
-export const availabilitySlotSchema = z.strictObject({
+export const availabilitySlotSchema: z.ZodType<AvailabilitySlot> = z.strictObject({
   provider_user_id: uuidSchema,
   starts_at: isoTimestampSchema,
   ends_at: isoTimestampSchema,
   buffer_min: z.number().int().min(0).max(120),
+})
+
+export const availabilityDaySchema: z.ZodType<AvailabilityDay> = z.strictObject({
+  shop_id: uuidSchema,
+  service_id: uuidSchema,
+  date: dateKeySchema,
+  slots: z.array(availabilitySlotSchema),
 })
 
 export const rateAppointmentInputSchema: z.ZodType<RateAppointmentInput> = z.strictObject({
@@ -487,6 +529,71 @@ export const resolveAppointmentDisputeInputSchema: z.ZodType<ResolveAppointmentD
   expected_version: z.number().int().positive(),
   reason: z.string().trim().min(3).max(1000),
   resolution: z.enum(['completed', 'cancelled']),
+})
+export const createAppointmentChangeProposalInputSchema: z.ZodType<CreateAppointmentChangeProposalInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  service_id: uuidSchema,
+  provider_id: uuidSchema,
+  starts_at: isoTimestampSchema,
+  reason: z.string().trim().min(3).max(1000),
+  expires_at: isoTimestampSchema,
+})
+export const respondAppointmentChangeProposalInputSchema: z.ZodType<RespondAppointmentChangeProposalInput> = z.strictObject({
+  expected_proposal_version: z.number().int().positive(),
+  expected_appointment_version: z.number().int().positive(),
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().trim().min(3).max(1000).optional(),
+})
+export const reportAppointmentDelayInputSchema: z.ZodType<ReportAppointmentDelayInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  category: z.enum(['provider_late', 'shop_delay', 'previous_service', 'other']),
+  estimate_minutes: z.number().int().min(5).max(240),
+  reason: z.string().trim().min(3).max(1000),
+})
+export const createNoShowAppealInputSchema: z.ZodType<CreateNoShowAppealInput> = z.strictObject({
+  reason: z.string().trim().min(3).max(1000),
+  evidence_note: z.string().trim().max(2000).optional(),
+})
+export const resolveNoShowAppealInputSchema: z.ZodType<ResolveNoShowAppealInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  resolution: z.enum(['accepted', 'upheld']),
+  reason: z.string().trim().min(3).max(1000),
+})
+export const createWalkInInputSchema: z.ZodType<CreateWalkInInput> = z.strictObject({
+  display_name: z.string().trim().min(1).max(80),
+  service_id: uuidSchema.optional(),
+  requested_barber_id: uuidSchema.optional(),
+  notes: z.string().trim().max(1000).optional(),
+})
+export const transitionWalkInInputSchema: z.ZodType<TransitionWalkInInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  action: z.enum(['call', 'check_in', 'start', 'complete', 'attention', 'cancel']),
+  provider_id: uuidSchema.optional(),
+  reason: z.string().trim().min(3).max(1000).optional(),
+})
+export const claimWalkInInputSchema: z.ZodType<ClaimWalkInInput> = z.strictObject({
+  code: z.string().regex(/^\d{6}$/),
+  phone: z.string().trim().min(7).max(32),
+})
+export const setCashierCapabilityInputSchema: z.ZodType<SetCashierCapabilityInput> = z.strictObject({ active: z.boolean() })
+export const recordOfflinePaymentInputSchema: z.ZodType<RecordOfflinePaymentInput> = z.strictObject({
+  appointment_id: uuidSchema.optional(),
+  walk_in_id: uuidSchema.optional(),
+  method: z.enum(['cash', 'card_terminal', 'ewallet', 'other_offline']),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  amount_cents: z.number().int().nonnegative(),
+  paid_at: isoTimestampSchema,
+  idempotency_key: uuidSchema,
+}).superRefine((value, context) => {
+  if ((value.appointment_id === undefined) === (value.walk_in_id === undefined)) {
+    context.addIssue({ code: 'custom', message: 'Choose exactly one appointment or walk-in.' })
+  }
+})
+export const changeOfflinePaymentInputSchema: z.ZodType<ChangeOfflinePaymentInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  action: z.enum(['correct', 'refund', 'void']),
+  amount_cents: z.number().int().nonnegative(),
+  reason: z.string().trim().min(3).max(1000),
 })
 export const resolveShiftChangeRequestInputSchema: z.ZodType<ResolveShiftChangeRequestInput> = z.strictObject({
   expected_version: z.number().int().min(1),

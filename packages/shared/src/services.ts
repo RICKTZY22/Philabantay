@@ -5,6 +5,7 @@
 import type {
   AppointmentReasonInput,
   AppointmentVersionInput,
+  AvailabilityQueryInput,
   CheckInAppointmentInput,
   CreateAppointmentInput,
   CompleteRoleOnboardingInput,
@@ -47,6 +48,17 @@ import type {
   SetProviderQualificationsInput,
   CreateServiceQualificationRequestInput,
   ResolveServiceQualificationRequestInput,
+  CreateAppointmentChangeProposalInput,
+  RespondAppointmentChangeProposalInput,
+  ReportAppointmentDelayInput,
+  CreateNoShowAppealInput,
+  ResolveNoShowAppealInput,
+  CreateWalkInInput,
+  TransitionWalkInInput,
+  ClaimWalkInInput,
+  SetCashierCapabilityInput,
+  RecordOfflinePaymentInput,
+  ChangeOfflinePaymentInput,
 } from './dto'
 import { DataError } from './dto'
 import {
@@ -56,6 +68,8 @@ import {
   professionalAccessSummarySchema,
   professionalPhoneVerificationChallengeSchema,
   publicBarberSchema,
+  availabilityDaySchema,
+  bookingQuoteSchema,
   publicServiceSchema,
   publicShopDetailSchema,
   publicShopWithStatusSchema,
@@ -95,6 +109,7 @@ import type {
   AppointmentCheckInCode,
   AppointmentDetailed,
   AppointmentEvent,
+  AvailabilityDay,
   AvailabilityOverride,
   PublicAvailabilityOverride,
   AvailabilityRule,
@@ -102,6 +117,7 @@ import type {
   BarberAbsence,
   BarberEmployment,
   BarberWithProfile,
+  BookingQuote,
   BugReport,
   ConversationDetailed,
   Message,
@@ -134,6 +150,20 @@ import type {
   ServiceQualificationRequest,
   Slot,
   StaffNote,
+  AppointmentChangeProposal,
+  AppointmentDelay,
+  AppointmentAttentionItem,
+  NoShowAppeal,
+  CustomerStrikeEvent,
+  WalkInEntry,
+  WalkInClaimCode,
+  GuestWalkInVisit,
+  QueueEvent,
+  CashierCapability,
+  PaymentRecord,
+  PaymentEvent,
+  InAppNotification,
+  CloseoutRun,
 } from './types'
 import { canonicalAppointmentStatus } from './appointment-lifecycle'
 
@@ -244,6 +274,8 @@ export interface AvailabilityService {
   getMyOverrides(): Promise<AvailabilityOverride[]>
   /** Open bookable slots for a barber + service on a given ISO date (YYYY-MM-DD). */
   getOpenSlots(barberId: string, serviceId: string, date: string): Promise<Slot[]>
+  /** Customer-aware slots across every eligible provider at one shop. */
+  getDay(input: AvailabilityQueryInput): Promise<AvailabilityDay>
 }
 
 export interface ServiceCatalog {
@@ -251,9 +283,11 @@ export interface ServiceCatalog {
 }
 
 export interface BookingService {
+  /** Advisory review data; creating still rechecks and claims transactionally. */
+  quote(input: CreateAppointmentInput): Promise<BookingQuote>
   create(input: CreateAppointmentInput): Promise<Appointment>
   /** Customer-only atomic move of an active appointment to a validated slot. */
-  reschedule(appointmentId: string, input: CreateAppointmentInput): Promise<Appointment>
+  reschedule(appointmentId: string, input: Omit<CreateAppointmentInput, 'idempotency_key'>): Promise<Appointment>
   cancel(appointmentId: string): Promise<Appointment>
   /** Appointments for the signed-in user (as customer or barber). */
   listMine(): Promise<AppointmentDetailed[]>
@@ -274,6 +308,45 @@ export interface BookingService {
   reassign(appointmentId: string, input: ReassignAppointmentInput): Promise<Appointment>
   rescheduleWithVersion(appointmentId: string, input: RescheduleAppointmentInput): Promise<Appointment>
   timeline(appointmentId: string): Promise<AppointmentEvent[]>
+  listChangeProposals(appointmentId: string): Promise<AppointmentChangeProposal[]>
+  proposeChange(appointmentId: string, input: CreateAppointmentChangeProposalInput): Promise<AppointmentChangeProposal>
+  respondToChange(proposalId: string, input: RespondAppointmentChangeProposalInput): Promise<AppointmentChangeProposal>
+  listDelays(appointmentId: string): Promise<AppointmentDelay[]>
+  reportDelay(appointmentId: string, input: ReportAppointmentDelayInput): Promise<AppointmentDelay>
+  appealNoShow(appointmentId: string, input: CreateNoShowAppealInput): Promise<NoShowAppeal>
+  listMyNoShowAppeals(): Promise<NoShowAppeal[]>
+  listShopNoShowAppeals(): Promise<NoShowAppeal[]>
+  resolveNoShowAppeal(appealId: string, input: ResolveNoShowAppealInput): Promise<NoShowAppeal>
+  waiveStrike(appointmentId: string, input: { reason: string }): Promise<CustomerStrikeEvent>
+  listAttention(): Promise<AppointmentAttentionItem[]>
+}
+
+export interface WalkInService {
+  list(): Promise<WalkInEntry[]>
+  create(input: CreateWalkInInput): Promise<WalkInEntry>
+  issueClaimCode(walkInId: string, input: { expected_version: number }): Promise<WalkInClaimCode>
+  claim(walkInId: string, input: ClaimWalkInInput): Promise<GuestWalkInVisit>
+  linkMine(walkInId: string): Promise<GuestWalkInVisit>
+  transition(walkInId: string, input: TransitionWalkInInput): Promise<WalkInEntry>
+  timeline(walkInId: string): Promise<QueueEvent[]>
+}
+
+export interface PaymentService {
+  list(): Promise<PaymentRecord[]>
+  timeline(paymentId: string): Promise<PaymentEvent[]>
+  record(input: RecordOfflinePaymentInput): Promise<PaymentRecord>
+  change(paymentId: string, input: ChangeOfflinePaymentInput): Promise<PaymentRecord>
+  setCashier(userId: string, input: SetCashierCapabilityInput): Promise<CashierCapability>
+}
+
+export interface NotificationService {
+  list(): Promise<InAppNotification[]>
+  markRead(notificationId: string): Promise<InAppNotification>
+}
+
+export interface CloseoutService {
+  list(): Promise<CloseoutRun[]>
+  run(localDate: string): Promise<CloseoutRun>
 }
 
 export interface ChatService {
@@ -440,6 +513,10 @@ export interface DataBackend {
   availability: AvailabilityService
   services: ServiceCatalog
   bookings: BookingService
+  walkIns: WalkInService
+  payments: PaymentService
+  notifications: NotificationService
+  closeout: CloseoutService
   chat: ChatService
   shops: ShopService
   ownerShop: OwnerShopService
@@ -1003,6 +1080,15 @@ export class ApiBackend implements DataBackend {
       const query = new URLSearchParams({ barberId, serviceId, date })
       return publicSlotSchema.array().parse(await this.request<unknown>(`/catalog/availability/slots?${query}`, { authenticated: false }))
     },
+    getDay: async (input) => {
+      const query = new URLSearchParams({
+        shopId: input.shop_id,
+        serviceId: input.service_id,
+        date: input.date,
+      })
+      if (input.barber_id) query.set('barberId', input.barber_id)
+      return availabilityDaySchema.parse(await this.request<unknown>(`/availability?${query}`))
+    },
   }
 
   readonly services: ServiceCatalog = {
@@ -1013,6 +1099,7 @@ export class ApiBackend implements DataBackend {
   }
 
   readonly bookings: BookingService = {
+    quote: async (input) => bookingQuoteSchema.parse(await this.request<unknown>('/bookings/quote', { method: 'POST', body: input })),
     create: (input) => this.appointmentRequest('/bookings', { method: 'POST', body: input }),
     reschedule: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
     cancel: (appointmentId) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/cancel`, { method: 'POST' }),
@@ -1035,6 +1122,45 @@ export class ApiBackend implements DataBackend {
     reassign: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}/reassign`, { method: 'POST', body: input }),
     rescheduleWithVersion: (appointmentId, input) => this.appointmentRequest(`/bookings/${encoded(appointmentId)}`, { method: 'PATCH', body: input }),
     timeline: (appointmentId) => this.request<AppointmentEvent[]>(`/bookings/${encoded(appointmentId)}/timeline`),
+    listChangeProposals: (appointmentId) => this.request<AppointmentChangeProposal[]>(`/bookings/${encoded(appointmentId)}/change-proposals`),
+    proposeChange: (appointmentId, input) => this.request<AppointmentChangeProposal>(`/bookings/${encoded(appointmentId)}/change-proposals`, { method: 'POST', body: input }),
+    respondToChange: (proposalId, input) => this.request<AppointmentChangeProposal>(`/booking-change-proposals/${encoded(proposalId)}/respond`, { method: 'POST', body: input }),
+    listDelays: (appointmentId) => this.request<AppointmentDelay[]>(`/bookings/${encoded(appointmentId)}/delays`),
+    reportDelay: (appointmentId, input) => this.request<AppointmentDelay>(`/bookings/${encoded(appointmentId)}/delays`, { method: 'POST', body: input }),
+    appealNoShow: (appointmentId, input) => this.request<NoShowAppeal>(`/bookings/${encoded(appointmentId)}/no-show-appeal`, { method: 'POST', body: input }),
+    listMyNoShowAppeals: () => this.request<NoShowAppeal[]>('/no-show-appeals?scope=mine'),
+    listShopNoShowAppeals: () => this.request<NoShowAppeal[]>('/no-show-appeals?scope=shop'),
+    resolveNoShowAppeal: (appealId, input) => this.request<NoShowAppeal>(`/no-show-appeals/${encoded(appealId)}/resolve`, { method: 'POST', body: input }),
+    waiveStrike: (appointmentId, input) => this.request<CustomerStrikeEvent>(`/bookings/${encoded(appointmentId)}/strike/waive`, { method: 'POST', body: input }),
+    listAttention: () => this.request<AppointmentAttentionItem[]>('/owner/attention'),
+  }
+
+  readonly walkIns: WalkInService = {
+    list: () => this.request<WalkInEntry[]>('/walk-ins'),
+    create: (input) => this.request<WalkInEntry>('/walk-ins', { method: 'POST', body: input }),
+    issueClaimCode: (walkInId, input) => this.request<WalkInClaimCode>(`/walk-ins/${encoded(walkInId)}/claim-code`, { method: 'POST', body: input }),
+    claim: (walkInId, input) => this.request<GuestWalkInVisit>(`/walk-ins/${encoded(walkInId)}/claim`, { method: 'POST', body: input, authenticated: false }),
+    linkMine: (walkInId) => this.request<GuestWalkInVisit>(`/walk-ins/${encoded(walkInId)}/link`, { method: 'POST' }),
+    transition: (walkInId, input) => this.request<WalkInEntry>(`/walk-ins/${encoded(walkInId)}/transition`, { method: 'POST', body: input }),
+    timeline: (walkInId) => this.request<QueueEvent[]>(`/walk-ins/${encoded(walkInId)}/timeline`),
+  }
+
+  readonly payments: PaymentService = {
+    list: () => this.request<PaymentRecord[]>('/payments'),
+    timeline: (paymentId) => this.request<PaymentEvent[]>(`/payments/${encoded(paymentId)}/timeline`),
+    record: (input) => this.request<PaymentRecord>('/payments', { method: 'POST', body: input }),
+    change: (paymentId, input) => this.request<PaymentRecord>(`/payments/${encoded(paymentId)}`, { method: 'POST', body: input }),
+    setCashier: (userId, input) => this.request<CashierCapability>(`/owner/cashiers/${encoded(userId)}`, { method: 'PUT', body: input }),
+  }
+
+  readonly notifications: NotificationService = {
+    list: () => this.request<InAppNotification[]>('/notifications'),
+    markRead: (notificationId) => this.request<InAppNotification>(`/notifications/${encoded(notificationId)}/read`, { method: 'POST' }),
+  }
+
+  readonly closeout: CloseoutService = {
+    list: () => this.request<CloseoutRun[]>('/owner/closeouts'),
+    run: (localDate) => this.request<CloseoutRun>('/owner/closeouts', { method: 'POST', body: { local_date: localDate } }),
   }
 
   readonly chat: ChatService = {

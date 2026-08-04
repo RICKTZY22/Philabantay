@@ -1,0 +1,8 @@
+.walkin-claim-page { min-height: calc(100vh - 80px); display: grid; place-items: center; padding: 22px; background: var(--paper-soft); }
+.walkin-claim-page > section { width: min(440px, 100%); padding: 26px; background: var(--paper); border: 2px solid var(--ink); border-radius: 18px; box-shadow: 6px 7px 0 color-mix(in srgb, var(--ink) 25%, transparent); }
+.walkin-claim-page h1 { margin: 4px 0; }
+.walkin-claim-page form, .walkin-claim-page label, .walkin-claim-success { display: grid; gap: 9px; }
+.walkin-claim-page form { margin-top: 18px; }
+.walkin-claim-page input { width: 100%; }
+.walkin-claim-success { margin-top: 18px; padding: 16px; background: color-mix(in srgb, var(--green) 24%, var(--paper)); border: 2px solid var(--ink); border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { .walkin-claim-page * { animation: none !important; transition: none !important; } }

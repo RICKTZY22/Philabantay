@@ -134,17 +134,24 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
   const decideReservation = async (
     appointment: AppointmentDetailed,
     decision: 'accept' | 'decline',
+    reason?: string,
   ) => {
     const version = appointment.version ?? 1
-    const updated = decision === 'accept'
-      ? await backend.bookings.accept(appointment.id, { expected_version: version })
-      : await backend.bookings.decline(appointment.id, {
+    await (decision === 'accept'
+      ? backend.bookings.accept(appointment.id, { expected_version: version })
+      : backend.bookings.decline(appointment.id, {
           expected_version: version,
-          reason: 'Declined by the shop owner.',
-        })
-    setAppointments((current) => current?.map((appointment) => (
-      appointment.id === updated.id ? { ...appointment, ...updated } : appointment
-    )) ?? null)
+          reason: reason ?? 'Declined by the shop owner.',
+        }))
+    setAppointments(await backend.bookings.listForMyShop())
+  }
+  const reassignReservation = async (appointment: AppointmentDetailed, barberId: string, reason: string) => {
+    await backend.bookings.reassign(appointment.id, {
+      expected_version: appointment.version ?? 1,
+      barber_id: barberId,
+      reason,
+    })
+    setAppointments(await backend.bookings.listForMyShop())
   }
   const loaded = appointments !== null
 
@@ -227,7 +234,9 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
               appointments={appointments ?? []}
               query={query}
               nowEpochMs={nowEpochMs}
+              staff={staff}
               onDecision={decideReservation}
+              onReassign={reassignReservation}
             />
           )}
 
@@ -625,25 +634,58 @@ const RESERVATION_FILTERS: Array<{ key: ReservationFilter; label: string }> = [
 ]
 
 /** Buong booking ledger ng shop — walang kulang na detalye per row. */
-function OwnerReservations({ appointments, query, nowEpochMs, onDecision }: {
+function OwnerReservations({ appointments, query, nowEpochMs, staff, onDecision, onReassign }: {
   appointments: AppointmentDetailed[]
   query: string
   nowEpochMs: number
-  onDecision: (appointment: AppointmentDetailed, decision: 'accept' | 'decline') => Promise<void>
+  staff: ShopStaffMember[]
+  onDecision: (appointment: AppointmentDetailed, decision: 'accept' | 'decline', reason?: string) => Promise<void>
+  onReassign: (appointment: AppointmentDetailed, barberId: string, reason: string) => Promise<void>
 }) {
   const [filter, setFilter] = useState<ReservationFilter>('upcoming')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actionError, setActionError] = useState('')
+  const [assigningId, setAssigningId] = useState<string | null>(null)
+  const [targetBarberId, setTargetBarberId] = useState('')
+  const [assignmentReason, setAssignmentReason] = useState('')
   const needle = query.trim().toLowerCase()
 
   async function decideReservation(appointment: AppointmentDetailed, decision: 'accept' | 'decline') {
     if (busyId) return
+    let reason: string | undefined
+    if (decision === 'decline') {
+      reason = window.prompt('Reason for declining this reservation:')?.trim()
+      if (!reason) return
+      if (reason.length < 3) {
+        setActionError('Decline reason must be at least 3 characters.')
+        return
+      }
+    }
     setBusyId(appointment.id)
     setActionError('')
     try {
-      await onDecision(appointment, decision)
+      await onDecision(appointment, decision, reason)
     } catch (error) {
       setActionError(error instanceof DataError ? error.message : 'Hindi ma-update ang reservation. Subukan ulit.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function submitReassignment(appointment: AppointmentDetailed) {
+    if (busyId || !targetBarberId || assignmentReason.trim().length < 3) {
+      setActionError('Choose a different barber and provide a reason of at least 3 characters.')
+      return
+    }
+    setBusyId(appointment.id)
+    setActionError('')
+    try {
+      await onReassign(appointment, targetBarberId, assignmentReason.trim())
+      setAssigningId(null)
+      setTargetBarberId('')
+      setAssignmentReason('')
+    } catch (error) {
+      setActionError(error instanceof DataError ? error.message : 'Hindi ma-assign ang reservation. Subukan ulit.')
     } finally {
       setBusyId(null)
     }
@@ -707,7 +749,13 @@ function OwnerReservations({ appointments, query, nowEpochMs, onDecision }: {
                     {appointment.notes && <small>“{appointment.notes}”</small>}
                   </span>
                 </td>
-                <td>{appointment.barber.profile.full_name}</td>
+                <td>
+                  <span className="owner-cell-stack">
+                    <strong>{appointment.barber.profile.full_name}</strong>
+                    {appointment.barber_preference && <small>Choice: {appointment.barber_preference}</small>}
+                    {appointment.assignment_reason && <small>{appointment.assignment_reason}</small>}
+                  </span>
+                </td>
                 <td>
                   <span className="owner-cell-stack">
                     <strong>{appointment.service.name}</strong>
@@ -725,7 +773,7 @@ function OwnerReservations({ appointments, query, nowEpochMs, onDecision }: {
                     <span className={`owner-status is-${canonicalAppointmentStatus(appointment.status)}`}>
                       {APPOINTMENT_STATUS_LABELS[canonicalAppointmentStatus(appointment.status)]}
                     </span>
-                    {canonicalAppointmentStatus(appointment.status) === 'requested' && Date.parse(appointment.starts_at) > nowEpochMs && (
+                    {appointment.allowed_actions?.includes('accept') && (
                       <div className="owner-reservation-actions">
                         <button
                           type="button"
@@ -745,6 +793,47 @@ function OwnerReservations({ appointments, query, nowEpochMs, onDecision }: {
                           onClick={() => void decideReservation(appointment, 'decline')}
                         >Decline</button>
                       </div>
+                    )}
+                    {appointment.allowed_actions?.includes('reassign')
+                      && staff.some((member) => member.barber.id !== appointment.barber_id) && (
+                      <div className="owner-reservation-assignment">
+                        {assigningId !== appointment.id ? (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={busyId !== null}
+                            onClick={() => {
+                              const firstAlternative = staff.find((member) => member.barber.id !== appointment.barber_id)
+                              setAssigningId(appointment.id)
+                              setTargetBarberId(firstAlternative?.barber.id ?? '')
+                              setAssignmentReason('')
+                            }}
+                          >Assign / reassign</button>
+                        ) : (
+                          <div className="owner-assignment-form">
+                            <label>
+                              <span>New barber</span>
+                              <select value={targetBarberId} onChange={(event) => setTargetBarberId(event.target.value)}>
+                                {staff.filter((member) => member.barber.id !== appointment.barber_id).map((member) => (
+                                  <option value={member.barber.id} key={member.barber.id}>{member.barber.profile.full_name}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Reason</span>
+                              <input value={assignmentReason} maxLength={1000} onChange={(event) => setAssignmentReason(event.target.value)} />
+                            </label>
+                            <span className="owner-assignment-buttons">
+                              <button type="button" className="btn btn-sm btn-green" disabled={busyId !== null} onClick={() => void submitReassignment(appointment)}>Save assignment</button>
+                              <button type="button" className="btn btn-sm" disabled={busyId !== null} onClick={() => setAssigningId(null)}>Cancel</button>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {appointment.barber_preference === 'exact'
+                      && ['requested', 'confirmed'].includes(canonicalAppointmentStatus(appointment.status)) && (
+                      <small>Exact choice: changing the barber needs customer approval.</small>
                     )}
                   </div>
                 </td>

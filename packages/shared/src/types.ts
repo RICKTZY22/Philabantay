@@ -49,6 +49,15 @@ export type AppointmentEventType =
   | 'rescheduled'
   | 'reassigned'
   | 'check_in_code_issued'
+  | 'change_proposed'
+  | 'change_approved'
+  | 'change_rejected'
+  | 'change_conflict'
+  | 'delay_reported'
+  | 'disruption_reported'
+  | 'no_show_appealed'
+  | 'no_show_appeal_resolved'
+  | 'strike_waived'
 
 export type ShiftStatus = 'off' | 'on'
 
@@ -284,7 +293,21 @@ export interface Appointment {
   assignment_source?: AppointmentAssignmentSource
   /** Why the assigned provider differs from the requested one, when it does. */
   assignment_reason?: string | null
+  /** Policy facts frozen when the booking is created. */
+  booked_timezone?: string
+  booked_cancellation_cutoff_minutes?: number
+  /** True when a cancel/reschedule was accepted inside the frozen cutoff. */
+  late_policy_action?: boolean
+  no_show_appeal_deadline?: string | null
+  /** Server-computed affordances; command RPCs remain the final authority. */
+  allowed_actions?: AppointmentAllowedAction[]
 }
+
+export type AppointmentAllowedAction =
+  | 'accept' | 'decline' | 'cancel' | 'reschedule' | 'reassign'
+  | 'propose_change' | 'respond_change' | 'issue_check_in_code' | 'check_in'
+  | 'start' | 'finish' | 'confirm_completion' | 'dispute' | 'resolve_dispute'
+  | 'report_delay' | 'mark_customer_no_show' | 'appeal_no_show'
 
 /**
  * How firmly the customer is tied to one provider. `exact` is surfaced as a
@@ -788,6 +811,226 @@ export interface AvailabilityDay {
   /** Local date in the shop's own timezone, not the caller's. */
   date: string
   slots: AvailabilitySlot[]
+}
+
+export type AppointmentChangeProposalStatus = 'pending' | 'approved' | 'rejected' | 'conflict' | 'expired'
+
+export interface AppointmentChangeProposal {
+  id: string
+  appointment_id: string
+  shop_id: string
+  proposed_by: string
+  proposed_by_role: 'barber' | 'shop_owner'
+  status: AppointmentChangeProposalStatus
+  reason: string
+  original_service_id: string
+  original_provider_id: string
+  original_starts_at: string
+  original_service_name: string
+  original_duration_min: number
+  original_price_cents: number
+  proposed_service_id: string
+  proposed_provider_id: string
+  proposed_starts_at: string
+  proposed_service_name: string
+  proposed_duration_min: number
+  proposed_price_cents: number
+  proposed_buffer_min: number
+  expires_at: string
+  responded_at: string | null
+  response_reason: string | null
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export interface AppointmentDelay {
+  id: string
+  appointment_id: string
+  shop_id: string
+  reported_by: string
+  category: 'provider_late' | 'shop_delay' | 'previous_service' | 'other'
+  estimate_minutes: number
+  reason: string
+  created_at: string
+}
+
+export interface AppointmentAttentionItem {
+  id: string
+  appointment_id: string
+  shop_id: string
+  disruption_batch_id: string | null
+  kind: 'disruption' | 'change_conflict' | 'closeout_unresolved' | 'payment_mismatch' | 'attendance_mismatch'
+  status: 'open' | 'resolved'
+  reason: string
+  suggested_alternatives: Array<{ provider_user_id: string; starts_at: string; ends_at: string }>
+  created_at: string
+  resolved_at: string | null
+}
+
+export interface NoShowAppeal {
+  id: string
+  appointment_id: string
+  shop_id: string
+  customer_id: string
+  status: 'pending' | 'accepted' | 'upheld' | 'expired'
+  reason: string
+  evidence_note: string | null
+  owner_reason: string | null
+  expires_at: string
+  resolved_at: string | null
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CustomerStrikeEvent {
+  id: string
+  customer_id: string
+  appointment_id: string
+  appeal_id: string | null
+  event_type: 'upheld' | 'waived' | 'corrected'
+  actor_id: string | null
+  reason: string
+  created_at: string
+}
+
+export type WalkInStatus = 'waiting' | 'called' | 'checked_in' | 'in_service' | 'attention' | 'completed' | 'cancelled'
+
+export interface WalkInEntry {
+  id: string
+  shop_id: string
+  created_by: string
+  customer_user_id: string | null
+  service_id: string | null
+  requested_barber_id: string | null
+  assigned_provider_id: string | null
+  display_name: string
+  notes: string | null
+  queue_status: WalkInStatus
+  quoted_at: string
+  checked_in_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  manually_verified: boolean
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WalkInClaimCode {
+  walk_in_id: string
+  code: string
+  expires_at: string
+  walk_in_version: number
+}
+
+/** Allowlisted guest/customer view; staff-only notes and creator identity stay private. */
+export type GuestWalkInVisit = Pick<WalkInEntry,
+  'id' | 'shop_id' | 'customer_user_id' | 'service_id' | 'assigned_provider_id' |
+  'display_name' | 'queue_status' | 'quoted_at' | 'checked_in_at' | 'started_at' |
+  'completed_at' | 'manually_verified' | 'version' | 'updated_at'
+>
+
+export interface QueueEvent {
+  id: string
+  walk_in_id: string
+  shop_id: string
+  actor_id: string | null
+  event_type: string
+  from_status: string | null
+  to_status: string
+  reason: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface CashierCapability {
+  shop_id: string
+  user_id: string
+  active: boolean
+  granted_by: string
+  granted_at: string
+  revoked_at: string | null
+}
+
+export interface PaymentRecord {
+  id: string
+  appointment_id: string | null
+  walk_in_id: string | null
+  shop_id: string
+  method: 'cash' | 'card_terminal' | 'ewallet' | 'other_offline'
+  currency: string
+  amount_cents: number
+  status: 'recorded' | 'corrected' | 'refunded' | 'voided'
+  recorded_by: string
+  paid_at: string
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PaymentEvent {
+  id: string
+  payment_id: string
+  appointment_id: string | null
+  walk_in_id: string | null
+  shop_id: string
+  actor_id: string
+  event_type: 'recorded' | 'corrected' | 'refunded' | 'voided'
+  amount_delta_cents: number
+  reason: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface InAppNotification {
+  id: string
+  outbox_id: string
+  recipient_id: string
+  title: string
+  body: string
+  payload: Record<string, unknown>
+  read_at: string | null
+  created_at: string
+}
+
+export interface CloseoutRun {
+  id: string
+  shop_id: string
+  local_date: string
+  status: 'running' | 'completed' | 'failed'
+  expired_count: number
+  auto_completed_count: number
+  attention_count: number
+  started_at: string
+  completed_at: string | null
+}
+
+/**
+ * Advisory answer for one booking choice. The claim always rechecks the same
+ * slot gate, so this prepares the review screen without reserving inventory.
+ */
+export interface BookingQuote {
+  bookable: boolean
+  /** Stable refusal label from the availability engine, or null when bookable. */
+  reason: string | null
+  provider_user_id: string | null
+  requested_barber_id: string | null
+  substituted: boolean
+  service_name: string | null
+  duration_min: number | null
+  price_cents: number | null
+  buffer_min: number | null
+  starts_at: string
+  ends_at: string | null
+  booking_mode: ShopBookingMode
+  /** May be manual at an instant shop when the customer is restricted. */
+  effective_mode: ShopBookingMode
+  request_expires_at: string | null
+  timezone: string
+  cancellation_cutoff_minutes: number
+  idempotency_key: string
 }
 
 /** One customer's rating for one completed appointment. */

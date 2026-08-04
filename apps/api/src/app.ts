@@ -18,6 +18,7 @@ import { createVerificationRouter } from './routes/verification'
 import { createAdminVerificationRouter } from './routes/admin-verification'
 import { createSupportRouter } from './routes/support'
 import { createQualificationsRouter } from './routes/qualifications'
+import { createPhase3OperationsRouter, createPublicWalkInClaimRouter } from './routes/phase3-operations'
 
 export interface CreateAppOptions {
   webOrigin: string | string[]
@@ -81,6 +82,7 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   // All mutations and private reads remain below both authentication guards.
   api.use('/catalog/availability/slots', slotLimiter)
   api.use('/catalog', catalogueLimiter, createPublicCatalogRouter(dependencies))
+  api.use('/walk-ins', createPublicWalkInClaimRouter(dependencies))
   api.use(authenticate(dependencies))
   // Locked professionals need the verification workspace and a narrow Help
   // path. Everything else remains behind the global operational lock.
@@ -98,6 +100,7 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use('/bookings/quote', slotLimiter)
   api.use(createAvailabilityRouter(dependencies))
   api.use(createBookingsRouter(dependencies))
+  api.use(createPhase3OperationsRouter(dependencies))
   api.use(createChatRouter(dependencies))
   api.use(createEmploymentRouter(dependencies))
   api.use(createQualificationsRouter(dependencies))

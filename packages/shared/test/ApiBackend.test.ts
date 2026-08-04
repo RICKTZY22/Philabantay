@@ -249,6 +249,85 @@ describe('ApiBackend', () => {
     }
   })
 
+  it('exposes customer-aware availability and booking quotes for the P3 booking workspace', async () => {
+    const shopId = crypto.randomUUID()
+    const serviceId = crypto.randomUUID()
+    const barberId = crypto.randomUUID()
+    const startsAt = '2030-01-08T02:00:00.000Z'
+    const endsAt = '2030-01-08T02:30:00.000Z'
+    const storage = memoryStorage({
+      'philabantay.api.session.v1': JSON.stringify({
+        access_token: primaryAccessToken,
+        refresh_token: primaryRefreshToken,
+      }),
+    })
+    const day = {
+      shop_id: shopId,
+      service_id: serviceId,
+      date: '2030-01-08',
+      slots: [{ provider_user_id: barberId, starts_at: startsAt, ends_at: endsAt, buffer_min: 10 }],
+    }
+    const quote = {
+      bookable: true,
+      reason: null,
+      provider_user_id: barberId,
+      requested_barber_id: barberId,
+      substituted: false,
+      service_name: 'Classic cut',
+      duration_min: 30,
+      price_cents: 35000,
+      buffer_min: 10,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      booking_mode: 'manual',
+      effective_mode: 'manual',
+      request_expires_at: '2030-01-08T01:45:00.000Z',
+      timezone: 'Asia/Manila',
+      cancellation_cutoff_minutes: 120,
+      idempotency_key: crypto.randomUUID(),
+    }
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ data: day }))
+      .mockResolvedValueOnce(json({ data: quote }))
+    const backend = new ApiBackend({ baseUrl: 'http://api.test/api/v1', fetch: fetchMock, storage })
+
+    await expect(backend.availability.getDay({
+      shop_id: shopId,
+      service_id: serviceId,
+      date: '2030-01-08',
+      barber_id: barberId,
+    })).resolves.toEqual(day)
+    const idempotencyKey = quote.idempotency_key
+    await expect(backend.bookings.quote({
+      barber_id: barberId,
+      service_id: serviceId,
+      starts_at: startsAt,
+      barber_preference: 'preferred',
+      notes: 'Keep the sides neat.',
+      idempotency_key: idempotencyKey,
+    })).resolves.toEqual(quote)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `http://api.test/api/v1/availability?shopId=${shopId}&serviceId=${serviceId}&date=2030-01-08&barberId=${barberId}`,
+    )
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe('http://api.test/api/v1/bookings/quote')
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({
+        barber_id: barberId,
+        service_id: serviceId,
+        starts_at: startsAt,
+        barber_preference: 'preferred',
+        notes: 'Keep the sides neat.',
+        idempotency_key: idempotencyKey,
+      }),
+    })
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${primaryAccessToken}`)
+    }
+  })
+
   it('normalizes legacy appointment statuses at the API boundary', async () => {
     const storage = memoryStorage({
       'philabantay.api.session.v1': JSON.stringify({
@@ -296,6 +375,7 @@ describe('ApiBackend', () => {
       barber_id: 'barber-1',
       service_id: 'service-1',
       starts_at: '2026-08-01T10:00:00.000Z',
+      idempotency_key: crypto.randomUUID(),
     })).resolves.toEqual({ id: 'cmd-1', status: 'requested' })
 
     await expect(backend.bookings.markCustomerNoShow('cmd-1', { expected_version: 1 }))

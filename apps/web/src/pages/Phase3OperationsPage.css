@@ -1,0 +1,34 @@
+.phase3-ops-page { display: grid; gap: 22px; width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 54px; }
+.phase3-ops-hero, .phase3-ops-section { padding: 22px; background: var(--paper); border: 2px solid var(--ink); border-radius: 18px; box-shadow: 5px 6px 0 color-mix(in srgb, var(--ink) 24%, transparent); }
+.phase3-ops-hero, .phase3-ops-section > header, .phase3-ops-card > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.phase3-ops-hero h1, .phase3-ops-section h2 { margin: 2px 0; }
+.phase3-ops-message { position: sticky; top: 12px; z-index: 3; margin: 0; padding: 12px 16px; background: var(--yellow); border: 2px solid var(--ink); border-radius: 12px; }
+.phase3-ops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(310px, 100%), 1fr)); gap: 14px; margin-top: 16px; }
+.phase3-ops-card { min-width: 0; padding: 16px; background: var(--paper-soft); border: 1.5px solid var(--line); border-radius: 14px; }
+.phase3-ops-card header div, .phase3-ops-card header { min-width: 0; }
+.phase3-ops-card header span, .phase3-ops-card p, .phase3-ops-card small { overflow-wrap: anywhere; }
+.phase3-ops-card.is-attention { background: color-mix(in srgb, var(--yellow) 26%, var(--paper)); }
+.phase3-ops-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.phase3-proposal { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.phase3-proposal summary { cursor: pointer; font-weight: 700; }
+.phase3-proposal form, .phase3-walkin-add { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.phase3-proposal label, .phase3-walkin-add label { display: grid; gap: 4px; }
+.phase3-proposal input, .phase3-proposal select, .phase3-walkin-add input, .phase3-walkin-add select { min-width: 0; width: 100%; }
+.phase3-claim-code { display: block; width: fit-content; margin: 12px 0; padding: 8px 14px; font: 700 1.3rem monospace; letter-spacing: .12em; background: var(--yellow); border: 2px dashed var(--ink); }
+.phase3-notification-list { display: grid; gap: 8px; margin-top: 14px; }
+.phase3-notification-list button { display: grid; gap: 3px; width: 100%; padding: 12px; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: 10px; }
+.phase3-notification-list button.is-unread { background: color-mix(in srgb, var(--blue) 18%, var(--paper)); border-width: 2px; }
+.phase3-closeout-list { display: grid; gap: 5px; padding: 0; list-style: none; }
+.phase3-closeout-list li { display: flex; justify-content: space-between; gap: 12px; }
+.phase3-payment-edit { display: grid; gap: 8px; margin-top: 10px; }
+.phase3-payment-edit label { display: grid; gap: 4px; }
+@media (max-width: 560px) {
+  .phase3-ops-page { width: min(100% - 20px, 1180px); padding-top: 16px; }
+  .phase3-ops-hero, .phase3-ops-section { padding: 15px; }
+  .phase3-ops-hero { flex-direction: column; }
+  .phase3-proposal form, .phase3-walkin-add { grid-template-columns: 1fr; }
+  .phase3-ops-actions .btn, .phase3-walkin-add .btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase3-ops-page *, .phase3-ops-page *::before, .phase3-ops-page *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

@@ -17,6 +17,7 @@ import {
   type Appointment,
   type AppointmentCheckInCode,
   type AppointmentEvent,
+  type AppointmentAllowedAction,
 } from '@barbershop/shared'
 import type { ApiDependencies } from '../lib/supabase'
 import { manilaDateTimeParts, wallMinute } from '../lib/manila-time'
@@ -56,6 +57,15 @@ const appointmentColumns = `
   booked_service_name,
   booked_duration_min,
   booked_price_cents,
+  booked_buffer_min,
+  barber_preference,
+  requested_barber_id,
+  assignment_source,
+  assignment_reason,
+  booked_timezone,
+  booked_cancellation_cutoff_minutes,
+  late_policy_action,
+  no_show_appeal_deadline,
   check_in_code_expires_at
 `
 
@@ -304,12 +314,45 @@ async function transitionAppointment(
   return safeAppointmentRecord(data) as Appointment
 }
 
-function snapshotAppointmentRows(rows: unknown[] | null): unknown[] {
+function allowedAppointmentActions(row: AppointmentRecord, request: Request): AppointmentAllowedAction[] {
+  const actions: AppointmentAllowedAction[] = []
+  const status = row.status === 'pending' ? 'requested' : row.status === 'no_show' ? 'customer_no_show' : row.status
+  const now = Date.now()
+  const startsAt = Date.parse(row.starts_at)
+  const isCustomer = request.auth.profile.role === 'customer' && row.customer_id === request.auth.profile.id
+  const isProvider = request.auth.profile.role === 'barber' && row.barber_id === request.auth.profile.id
+  const isOwner = request.auth.profile.role === 'shop_owner'
+  if (isCustomer) {
+    if ((status === 'requested' || status === 'confirmed') && startsAt > now) actions.push('cancel', 'reschedule')
+    if (status === 'confirmed' && now >= startsAt - 30 * 60_000 && now <= Date.parse(row.ends_at)) actions.push('check_in')
+    if (status === 'awaiting_confirmation') actions.push('confirm_completion', 'dispute')
+    if (status === 'customer_no_show' && row.no_show_appeal_deadline && Date.parse(row.no_show_appeal_deadline) > now) actions.push('appeal_no_show')
+  }
+  if (isProvider) {
+    if (status === 'confirmed') actions.push('issue_check_in_code', 'report_delay', 'propose_change')
+    if (status === 'confirmed' && now >= startsAt + 15 * 60_000) actions.push('mark_customer_no_show')
+    if (status === 'checked_in') actions.push('start', 'report_delay', 'propose_change')
+    if (status === 'in_progress') actions.push('finish', 'report_delay', 'propose_change')
+  }
+  if (isOwner) {
+    if (status === 'requested') actions.push('accept', 'decline', 'cancel', 'propose_change')
+    if ((status === 'requested' || status === 'confirmed') && row.barber_preference !== 'exact' && startsAt > now) actions.push('reassign')
+    if (status === 'confirmed') actions.push('issue_check_in_code', 'check_in', 'report_delay', 'propose_change')
+    if (status === 'confirmed' && now >= startsAt + 15 * 60_000) actions.push('mark_customer_no_show')
+    if (status === 'checked_in' || status === 'in_progress') actions.push('report_delay', 'propose_change')
+    if (status === 'disputed') actions.push('resolve_dispute')
+  }
+  return actions
+}
+
+function snapshotAppointmentRows(rows: unknown[] | null, request: Request): unknown[] {
   return (rows ?? []).map((raw) => {
     const row = safeAppointmentRecord(raw) as AppointmentRecord & { service?: Record<string, unknown> | null }
-    if (!row.service) return row
+    const allowed_actions = allowedAppointmentActions(row, request)
+    if (!row.service) return { ...row, allowed_actions }
     return {
       ...row,
+      allowed_actions,
       service: {
         ...row.service,
         name: row.booked_service_name ?? row.service.name,
@@ -342,7 +385,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     else throw new ApiError(403, 'forbidden', 'Use the shop bookings endpoint for owner reservations.')
     const { data, error } = await query.order('starts_at', { ascending: false })
     if (error) throw fromDatabaseError(error)
-    response.json({ data: snapshotAppointmentRows(data) })
+    response.json({ data: snapshotAppointmentRows(data, request) })
   })
 
   router.post('/bookings', async (request, response) => {
@@ -351,7 +394,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     // The command resolves `preferred` and `any` itself, inside the same
     // transaction that claims the slot. Resolving out here would let the chosen
     // provider be taken between the decision and the write.
-    const { data, error } = await dependencies.database.rpc('api_create_appointment', {
+    const { data, error } = await dependencies.database.rpc('api_create_booking', {
       p_customer_id: request.auth.profile.id,
       p_barber_id: input.barber_id ?? null,
       p_service_id: input.service_id,
@@ -361,6 +404,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
       p_requested_barber_id: input.barber_id ?? null,
       p_assignment_source: 'customer',
       p_assignment_reason: null,
+      p_idempotency_key: input.idempotency_key,
     })
     if (error) throw fromDatabaseError(error)
     if (!data) throw new ApiError(500, 'database_error', 'Appointment creation returned no record.')
@@ -389,7 +433,40 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     // making every caller remember to read index zero.
     const quote = Array.isArray(data) ? data[0] : data
     if (!quote) throw new ApiError(500, 'database_error', 'Quote returned no row.')
-    response.json({ data: quote })
+
+    const { data: service, error: serviceError } = await dependencies.database
+      .from('services')
+      .select('shop_id')
+      .eq('id', input.service_id)
+      .maybeSingle()
+    if (serviceError) throw fromDatabaseError(serviceError)
+    if (!service) throw new ApiError(404, 'not_found', 'Service not found.')
+
+    const [{ data: shop, error: shopError }, { data: customer, error: customerError }] = await Promise.all([
+      dependencies.database.from('shops').select('booking_mode,timezone').eq('id', service.shop_id as string).maybeSingle(),
+      dependencies.database.from('users').select('manual_approval_until').eq('id', request.auth.profile.id).maybeSingle(),
+    ])
+    if (shopError) throw fromDatabaseError(shopError)
+    if (customerError) throw fromDatabaseError(customerError)
+    if (!shop) throw new ApiError(404, 'not_found', 'Shop not found.')
+    const restricted = customer?.manual_approval_until != null
+      && Date.parse(customer.manual_approval_until as string) > Date.now()
+    const bookingMode = shop.booking_mode === 'instant' ? 'instant' : 'manual'
+    const effectiveMode = bookingMode === 'instant' && !restricted ? 'instant' : 'manual'
+
+    response.json({
+      data: {
+        ...quote,
+        booking_mode: bookingMode,
+        effective_mode: effectiveMode,
+        request_expires_at: effectiveMode === 'manual'
+          ? new Date(Date.now() + 15 * 60_000).toISOString()
+          : null,
+        timezone: shop.timezone,
+        cancellation_cutoff_minutes: 120,
+        idempotency_key: input.idempotency_key,
+      },
+    })
   })
 
   router.patch('/bookings/:id', async (request, response) => {
@@ -519,8 +596,16 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const { id } = parseParams(request, idParamsSchema)
     const input = parseBody(request, appointmentReasonInputSchema)
     const appointment = await getAppointment(dependencies, id)
-    await requireAssignedProvider(dependencies, request, appointment)
-    response.json({ data: await transitionAppointment(dependencies, id, input.expected_version, 'mark_customer_no_show', request.auth.profile.id, input.reason) })
+    if (request.auth.profile.role === 'barber') await requireAssignedProvider(dependencies, request, appointment)
+    else await requireAppointmentOwner(dependencies, request, appointment)
+    const { data, error } = await dependencies.database.rpc('api_mark_customer_no_show', {
+      p_appointment_id: id,
+      p_expected_version: input.expected_version,
+      p_actor_id: request.auth.profile.id,
+      p_reason: input.reason,
+    })
+    if (error) throw fromDatabaseError(error)
+    response.json({ data: safeAppointmentRecord(data) })
   })
 
   router.post('/bookings/:id/resolve-dispute', async (request, response) => {
@@ -574,7 +659,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     await requireOwnedShop(dependencies, request, id)
     const { data, error } = await dependencies.database.from('appointments').select(appointmentSelect).eq('shop_id', id).order('starts_at', { ascending: false })
     if (error) throw fromDatabaseError(error)
-    response.json({ data: snapshotAppointmentRows(data) })
+    response.json({ data: snapshotAppointmentRows(data, request) })
   })
 
   router.get('/shops/:id/stats', async (request, response) => {

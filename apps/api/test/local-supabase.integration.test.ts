@@ -2741,6 +2741,22 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     })
     expect(patternError).toBeNull()
 
+    const exactRefusal = await request(app)
+      .post(`/api/v1/bookings/${fixtures.customerAppointmentId}/reassign`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: 2,
+        barber_id: alternateBarberId,
+        reason: 'This must wait for customer consent.',
+      })
+    expect(exactRefusal.status).toBe(409)
+    expect(exactRefusal.body.error.code).toBe('precondition_failed')
+
+    const { error: preferenceError } = await service.from('appointments')
+      .update({ barber_preference: 'preferred' })
+      .eq('id', fixtures.customerAppointmentId)
+    expect(preferenceError).toBeNull()
+
     const reassigned = await request(app)
       .post(`/api/v1/bookings/${fixtures.customerAppointmentId}/reassign`)
       .set('Authorization', `Bearer ${owner.token}`)
@@ -2798,6 +2814,10 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       booked_price_cents: 76000,
       ends_at: '2034-01-02T08:00:00+00:00',
     })
+    const { error: preferredError } = await service.from('appointments')
+      .update({ barber_preference: 'preferred' })
+      .eq('id', booked.id as string)
+    expect(preferredError).toBeNull()
 
     const candidateIds: string[] = []
     for (const candidate of [
@@ -3109,6 +3129,12 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       end_time: '17:00',
     })
     expect(unavailablePatternError).toBeNull()
+
+    // This probe targets provider eligibility rather than exact-choice consent.
+    const { error: reassignPreferenceError } = await service.from('appointments')
+      .update({ barber_preference: 'preferred' })
+      .eq('id', created.id as string)
+    expect(reassignPreferenceError).toBeNull()
 
     const forbiddenReassign = await service.rpc('api_reassign_appointment', {
       p_appointment_id: created.id,
@@ -4540,6 +4566,95 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     }
   })
 
+  // ---- P3-01 request / accept / assign ------------------------------------
+
+  it('creates manual and instant bookings idempotently, while restrictions force manual approval', async () => {
+    const createdIds: string[] = []
+    const keys: string[] = []
+    const create = async (input: {
+      customerId: string
+      startsAt: string
+      key: string
+    }) => service.rpc('api_create_booking', {
+      p_customer_id: input.customerId,
+      p_barber_id: barber.id,
+      p_service_id: fixtures.primaryServiceId,
+      p_starts_at: input.startsAt,
+      p_notes: 'P3-01 idempotency probe.',
+      p_barber_preference: 'exact',
+      p_requested_barber_id: barber.id,
+      p_assignment_source: 'customer',
+      p_assignment_reason: null,
+      p_idempotency_key: input.key,
+    })
+
+    try {
+      const manualKey = crypto.randomUUID()
+      keys.push(manualKey)
+      const manualRace = await Promise.all([
+        create({ customerId: customer.id, startsAt: '2030-06-03T02:00:00.000Z', key: manualKey }),
+        create({ customerId: customer.id, startsAt: '2030-06-03T02:00:00.000Z', key: manualKey }),
+      ])
+      for (const result of manualRace) expect(result.error, JSON.stringify(result.error)).toBeNull()
+      const manualRows = manualRace.map((result) => result.data as Record<string, unknown>)
+      expect(manualRows[0]?.id).toBe(manualRows[1]?.id)
+      expect(manualRows[0]?.status).toBe('requested')
+      expect(manualRows[0]?.expires_at).toBeTruthy()
+      createdIds.push(manualRows[0]?.id as string)
+
+      const mismatchedReplay = await create({
+        customerId: customer.id,
+        startsAt: '2030-06-03T02:15:00.000Z',
+        key: manualKey,
+      })
+      expect(mismatchedReplay.error?.code).toBe('P4090')
+
+      const { error: instantModeError } = await service.from('shops')
+        .update({ booking_mode: 'instant' })
+        .eq('id', fixtures.primaryShopId)
+      expect(instantModeError).toBeNull()
+
+      const instantKey = crypto.randomUUID()
+      keys.push(instantKey)
+      const instant = await create({ customerId: otherCustomer.id, startsAt: '2030-06-03T03:00:00.000Z', key: instantKey })
+      expect(instant.error, JSON.stringify(instant.error)).toBeNull()
+      const instantRow = instant.data as Record<string, unknown>
+      expect(instantRow.status).toBe('confirmed')
+      expect(instantRow.expires_at).toBeNull()
+      createdIds.push(instantRow.id as string)
+      const { data: instantEvents } = await service.from('appointment_events')
+        .select('actor_role,event_type,from_status,to_status,metadata')
+        .eq('appointment_id', instantRow.id as string)
+        .order('created_at')
+      expect(instantEvents).toEqual(expect.arrayContaining([
+        expect.objectContaining({ actor_role: 'system', event_type: 'accepted', from_status: 'requested', to_status: 'confirmed' }),
+      ]))
+
+      const { error: restrictError } = await service.from('users')
+        .update({ manual_approval_until: '2030-07-01T00:00:00.000Z' })
+        .eq('id', customer.id)
+      expect(restrictError).toBeNull()
+      const restrictedKey = crypto.randomUUID()
+      keys.push(restrictedKey)
+      const restricted = await create({ customerId: customer.id, startsAt: '2030-06-03T04:00:00.000Z', key: restrictedKey })
+      expect(restricted.error, JSON.stringify(restricted.error)).toBeNull()
+      const restrictedRow = restricted.data as Record<string, unknown>
+      expect(restrictedRow.status).toBe('requested')
+      expect(restrictedRow.expires_at).toBeTruthy()
+      createdIds.push(restrictedRow.id as string)
+    } finally {
+      await service.from('users').update({ manual_approval_until: null }).eq('id', customer.id)
+      await service.from('shops').update({ booking_mode: 'manual' }).eq('id', fixtures.primaryShopId)
+      for (const key of keys) {
+        await service.from('booking_create_requests').delete().eq('idempotency_key', key)
+      }
+      for (const id of createdIds) {
+        await service.from('appointment_events').delete().eq('appointment_id', id)
+        await service.from('appointments').delete().eq('id', id)
+      }
+    }
+  })
+
   // ---- P2-08 race gate -----------------------------------------------------
   // P2-07 already proves three races: two customers on one barber, one customer
   // on two barbers, and two customers on two barbers for the last chair. This
@@ -4729,5 +4844,211 @@ localDescribe('local Supabase RLS and Express authorization', () => {
           command_id: crypto.randomUUID(),
         })
     }
+  })
+
+  // ---- Phase 3 operational completion ------------------------------------
+
+  it('keeps the original booking until a versioned customer change approval and preserves in-app state across delivery retry', async () => {
+    const created = await book(customer.id, barber.id, '2030-06-10T02:00:00.000Z')
+    expect(created.error, JSON.stringify(created.error)).toBeNull()
+    const accepted = await acceptAppointment(created.data as Record<string, unknown>, owner.id)
+
+    const proposalResult = await request(app)
+      .post(`/api/v1/bookings/${accepted.id as string}/change-proposals`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({
+        expected_version: accepted.version,
+        service_id: fixtures.primaryServiceId,
+        provider_id: barber.id,
+        starts_at: '2030-06-10T03:00:00.000Z',
+        reason: 'Shop requests a one-hour move with customer approval.',
+        expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+      })
+    expect(proposalResult.status, JSON.stringify(proposalResult.body)).toBe(201)
+    const proposal = proposalResult.body.data as Record<string, unknown>
+
+    const { data: unchanged } = await service.from('appointments').select('starts_at,version').eq('id', accepted.id as string).single()
+    expect(unchanged?.starts_at).toBe('2030-06-10T02:00:00+00:00')
+    expect(unchanged?.version).toBe((accepted.version as number) + 1)
+
+    const foreignWrite = await otherCustomer.client.from('appointment_change_proposals').insert({
+      appointment_id: accepted.id,
+      shop_id: fixtures.primaryShopId,
+      proposed_by: otherCustomer.id,
+      proposed_by_role: 'shop_owner',
+      reason: 'Forbidden direct proposal.',
+    })
+    expect(foreignWrite.error).not.toBeNull()
+
+    const approved = await request(app)
+      .post(`/api/v1/booking-change-proposals/${proposal.id as string}/respond`)
+      .set('Authorization', `Bearer ${customer.token}`)
+      .send({
+        expected_proposal_version: proposal.version,
+        expected_appointment_version: unchanged?.version,
+        decision: 'approve',
+      })
+    expect(approved.status, JSON.stringify(approved.body)).toBe(200)
+    expect((approved.body.data as { status: string }).status).toBe('approved')
+    const { data: changed } = await service.from('appointments').select('starts_at').eq('id', accepted.id as string).single()
+    expect(changed?.starts_at).toBe('2030-06-10T03:00:00+00:00')
+
+    const { data: inbox } = await service.from('in_app_notifications').select('id,outbox_id').eq('recipient_id', customer.id)
+    expect((inbox ?? []).length).toBeGreaterThan(0)
+    const outboxId = inbox?.at(-1)?.outbox_id as string
+    const failed = await service.rpc('api_record_notification_attempt', {
+      p_outbox_id: outboxId,
+      p_provider: 'test-provider',
+      p_succeeded: false,
+      p_error_code: 'provider_down',
+    })
+    expect(failed.error, JSON.stringify(failed.error)).toBeNull()
+    expect((failed.data as { status: string }).status).toBe('retry')
+    const { data: stillVisible } = await service.from('in_app_notifications').select('id').eq('outbox_id', outboxId).single()
+    expect(stillVisible?.id).toBeTruthy()
+    const delivered = await service.rpc('api_record_notification_attempt', {
+      p_outbox_id: outboxId,
+      p_provider: 'test-provider',
+      p_succeeded: true,
+      p_error_code: null,
+    })
+    expect(delivered.error, JSON.stringify(delivered.error)).toBeNull()
+    const { data: deliveredRow } = await service.from('notification_outbox').select('status').eq('id', outboxId).single()
+    expect(deliveredRow?.status).toBe('delivered')
+  })
+
+  it('persists failed guest claim attempts, rejects replay, and keeps walk-in payment facts independent', async () => {
+    const created = await service.rpc('api_create_walk_in', {
+      p_shop_id: fixtures.primaryShopId,
+      p_actor_id: owner.id,
+      p_display_name: 'Queue Guest',
+      p_service_id: fixtures.primaryServiceId,
+      p_requested_barber_id: barber.id,
+      p_notes: 'Phase 3 walk-in regression.',
+    })
+    expect(created.error, JSON.stringify(created.error)).toBeNull()
+    const walkIn = created.data as Record<string, unknown>
+    const code = '728194'
+    const issued = await service.rpc('api_issue_walk_in_claim', {
+      p_walk_in_id: walkIn.id,
+      p_expected_version: walkIn.version,
+      p_actor_id: owner.id,
+      p_token: code,
+      p_expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+    })
+    expect(issued.error, JSON.stringify(issued.error)).toBeNull()
+
+    const wrong = await service.rpc('api_claim_walk_in', { p_walk_in_id: walkIn.id, p_token: '000000', p_phone: '+639171234567' })
+    expect(wrong.error).toBeNull()
+    expect((wrong.data as { ok: boolean }).ok).toBe(false)
+    const { data: attempts } = await service.from('guest_visit_claims').select('otp_attempts').eq('walk_in_id', walkIn.id as string).single()
+    expect(attempts?.otp_attempts).toBe(1)
+
+    const claimed = await request(app).post(`/api/v1/walk-ins/${walkIn.id as string}/claim`).send({ code, phone: '+639171234567' })
+    expect(claimed.status, JSON.stringify(claimed.body)).toBe(200)
+    const replay = await request(app).post(`/api/v1/walk-ins/${walkIn.id as string}/claim`).send({ code, phone: '+639171234567' })
+    expect(replay.status).toBe(404)
+
+    const checkedIn = claimed.body.data as Record<string, unknown>
+    const started = await service.rpc('api_transition_walk_in', {
+      p_walk_in_id: walkIn.id, p_expected_version: checkedIn.version, p_actor_id: barber.id,
+      p_action: 'start', p_provider_id: barber.id, p_reason: null,
+    })
+    expect(started.error, JSON.stringify(started.error)).toBeNull()
+    const completed = await service.rpc('api_transition_walk_in', {
+      p_walk_in_id: walkIn.id, p_expected_version: (started.data as { version: number }).version,
+      p_actor_id: barber.id, p_action: 'complete', p_provider_id: null, p_reason: null,
+    })
+    expect(completed.error, JSON.stringify(completed.error)).toBeNull()
+
+    const key = crypto.randomUUID()
+    const recorded = await service.rpc('api_record_offline_payment', {
+      p_appointment_id: null, p_walk_in_id: walkIn.id, p_actor_id: owner.id,
+      p_method: 'cash', p_currency: 'PHP', p_amount_cents: 30000,
+      p_paid_at: new Date().toISOString(), p_idempotency_key: key,
+    })
+    expect(recorded.error, JSON.stringify(recorded.error)).toBeNull()
+    const duplicate = await service.rpc('api_record_offline_payment', {
+      p_appointment_id: null, p_walk_in_id: walkIn.id, p_actor_id: owner.id,
+      p_method: 'cash', p_currency: 'PHP', p_amount_cents: 30000,
+      p_paid_at: new Date().toISOString(), p_idempotency_key: key,
+    })
+    expect(duplicate.error, JSON.stringify(duplicate.error)).toBeNull()
+    expect((duplicate.data as { id: string }).id).toBe((recorded.data as { id: string }).id)
+    const corrected = await service.rpc('api_change_offline_payment', {
+      p_payment_id: (recorded.data as { id: string }).id, p_expected_version: (recorded.data as { version: number }).version,
+      p_actor_id: owner.id, p_action: 'correct', p_amount_cents: 32500,
+      p_reason: 'Corrected after counting the offline cash receipt.',
+    })
+    expect(corrected.error, JSON.stringify(corrected.error)).toBeNull()
+    expect((corrected.data as { amount_cents: number }).amount_cents).toBe(32500)
+
+    const forbiddenPayment = await service.rpc('api_record_offline_payment', {
+      p_appointment_id: null, p_walk_in_id: walkIn.id, p_actor_id: otherOwner.id,
+      p_method: 'cash', p_currency: 'PHP', p_amount_cents: 1,
+      p_paid_at: new Date().toISOString(), p_idempotency_key: crypto.randomUUID(),
+    })
+    expect(forbiddenPayment.error?.code).toBe('P4031')
+    const directWrite = await customer.client.from('walk_in_entries').insert({ shop_id: fixtures.primaryShopId, created_by: customer.id, display_name: 'Bypass' })
+    expect(directWrite.error).not.toBeNull()
+  })
+
+  it('lets the owner mark after grace, resolves appeals, and activates the rolling strike restriction at three', async () => {
+    const strikeAppointmentIds: string[] = []
+    for (const [index, slot] of ['2030-06-17T02:00:00.000Z', '2030-06-17T03:00:00.000Z', '2030-06-17T04:00:00.000Z'].entries()) {
+      const created = await book(customer.id, barber.id, slot)
+      expect(created.error, JSON.stringify(created.error)).toBeNull()
+      const accepted = await acceptAppointment(created.data as Record<string, unknown>, owner.id)
+      const pastStart = new Date(Date.now() - (3 - index) * 60 * 60_000).toISOString()
+      const { data: moved, error: moveError } = await service.from('appointments').update({ starts_at: pastStart }).eq('id', accepted.id as string).select('version').single()
+      expect(moveError, JSON.stringify(moveError)).toBeNull()
+      const marked = await service.rpc('api_mark_customer_no_show', {
+        p_appointment_id: accepted.id, p_expected_version: moved?.version,
+        p_actor_id: owner.id, p_reason: 'Owner verified absence after the grace period.',
+      })
+      expect(marked.error, JSON.stringify(marked.error)).toBeNull()
+      const appeal = await service.rpc('api_create_no_show_appeal', {
+        p_appointment_id: accepted.id, p_customer_id: customer.id,
+        p_reason: 'Customer requests a documented owner review.', p_evidence_note: `Appeal evidence ${index + 1}.`,
+      })
+      expect(appeal.error, JSON.stringify(appeal.error)).toBeNull()
+      const resolved = await service.rpc('api_resolve_no_show_appeal', {
+        p_appeal_id: (appeal.data as { id: string }).id,
+        p_expected_version: (appeal.data as { version: number }).version,
+        p_owner_id: owner.id, p_resolution: 'upheld',
+        p_reason: 'Owner upheld after reviewing the recorded facts.',
+      })
+      expect(resolved.error, JSON.stringify(resolved.error)).toBeNull()
+      strikeAppointmentIds.push(accepted.id as string)
+    }
+    const { data: restricted } = await service.from('users').select('manual_approval_until').eq('id', customer.id).single()
+    expect(Date.parse(restricted?.manual_approval_until as string)).toBeGreaterThan(Date.now())
+    const waived = await service.rpc('api_waive_customer_strike', {
+      p_appointment_id: strikeAppointmentIds[0], p_owner_id: owner.id,
+      p_reason: 'Owner correction removes one upheld strike after new evidence.',
+    })
+    expect(waived.error, JSON.stringify(waived.error)).toBeNull()
+    const { data: unrestricted } = await service.from('users').select('manual_approval_until').eq('id', customer.id).single()
+    expect(unrestricted?.manual_approval_until).toBeNull()
+  })
+
+  it('runs closeout twice as one run and creates attention instead of guessing an unresolved visit', async () => {
+    const created = await book(otherCustomer.id, barber.id, '2030-06-24T02:00:00.000Z')
+    expect(created.error, JSON.stringify(created.error)).toBeNull()
+    const accepted = await acceptAppointment(created.data as Record<string, unknown>, owner.id)
+    const yesterday = new Date(Date.now() - 86_400_000)
+    const localDate = yesterday.toISOString().slice(0, 10)
+    const startsAt = new Date(`${localDate}T02:00:00.000Z`).toISOString()
+    const { error: moveError } = await service.from('appointments').update({ starts_at: startsAt }).eq('id', accepted.id as string)
+    expect(moveError, JSON.stringify(moveError)).toBeNull()
+    const first = await service.rpc('api_run_shop_closeout', { p_shop_id: fixtures.primaryShopId, p_local_date: localDate })
+    const second = await service.rpc('api_run_shop_closeout', { p_shop_id: fixtures.primaryShopId, p_local_date: localDate })
+    expect(first.error, JSON.stringify(first.error)).toBeNull()
+    expect(second.error, JSON.stringify(second.error)).toBeNull()
+    expect((first.data as { id: string }).id).toBe((second.data as { id: string }).id)
+    const { data: unchanged } = await service.from('appointments').select('status').eq('id', accepted.id as string).single()
+    expect(unchanged?.status).toBe('confirmed')
+    const { data: attention } = await service.from('appointment_attention_items').select('kind').eq('appointment_id', accepted.id as string)
+    expect(attention).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'closeout_unresolved' })]))
   })
 })

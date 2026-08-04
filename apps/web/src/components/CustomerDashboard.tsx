@@ -4,7 +4,10 @@ import {
   DataError,
   isUpcomingAppointment,
   type AppointmentDetailed,
+  type AppointmentBarberPreference,
+  type AvailabilitySlot,
   type BarberWithProfile,
+  type BookingQuote,
   type ConversationDetailed,
   type Service,
   type ShopWithStatus,
@@ -79,6 +82,221 @@ function Stars({ rating }: { rating: number }) {
         <DoodleIcon key={i} name="star" size={14} className={i <= Math.round(rating) ? 'is-lit' : 'is-dim'} />
       ))}
     </span>
+  )
+}
+
+function todayDateKey(): string {
+  const today = new Date()
+  const parts = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(today)
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${value.year}-${value.month}-${value.day}`
+}
+
+function BookingWorkspace({
+  shopId,
+  services,
+  barbers,
+  onBooked,
+}: {
+  shopId: string
+  services: Service[]
+  barbers: BarberWithProfile[]
+  onBooked: () => Promise<void>
+}) {
+  const backend = useBackend()
+  const [serviceId, setServiceId] = useState(services[0]?.id ?? '')
+  const [preference, setPreference] = useState<AppointmentBarberPreference>('any')
+  const [barberId, setBarberId] = useState(barbers[0]?.id ?? '')
+  const [date, setDate] = useState(todayDateKey)
+  const [notes, setNotes] = useState('')
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [startsAt, setStartsAt] = useState('')
+  const [quote, setQuote] = useState<BookingQuote | null>(null)
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+  const [shopTimezone, setShopTimezone] = useState('Asia/Manila')
+  const [busy, setBusy] = useState<'slots' | 'quote' | 'create' | null>(null)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setServiceId(services[0]?.id ?? '')
+    setBarberId(barbers[0]?.id ?? '')
+    setSlots([])
+    setStartsAt('')
+    setQuote(null)
+    setMessage('')
+    setError('')
+    setIdempotencyKey(crypto.randomUUID())
+    void backend.shops.get(shopId).then((detail) => {
+      if (active && detail) setShopTimezone(detail.timezone)
+    }).catch(() => {
+      // The booking/quote endpoints remain authoritative and surface a useful
+      // error; the PH default only formats pre-quote slot labels.
+    })
+    return () => { active = false }
+  }, [backend, barbers, services, shopId])
+
+  const bookingInput = useMemo(() => ({
+    service_id: serviceId,
+    starts_at: startsAt,
+    notes: notes.trim() || undefined,
+    barber_preference: preference,
+    barber_id: preference === 'any' ? undefined : barberId,
+    idempotency_key: idempotencyKey,
+  }), [barberId, idempotencyKey, notes, preference, serviceId, startsAt])
+
+  async function loadSlots() {
+    if (!serviceId || (preference !== 'any' && !barberId)) return
+    setBusy('slots')
+    setError('')
+    setMessage('')
+    setQuote(null)
+    setStartsAt('')
+    try {
+      const day = await backend.availability.getDay({
+        shop_id: shopId,
+        service_id: serviceId,
+        date,
+        barber_id: preference === 'exact' ? barberId : undefined,
+      })
+      const byStart = new Map<string, AvailabilitySlot>()
+      day.slots.forEach((slot) => {
+        if (!byStart.has(slot.starts_at)) byStart.set(slot.starts_at, slot)
+      })
+      const nextSlots = [...byStart.values()].sort((left, right) => left.starts_at.localeCompare(right.starts_at))
+      setSlots(nextSlots)
+      if (nextSlots.length === 0) setMessage('Walang available na oras sa araw na ito. Pumili ng ibang date.')
+    } catch (caught) {
+      setError(caught instanceof DataError ? caught.message : 'Hindi ma-load ang available times.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function reviewBooking() {
+    if (!startsAt) return
+    setBusy('quote')
+    setError('')
+    try {
+      const nextQuote = await backend.bookings.quote(bookingInput)
+      setQuote(nextQuote)
+      if (!nextQuote.bookable) setMessage('Kinuha na ang oras na iyon. Refresh ang available times.')
+    } catch (caught) {
+      setQuote(null)
+      setError(caught instanceof DataError ? caught.message : 'Hindi ma-review ang booking.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function createBooking() {
+    if (!quote?.bookable) return
+    setBusy('create')
+    setError('')
+    try {
+      const appointment = await backend.bookings.create(bookingInput)
+      await onBooked()
+      setMessage(appointment.status === 'confirmed'
+        ? 'Confirmed na ang booking mo.'
+        : 'Naipadala ang request. May 15 minutes ang shop para tanggapin ito.')
+      setSlots([])
+      setStartsAt('')
+      setQuote(null)
+      setIdempotencyKey(crypto.randomUUID())
+    } catch (caught) {
+      setQuote(null)
+      setError(caught instanceof DataError ? caught.message : 'Hindi ma-create ang booking. I-refresh ang times at subukan ulit.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (services.length === 0) return null
+
+  return (
+    <section className="cd-booking-workspace" aria-labelledby="cd-booking-title">
+      <div className="cd-shop-section-title">
+        <h4 id="cd-booking-title">Book an appointment</h4>
+        <span className="pill">Service → barber → time → review</span>
+      </div>
+      <div className="cd-booking-fields">
+        <label>
+          <span>Service</span>
+          <select value={serviceId} onChange={(event) => { setServiceId(event.target.value); setSlots([]); setQuote(null) }}>
+            {services.map((service) => (
+              <option value={service.id} key={service.id}>{service.name} · {service.duration_min} min · {money(service.price_cents)}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Barber choice</span>
+          <select value={preference} onChange={(event) => { setPreference(event.target.value as AppointmentBarberPreference); setSlots([]); setQuote(null) }}>
+            <option value="any">Any available barber</option>
+            <option value="preferred" disabled={barbers.length === 0}>Prefer a barber; allow replacement</option>
+            <option value="exact" disabled={barbers.length === 0}>Only this barber</option>
+          </select>
+        </label>
+        {preference !== 'any' && (
+          <label>
+            <span>{preference === 'exact' ? 'Required barber' : 'Preferred barber'}</span>
+            <select value={barberId} onChange={(event) => { setBarberId(event.target.value); setSlots([]); setQuote(null) }}>
+              {barbers.map((barber) => <option value={barber.id} key={barber.id}>{barber.profile.full_name}</option>)}
+            </select>
+          </label>
+        )}
+        <label>
+          <span>Shop-local date</span>
+          <input type="date" min={todayDateKey()} value={date} onChange={(event) => { setDate(event.target.value); setSlots([]); setQuote(null) }} />
+        </label>
+      </div>
+      <button type="button" className="btn btn-sm" disabled={busy !== null || !serviceId} onClick={() => void loadSlots()}>
+        {busy === 'slots' ? 'Checking…' : 'Check available times'}
+      </button>
+      {slots.length > 0 && (
+        <div className="cd-booking-slots" role="group" aria-label="Available appointment times">
+          {slots.map((slot) => (
+            <button
+              type="button"
+              key={slot.starts_at}
+              className={startsAt === slot.starts_at ? 'is-active' : ''}
+              aria-pressed={startsAt === slot.starts_at}
+              onClick={() => { setStartsAt(slot.starts_at); setQuote(null); setMessage('') }}
+            >
+              {new Date(slot.starts_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', timeZone: shopTimezone })}
+            </button>
+          ))}
+        </div>
+      )}
+      {startsAt && (
+        <label className="cd-booking-notes">
+          <span>Notes for the shop (optional)</span>
+          <textarea value={notes} maxLength={1000} rows={2} onChange={(event) => { setNotes(event.target.value); setQuote(null) }} />
+        </label>
+      )}
+      {startsAt && !quote && (
+        <button type="button" className="btn btn-sm btn-blue" disabled={busy !== null} onClick={() => void reviewBooking()}>
+          {busy === 'quote' ? 'Reviewing…' : 'Review booking'}
+        </button>
+      )}
+      {quote?.bookable && (
+        <div className="cd-booking-review" aria-label="Booking review">
+          <strong>{quote.service_name} · {quote.duration_min} min · {money(quote.price_cents ?? 0)}</strong>
+          <span>{new Date(quote.starts_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: quote.timezone })}</span>
+          <span>{quote.effective_mode === 'instant' ? 'Instant confirmation' : 'Manual approval · request expires after 15 minutes'}</span>
+          {quote.substituted && <span>The preferred barber is unavailable; another qualified provider will be assigned.</span>}
+          {quote.buffer_min ? <small>The shop reserves {quote.buffer_min} cleanup minutes after the service.</small> : null}
+          <small>Free cancellation or reschedule until {quote.cancellation_cutoff_minutes / 60} hours before start.</small>
+          <button type="button" className="btn btn-sm btn-green" disabled={busy !== null} onClick={() => void createBooking()}>
+            {busy === 'create' ? 'Booking…' : quote.effective_mode === 'instant' ? 'Confirm booking' : 'Send request'}
+          </button>
+        </div>
+      )}
+      {message && <p className="muted" role="status">{message}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </section>
   )
 }
 
@@ -635,6 +853,12 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
                     <p className="muted cd-staff-empty-note">Walang bakanteng barber ngayon. Tingnan ulit mamaya o buksan ang full details.</p>
                   )}
                 </section>
+                <BookingWorkspace
+                  shopId={selectedShop.id}
+                  services={selectedShopServices}
+                  barbers={selectedShopStaff}
+                  onBooked={async () => setBookings(await backend.bookings.listMine())}
+                />
               </ModalPortal>
             )}
           </div>

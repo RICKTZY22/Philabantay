@@ -33,6 +33,7 @@ const CUSTOMER_MENU_ITEMS: MenuItem[] = [
 
 const BARBER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard', icon: 'home', label: 'Home', end: true },
+  { to: '/chair', icon: 'chair', label: "Today's Chair" },
   { to: '/professional', icon: 'user', label: 'Professional profile' },
   { to: '/chat', icon: 'chat', label: 'Chats' },
   { to: '/schedule', icon: 'calendar', label: 'Schedule' },
@@ -47,6 +48,7 @@ const BARBER_SEEKER_MENU_ITEMS: MenuItem[] = [
 
 const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard/owner/overview', icon: 'home', label: 'Overview', end: true },
+  { to: '/dashboard/owner/operations', icon: 'chair', label: 'Live operations', end: true },
   { to: '/dashboard/owner/reservations', icon: 'calendar', label: 'Reservations', end: true },
   { to: '/dashboard/owner/staff', icon: 'user', label: 'Staff', end: true },
   { to: '/dashboard/owner/hiring', icon: 'search', label: 'Hiring', end: true },

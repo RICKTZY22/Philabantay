@@ -153,12 +153,14 @@ function customerCreateBookingDependencies(profileOverrides: Partial<Profile> = 
   profileId: string
   barberId: string
   serviceId: string
+  shopId: string
   startsAt: string
   createAppointment: ReturnType<typeof vi.fn>
 } {
   const profileId = crypto.randomUUID()
   const barberId = crypto.randomUUID()
   const serviceId = crypto.randomUUID()
+  const shopId = crypto.randomUUID()
   const startsAt = new Date(Date.now() + 86_400_000).toISOString()
   const profile: Profile = {
     id: profileId,
@@ -179,7 +181,7 @@ function customerCreateBookingDependencies(profileOverrides: Partial<Profile> = 
     id: crypto.randomUUID(),
     customer_id: profileId,
     barber_id: barberId,
-    shop_id: crypto.randomUUID(),
+    shop_id: shopId,
     service_id: serviceId,
     starts_at: startsAt,
     ends_at: new Date(Date.parse(startsAt) + 30 * 60_000).toISOString(),
@@ -194,10 +196,18 @@ function customerCreateBookingDependencies(profileOverrides: Partial<Profile> = 
   const profileBuilder: Record<string, unknown> = {}
   profileBuilder.eq = vi.fn().mockReturnValue(profileBuilder)
   profileBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: profile, error: null })
+  const serviceBuilder: Record<string, unknown> = {}
+  serviceBuilder.eq = vi.fn().mockReturnValue(serviceBuilder)
+  serviceBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: { shop_id: shopId }, error: null })
+  const shopBuilder: Record<string, unknown> = {}
+  shopBuilder.eq = vi.fn().mockReturnValue(shopBuilder)
+  shopBuilder.maybeSingle = vi.fn().mockResolvedValue({ data: { booking_mode: 'instant', timezone: 'Asia/Manila' }, error: null })
   const createAppointment = vi.fn().mockResolvedValue({ data: appointment, error: null })
   const database = {
     from: vi.fn((table: string) => {
       if (table === 'users') return { select: vi.fn().mockReturnValue(profileBuilder) }
+      if (table === 'services') return { select: vi.fn().mockReturnValue(serviceBuilder) }
+      if (table === 'shops') return { select: vi.fn().mockReturnValue(shopBuilder) }
       throw new Error(`Unexpected direct table access: ${table}`)
     }),
     rpc: createAppointment,
@@ -216,6 +226,7 @@ function customerCreateBookingDependencies(profileOverrides: Partial<Profile> = 
     profileId,
     barberId,
     serviceId,
+    shopId,
     startsAt,
     createAppointment,
   }
@@ -356,6 +367,7 @@ describe('Express API boundary', () => {
 
   it('creates bookings only through the transactional database command', async () => {
     const fixture = customerCreateBookingDependencies()
+    const idempotencyKey = crypto.randomUUID()
     const response = await request(createApp(fixture.dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${crypto.randomUUID()}`)
@@ -364,6 +376,7 @@ describe('Express API boundary', () => {
         service_id: fixture.serviceId,
         starts_at: fixture.startsAt,
         notes: 'Low fade.',
+        idempotency_key: idempotencyKey,
       })
 
     expect(response.status).toBe(201)
@@ -374,7 +387,7 @@ describe('Express API boundary', () => {
       status: 'requested',
     })
     expect(response.body.data).not.toHaveProperty('check_in_code_hash')
-    expect(fixture.createAppointment).toHaveBeenCalledWith('api_create_appointment', {
+    expect(fixture.createAppointment).toHaveBeenCalledWith('api_create_booking', {
       p_customer_id: fixture.profileId,
       p_barber_id: fixture.barberId,
       p_service_id: fixture.serviceId,
@@ -387,6 +400,7 @@ describe('Express API boundary', () => {
       p_requested_barber_id: fixture.barberId,
       p_assignment_source: 'customer',
       p_assignment_reason: null,
+      p_idempotency_key: idempotencyKey,
     })
   })
 
@@ -402,10 +416,54 @@ describe('Express API boundary', () => {
         barber_id: fixture.barberId,
         service_id: fixture.serviceId,
         starts_at: fixture.startsAt,
+        idempotency_key: crypto.randomUUID(),
       })
 
     expect(response.status).toBe(403)
     expect(response.body.error.code).toBe('verification_locked')
     expect(fixture.createAppointment).not.toHaveBeenCalled()
+  })
+
+  it('quotes the effective booking mode and returns the submitted idempotency key', async () => {
+    const fixture = customerCreateBookingDependencies()
+    const idempotencyKey = crypto.randomUUID()
+    fixture.createAppointment.mockResolvedValueOnce({
+      data: [{
+        bookable: true,
+        reason: null,
+        provider_user_id: fixture.barberId,
+        requested_barber_id: fixture.barberId,
+        substituted: false,
+        service_name: 'Classic cut',
+        duration_min: 30,
+        price_cents: 35000,
+        buffer_min: 10,
+        starts_at: fixture.startsAt,
+        ends_at: new Date(Date.parse(fixture.startsAt) + 30 * 60_000).toISOString(),
+      }],
+      error: null,
+    })
+
+    const response = await request(createApp(fixture.dependencies, { webOrigin: 'http://127.0.0.1:5174' }))
+      .post('/api/v1/bookings/quote')
+      .set('Authorization', `Bearer ${crypto.randomUUID()}`)
+      .send({
+        barber_id: fixture.barberId,
+        service_id: fixture.serviceId,
+        starts_at: fixture.startsAt,
+        barber_preference: 'exact',
+        idempotency_key: idempotencyKey,
+      })
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toMatchObject({
+      bookable: true,
+      booking_mode: 'instant',
+      effective_mode: 'instant',
+      request_expires_at: null,
+      timezone: 'Asia/Manila',
+      cancellation_cutoff_minutes: 120,
+      idempotency_key: idempotencyKey,
+    })
   })
 })

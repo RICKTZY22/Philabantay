@@ -31,9 +31,12 @@ const SettingsNotificationsPage = lazy(() => import('./pages/SettingsPage').then
 const SettingsSecurityPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsSecurityPage })))
 const SettingsBugReportPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsBugReportPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
+const Phase3OperationsPage = lazy(() => import('./pages/Phase3OperationsPage').then((m) => ({ default: m.Phase3OperationsPage })))
+const WalkInClaimPage = lazy(() => import('./pages/WalkInClaimPage').then((m) => ({ default: m.WalkInClaimPage })))
 
 function RoleAwareAppointments() {
   const { profile } = useAuth()
+  if (profile?.role === 'shop_owner') return <Navigate to="/dashboard/owner/reservations" replace />
   if (profile?.role === 'barber' || profile?.requested_role === 'barber') {
     return <Navigate to={profile.role === 'barber' ? '/schedule' : '/dashboard'} replace />
   }
@@ -49,6 +52,7 @@ export function App() {
         {/* Real deep-linkable auth pages keep the public landing value-first. */}
         <Route path="login" element={<AuthPage mode="signin" />} />
         <Route path="signup" element={<AuthPage mode="signup" />} />
+        <Route path="walk-in/:walkInId/claim" element={<WalkInClaimPage />} />
 
         {/* One-time role request: signed in dapat, pero incomplete profile is allowed. */}
         <Route
@@ -121,6 +125,10 @@ export function App() {
           }
         />
         <Route
+          path="dashboard/owner/operations"
+          element={<RequireAuth role="shop_owner"><Phase3OperationsPage /></RequireAuth>}
+        />
+        <Route
           path="dashboard/owner/:ownerSection"
           element={
             <RequireAuth>
@@ -144,6 +152,10 @@ export function App() {
         <Route path="settings/report-bug" element={<RequireAuth><SettingsBugReportPage /></RequireAuth>} />
         {/* One barber schedule screen. The legacy URL redirects here so there
             is no duplicate chair-tools/booking flow. */}
+        <Route
+          path="chair"
+          element={<RequireAuth role="barber"><Phase3OperationsPage /></RequireAuth>}
+        />
         <Route
           path="schedule"
           element={

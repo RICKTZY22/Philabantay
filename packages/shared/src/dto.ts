@@ -88,6 +88,8 @@ export interface CreateAppointmentInput {
   notes?: string
   /** Defaults to `exact`, which preserves the pre-P2-07 behaviour. */
   barber_preference?: 'exact' | 'preferred' | 'any'
+  /** Reused across quote, submit, and safe retries of the same booking intent. */
+  idempotency_key: string
 }
 
 /** Query for the availability engine. `date` is a local date at the shop. */
@@ -246,10 +248,84 @@ export interface ReassignAppointmentInput extends AppointmentReasonInput {
   barber_id: string
 }
 
-export interface RescheduleAppointmentInput extends CreateAppointmentInput, AppointmentVersionInput {}
+export interface RescheduleAppointmentInput extends Omit<CreateAppointmentInput, 'idempotency_key'>, AppointmentVersionInput {}
 
 export interface ResolveAppointmentDisputeInput extends AppointmentReasonInput {
   resolution: 'completed' | 'cancelled'
+}
+
+export interface CreateAppointmentChangeProposalInput extends AppointmentVersionInput {
+  service_id: string
+  provider_id: string
+  starts_at: string
+  reason: string
+  expires_at: string
+}
+
+export interface RespondAppointmentChangeProposalInput {
+  expected_proposal_version: number
+  expected_appointment_version: number
+  decision: 'approve' | 'reject'
+  reason?: string
+}
+
+export interface ReportAppointmentDelayInput extends AppointmentVersionInput {
+  category: 'provider_late' | 'shop_delay' | 'previous_service' | 'other'
+  estimate_minutes: number
+  reason: string
+}
+
+export interface CreateNoShowAppealInput {
+  reason: string
+  evidence_note?: string
+}
+
+export interface ResolveNoShowAppealInput {
+  expected_version: number
+  resolution: 'accepted' | 'upheld'
+  reason: string
+}
+
+export interface CreateWalkInInput {
+  display_name: string
+  service_id?: string
+  requested_barber_id?: string
+  notes?: string
+}
+
+export interface WalkInVersionInput {
+  expected_version: number
+}
+
+export interface TransitionWalkInInput extends WalkInVersionInput {
+  action: 'call' | 'check_in' | 'start' | 'complete' | 'attention' | 'cancel'
+  provider_id?: string
+  reason?: string
+}
+
+export interface ClaimWalkInInput {
+  code: string
+  phone: string
+}
+
+export interface SetCashierCapabilityInput {
+  active: boolean
+}
+
+export interface RecordOfflinePaymentInput {
+  appointment_id?: string
+  walk_in_id?: string
+  method: 'cash' | 'card_terminal' | 'ewallet' | 'other_offline'
+  currency: string
+  amount_cents: number
+  paid_at: string
+  idempotency_key: string
+}
+
+export interface ChangeOfflinePaymentInput extends AppointmentVersionInput {
+  action: 'correct' | 'refund' | 'void'
+  amount_cents: number
+  reason: string
 }
 
 /**

@@ -4,6 +4,7 @@ import { readConfig } from './config'
 import { createSupabaseDependencies } from './lib/supabase'
 import { processDueAppointmentTransitions } from './routes/bookings'
 import { processStaleShopMedia } from './lib/shop-media'
+import { processPhase3Operations } from './routes/phase3-operations'
 
 const config = readConfig(process.env)
 const dependencies = createSupabaseDependencies(config)
@@ -17,6 +18,7 @@ async function runLifecycleWorker(): Promise<void> {
     await Promise.all([
       processDueAppointmentTransitions(dependencies),
       processStaleShopMedia(dependencies),
+      processPhase3Operations(dependencies),
     ])
   } catch (error) {
     console.error('Lifecycle worker failed.', error)
