@@ -2,7 +2,7 @@
 tags:
   - philabantay
   - current-state
-updated: 2026-08-02
+updated: 2026-08-05
 ---
 
 # Current state
@@ -12,11 +12,13 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 ## Active phase
 
 **Phase 3 — booking and live operations: implementation/automated gate complete,
-browser acceptance pending.** P3-01 through P3-09 are implemented. The product
-owner will run the consolidated browser checklist; it has not been run. The
-product owner explicitly deferred the
-remaining P2-08 browser acceptance; that evidence is skipped for now, not passed,
-so Phase 2 is still not formally closed.
+browser acceptance partially executed.** P3-01 through P3-09 are implemented.
+The 2026-08-05 browser run covered responsive owner/barber/customer surfaces,
+manual booking/acceptance, consent proposals, reschedule/cancel, delay, stale
+state, reduced motion, and cleanup, but did not cover the checklist's remaining
+time-bound and operational journeys. Phase 3 is still not formally closed.
+P2-08 also remains open because native date/time mutations and exhaustive
+keyboard traversal were skipped rather than passed.
 
 - P2-01 Shop lifecycle: verified complete.
 - P2-02 Shop facts: verified complete.
@@ -24,30 +26,39 @@ so Phase 2 is still not formally closed.
 - P2-04 Employment convergence: verified complete.
 - P2-05 Provider capabilities: verified complete.
 - P2-06 Schedule authority: **verified complete, signed off 2026-07-30**; its
-  carried visible-workflow and real reduced-motion caveats have preliminary
-  agent evidence from P2-08 and await product-owner browser confirmation.
+  carried visible-workflow and real reduced-motion follow-up was closed by the
+  measured 2026-08-05 browser continuation.
 - P2-07 Availability engine: **verified complete 2026-07-30**, all ten required
   inputs. Q20 was answered the same day (D-028).
-- P2-08 Race gate + frontend smoke: **acceptance deferred, still open.** Backend
+- P2-08 Race gate + frontend smoke: **browser acceptance partial, still open.** Backend
   matrix 85/85 twice on the recorded clean replay; frontend fixes and the
-  deterministic code gate are green. Final product-owner browser acceptance was
-  explicitly skipped for now on 2026-08-02 and must not be recorded as a pass.
+  deterministic code gate are green. The resumed browser run fixed Owner
+  Barbers heading semantics and 320 px Barber Schedule overflow, but native
+  date/time mutation and exhaustive keyboard traversal remain unobserved.
 - P3-01 through P3-08: **implementation/automated verification complete.** The
   final tree passed an empty replay through 58 migrations, zero-finding DB lint,
   131 fast tests, matrix 91/91 twice, typecheck/lint/build/diff.
-- P3-09 Phase 3 journey gate: **product-owner browser acceptance pending.** No
-  browser result is claimed. Use the written consolidated checklist.
+- P3-09 Phase 3 journey gate: **browser acceptance partial.** The completed and
+  skipped rows are recorded in the consolidated checklist; the packet remains
+  open until the remaining rows pass.
 
 ## Active packet
 
-### P3-09 Phase 3 journey gate — browser acceptance pending
+### P3-09 Phase 3 journey gate — partial browser record, acceptance pending
 
 All planned Phase 3 contracts, migrations, API routes, role UI, and automated
 regressions are implemented. The authoritative evidence and packet-by-packet
 scope are in the [Phase 3 handoff](../plans/P3-09-PHASE-3-JOURNEY-HANDOFF.md).
-The product owner must now run the
-[browser checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md). Do not mark
-P3-09 or Phase 3 formally complete until that result is recorded.
+The 2026-08-05 partial run and exact remaining work are in the
+[browser checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md#execution-record--2026-08-05-partial-phase-3-remains-open).
+Do not mark P3-09 or Phase 3 formally complete until the skipped rows pass.
+
+The run found and fixed two real frontend defects: Owner Barbers had no heading,
+and the Barber Schedule calendar forced horizontal overflow at 320 px. The
+cross-role booking path passed through request, owner acceptance, audited barber
+assignment, proposal reject/accept, delay visibility, live reschedule, and
+cancellation. Cleanup left the shop draft and all roles signed out. Customer
+check-in correctly refused outside its time window; no timestamps were altered.
 
 ### P3-02 Change and disruption — implementation gate green
 
@@ -73,9 +84,10 @@ workspace, idempotent manual/instant create, quote policy, restricted fallback,
 and owner decision/assignment controls are implemented. Clean replay and DB lint
 passed; the final Phase 3 matrix is 91/91 twice; 131 fast tests;
 typecheck/lint/build/diff green.
-Codex did not run a browser. The product owner must use the
-[manual checklist](../testing/P3-01-MANUAL-BROWSER-CHECKLIST.md) before P3-01 is
-marked fully verified.
+The 2026-08-05 browser continuation passed one real manual booking through
+customer request, owner acceptance, and assigned-barber visibility, then
+cancelled it during cleanup. Duplicate retry, exact/preferred intent, and
+instant-mode browser rows remain open in the consolidated checklist.
 
 ### Deferred P2-08 closeout — owner browser acceptance still open
 
@@ -99,8 +111,8 @@ real local API/browser stack at 1280×800, 390×844, 375×812, and 320×800.
   Log in link.
 - Preliminary real `prefers-reduced-motion: reduce` media emulation matched and produced no
   animation/transition duration above 1 ms on representative owner, barber, and
-  customer surfaces. The agent also visually inspected owner Staff and barber
-  Schedule; final product-owner confirmation remains for both carried items.
+  customer surfaces. The measured 2026-08-05 continuation repeated real media
+  emulation and the visible Staff/Schedule review, closing both carried items.
 - Preliminary LR-033: at all four viewports, a restored owner deep link showed only the
   neutral session shell before resolving to Owner Staff; a stale session fell
   back to login without flashing another workspace.
@@ -114,9 +126,8 @@ is restored: shop draft, hiring Off with no note/count, owner provider Off,
 Bruno qualified for both active services, no pending shift request, and no
 closure or booking created.
 
-**Deferred action:** the product owner may later run the responsive owner/barber/
-customer browser acceptance and record the result. Until then P2-08 and Phase 2
-remain open even though work has begun on P3-01 at the owner's direction.
+**Remaining action:** finish exhaustive keyboard traversal plus native
+hours/closure mutations. Until then P2-08 and Phase 2 remain open.
 
 ### P2-07 availability engine — verified complete
 
@@ -501,14 +512,13 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Run P3-09 product-owner browser acceptance using the consolidated checklist.**
-The change-proposal/customer-response path, remaining Phase 3 operations, and
-final automated gate are complete. Record failures, fix them, and retest the
-affected journeys. Do not record the skipped browser check as passed.
-
-P2-08's product-owner browser pass was explicitly deferred on 2026-08-02. Its
-backend race gate remains proven (matrix 85/85 twice after a clean replay), but
-the skipped browser acceptance is not a pass and Phase 2 remains formally open.
+**Finish the explicit skips in the consolidated P3-09 browser checklist.** The
+change-proposal/customer-response path and responsive role sweep passed on
+2026-08-05. Remaining work is exhaustive keyboard traversal, native Shop Setup
+hours/closure mutation, duplicate/exact/preferred/instant booking, and the
+time-bound/walk-in/payment/notification/closeout journeys. Record failures, fix
+them, and retest affected routes. P2-08 and Phase 2 remain open for their two
+skipped checks; P3-09 and Phase 3 remain open for the remaining journey rows.
 
 Two follow-ups from the P2-08 work, neither blocking:
 

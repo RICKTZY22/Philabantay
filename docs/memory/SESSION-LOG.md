@@ -2117,3 +2117,28 @@ without ever handling the credential.
 
 Phase 3 also remains **entirely uncommitted** — 50 dirty files including five new
 migrations — which is a real risk independent of testing.
+
+## 2026-08-05 — Codex — browser acceptance resumed; two frontend defects fixed
+
+- Executed the 2026-08-02 browser-acceptance handoff against the real
+  `localhost:5174` web app, API `:4000`, and local Supabase. The backend matrix
+  was not rerun because no API, migration, or Supabase file changed.
+- Fixed the missing Owner Barbers H1 and the intrinsic Barber Shift Calendar
+  width that overflowed at 320 px. Reverification at 1280×800, 390×844,
+  375×812, and 320×800 produced zero overflow, clipping, or unlabelled controls
+  on the repaired surfaces.
+- Passed real reduced-motion media emulation, visible Staff/Schedule review,
+  LR-033 no-flash restore, owner readiness/provider/hiring/stale-state flows,
+  barber read-only schedule/request/attendance, and responsive customer
+  discovery/detail/appointments/chat/settings.
+- Ran one real manual booking through owner acceptance and barber visibility;
+  customer rejected one proposal, accepted a fresh proposal, saw a barber delay,
+  rescheduled through offered availability, and cancelled the temporary booking.
+  Check-in before its window correctly refused; timestamps were not altered.
+- Explicitly skipped exhaustive Tab/Enter/Space traversal, Chromium-native
+  hours/closure mutations, and the remaining time-bound/operational P3-09 rows.
+  Therefore P2-08, Phase 2, P3-09, and Phase 3 remain open.
+- Cleanup left the dev shop draft, original details/hours/services restored,
+  hiring/provider capability off, Bruno qualified for both services, no closure,
+  the temporary booking cancelled, the shift request declined, and all roles
+  signed out. The local web/API servers were restarted after one process exit.

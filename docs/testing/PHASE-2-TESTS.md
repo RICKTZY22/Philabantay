@@ -416,6 +416,32 @@ On 2026-08-02 the product owner explicitly deferred/skipped that acceptance and
 directed P3-01 to start. This is **not a pass**: P2-08 and Phase 2 remain open
 evidence while Phase 3 work proceeds.
 
+### Browser continuation — 2026-08-05 (partial; still open)
+
+The browser handoff was resumed against the real stack. Owner provider and
+qualification mutations, publish readiness refusal, details/service
+save-and-restore, Hiring Off → Hiring → Full → Off, publish/unpublish, and the
+two-tab version conflict all passed. Barber read-only schedule/request and
+customer discovery/real booking/chat entry also passed. The full Phase 3-linked
+record is in the
+[P3-09 checklist](P3-09-MANUAL-BROWSER-CHECKLIST.md#execution-record--2026-08-05-partial-phase-3-remains-open).
+
+The continuation found and fixed a missing H1 on Owner Barbers and a real
+320 px Barber Schedule/calendar overflow. Reverification at 1280×800, 390×844,
+375×812, and 320×800 measured zero overflow, clipping, or unlabelled controls on
+the repaired surfaces. Real reduced-motion media emulation matched and reduced
+motion to `0.00001s`; the visible Staff/Schedule review passed. LR-033 also
+passed again: a signed-out protected deep link showed only the neutral restore
+shell before login, with no private-content flash. These observations close the
+carried P2-06 reduced-motion/visible-workflow follow-up and P1-02 LR-033 item.
+
+P2-08 and Phase 2 still remain open. Exhaustive keyboard traversal could not be
+driven by the browser-control layer, and Chromium native date/time inputs did
+not emit the React change event needed for the hours and closure mutation checks.
+Those checks are explicitly skipped, not passed. The fixture finished draft,
+with original details/hours/services/capabilities/qualifications restored and
+zero closures.
+
 ---
 
 ## Findings {#findings}

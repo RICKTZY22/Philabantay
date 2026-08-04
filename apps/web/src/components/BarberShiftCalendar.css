@@ -134,3 +134,32 @@
 .bsc-request-times label { display: grid; flex: 1; gap: 3px; }
 .bsc-request-message-row { align-items: stretch; }
 .bsc-form-ok { margin: 0; color: #367044; }
+
+@media (max-width: 420px) {
+  /* The desktop 4:3 cells imply a ~45px minimum width from their 34px
+     minimum height. Seven of those cannot fit inside the 320px workspace and
+     used to widen the entire schedule page. On phones, let the grid own each
+     column width while preserving a comfortable tap height. */
+  .bsc-cell {
+    aspect-ratio: auto;
+    min-height: 36px;
+  }
+
+  .bsc,
+  .bsc-grid,
+  .bsc-day-card,
+  .bsc-request-form {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .bsc-request-form > div {
+    flex-direction: column;
+  }
+
+  .bsc-request-form input,
+  .bsc-request-form select,
+  .bsc-request-form .btn {
+    width: 100%;
+  }
+}

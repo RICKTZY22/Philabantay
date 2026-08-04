@@ -117,6 +117,11 @@ api with RUN_LOCAL_SUPABASE_TESTS=1
 
 All-workspace typecheck, zero-warning ESLint, API/web production build,
 `git diff --check`, clean database reset, and database lint with zero findings
-passed on the same final tree. Browser acceptance was not run; it remains with
-the product owner in
+passed on the same final tree. At that 2026-08-02 gate, browser acceptance was
+not run; its checklist is
 [P3-09-MANUAL-BROWSER-CHECKLIST.md](P3-09-MANUAL-BROWSER-CHECKLIST.md).
+
+Browser acceptance was partially executed on 2026-08-05. Responsive role
+surfaces plus one real manual booking/owner-decision/proposal/reschedule/cancel
+journey passed after two frontend fixes; the exact passed and skipped rows are
+recorded in the checklist. P3-09 and Phase 3 remain open.

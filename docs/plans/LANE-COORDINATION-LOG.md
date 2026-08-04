@@ -2118,3 +2118,17 @@ zero-finding DB lint, typecheck, lint, build, and diff check. The product owner
 owns the remaining P3-09 browser/a11y journey lane using the consolidated manual
 checklist. Do not begin Phase 4 or mark Phase 3 accepted until that evidence is
 recorded or the owner explicitly directs otherwise.
+
+## 2026-08-05 — Codex — browser acceptance continuation
+
+Resumed the P2-08/P3-09 browser handoff on the real local stack. Fixed and
+reverified two frontend-only defects: Owner Barbers now has a semantic H1, and
+Barber Shift Calendar/request controls no longer force horizontal overflow at
+320 px. Responsive role counts, stale state, real reduced motion, LR-033, and a
+manual booking → owner acceptance → proposal reject/accept → delay → live
+reschedule → cancellation path are recorded in the testing docs.
+
+No backend, migration, or SQL file changed; matrix was not rerun. Browser
+acceptance remains partial because native date/time mutation, exhaustive
+keyboard traversal, and the remaining P3-09 operational journeys were skipped.
+Fixture cleanup is complete and the dev shop is draft.

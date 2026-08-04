@@ -34,6 +34,10 @@
 .owner-performance-card { padding: 18px; display: grid; gap: 13px; align-content: start; }
 
 .owner-performance-head { display: flex; align-items: center; gap: 12px; }
+.owner-barbers-workspace { display: grid; gap: 18px; }
+.owner-barbers-heading { display: grid; gap: 5px; }
+.owner-barbers-heading h1 { margin: 0; }
+.owner-barbers-heading p { margin: 0; max-width: 68ch; }
 .owner-performance-id { display: grid; min-width: 0; }
 .owner-performance-id strong { font: 700 1.2rem 'Kalam', cursive; }
 .owner-performance-id .muted { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

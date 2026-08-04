@@ -875,59 +875,65 @@ function OwnerBarbersPerformance({ staff, appointments }: {
     }
   }).sort((left, right) => right.member.barber.rating - left.member.barber.rating)
 
-  if (rows.length === 0) {
-    return (
-      <section className="owner-paper-card owner-section-card">
-        <p className="muted">Wala pang barbers sa roster.</p>
-      </section>
-    )
-  }
-
   return (
-    <div className="owner-performance-grid">
-      {rows.map(({ member, completedCount, noShows, noShowRate, revenue, upcomingCount }) => {
-        const scheduledDays = new Set<number>(member.rules.map((rule) => rule.weekday))
-        const onShift = member.barber.shift_status === 'on'
-        return (
-          <section className="owner-paper-card owner-performance-card" key={member.barber.id} aria-label={`Performance ni ${member.barber.profile.full_name}`}>
-            <header className="owner-performance-head">
-              <Avatar name={member.barber.profile.full_name} size={52} />
-              <div className="owner-performance-id">
-                <strong>{member.barber.profile.full_name}</strong>
-                <span className="muted">{member.barber.bio ?? 'Walang bio pa.'}</span>
-              </div>
-              <span className={`owner-shift-badge ${onShift ? 'is-on' : 'is-off'}`}>{onShift ? 'On shift' : 'Off shift'}</span>
-            </header>
+    <section className="owner-barbers-workspace" aria-labelledby="owner-barbers-title">
+      <header className="owner-barbers-heading">
+        <span className="owner-card-kicker">team insights</span>
+        <h1 id="owner-barbers-title">Barber performance</h1>
+        <p className="muted">Ratings, workload, upcoming visits, at customer no-shows ng active roster.</p>
+      </header>
 
-            <div className="owner-performance-rating">
-              <span className="owner-performance-stars" aria-label={`${member.barber.rating.toFixed(1)} out of 5 stars`}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <DoodleIcon key={star} name="star" size={19} className={star <= Math.round(member.barber.rating) ? 'is-lit' : 'is-dim'} />
-                ))}
-              </span>
-              <strong>{member.barber.rating.toFixed(1)}</strong>
-              <span className="muted">({member.barber.rating_count} rating{member.barber.rating_count === 1 ? '' : 's'})</span>
-              {member.barber.accepting_bookings
-                ? <span className="pill pill-on owner-perf-accepting">Accepting bookings</span>
-                : <span className="pill pill-off owner-perf-accepting">Bookings paused</span>}
-            </div>
+      {rows.length === 0 ? (
+        <div className="owner-paper-card owner-section-card">
+          <p className="muted">Wala pang barbers sa roster.</p>
+        </div>
+      ) : (
+        <div className="owner-performance-grid">
+          {rows.map(({ member, completedCount, noShows, noShowRate, revenue, upcomingCount }) => {
+            const scheduledDays = new Set<number>(member.rules.map((rule) => rule.weekday))
+            const onShift = member.barber.shift_status === 'on'
+            return (
+              <section className="owner-paper-card owner-performance-card" key={member.barber.id} aria-label={`Performance ni ${member.barber.profile.full_name}`}>
+                <header className="owner-performance-head">
+                  <Avatar name={member.barber.profile.full_name} size={52} />
+                  <div className="owner-performance-id">
+                    <strong>{member.barber.profile.full_name}</strong>
+                    <span className="muted">{member.barber.bio ?? 'Walang bio pa.'}</span>
+                  </div>
+                  <span className={`owner-shift-badge ${onShift ? 'is-on' : 'is-off'}`}>{onShift ? 'On shift' : 'Off shift'}</span>
+                </header>
 
-            <div className="owner-perf-days" role="img" aria-label={`Naka-schedule ${scheduledDays.size} araw kada linggo`}>
-              {WEEKDAY_LABELS.map((label, day) => (
-                <span key={label} className={`owner-perf-day${scheduledDays.has(day) ? ' is-on' : ''}`}>{label.slice(0, 3)}</span>
-              ))}
-            </div>
+                <div className="owner-performance-rating">
+                  <span className="owner-performance-stars" aria-label={`${member.barber.rating.toFixed(1)} out of 5 stars`}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <DoodleIcon key={star} name="star" size={19} className={star <= Math.round(member.barber.rating) ? 'is-lit' : 'is-dim'} />
+                    ))}
+                  </span>
+                  <strong>{member.barber.rating.toFixed(1)}</strong>
+                  <span className="muted">({member.barber.rating_count} rating{member.barber.rating_count === 1 ? '' : 's'})</span>
+                  {member.barber.accepting_bookings
+                    ? <span className="pill pill-on owner-perf-accepting">Accepting bookings</span>
+                    : <span className="pill pill-off owner-perf-accepting">Bookings paused</span>}
+                </div>
 
-            <dl className="owner-performance-stats">
-              <div><dt>Completed cuts</dt><dd>{completedCount}</dd></div>
-              <div><dt>Revenue</dt><dd>{money(revenue)}</dd></div>
-              <div><dt>Upcoming</dt><dd>{upcomingCount}</dd></div>
-              <div><dt>No-shows</dt><dd>{noShows} <small>({noShowRate}%)</small></dd></div>
-            </dl>
-          </section>
-        )
-      })}
-    </div>
+                <div className="owner-perf-days" role="img" aria-label={`Naka-schedule ${scheduledDays.size} araw kada linggo`}>
+                  {WEEKDAY_LABELS.map((label, day) => (
+                    <span key={label} className={`owner-perf-day${scheduledDays.has(day) ? ' is-on' : ''}`}>{label.slice(0, 3)}</span>
+                  ))}
+                </div>
+
+                <dl className="owner-performance-stats">
+                  <div><dt>Completed cuts</dt><dd>{completedCount}</dd></div>
+                  <div><dt>Revenue</dt><dd>{money(revenue)}</dd></div>
+                  <div><dt>Upcoming</dt><dd>{upcomingCount}</dd></div>
+                  <div><dt>No-shows</dt><dd>{noShows} <small>({noShowRate}%)</small></dd></div>
+                </dl>
+              </section>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }
 
