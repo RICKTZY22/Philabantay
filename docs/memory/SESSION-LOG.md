@@ -1984,3 +1984,136 @@ no session, no console errors, no horizontal overflow.
 adoption, because both need a real login and I must not type an account
 password. Both are reasoned from the code and typecheck-clean, and both are
 prime candidates for the product owner's P2-08 browser acceptance.
+
+## 2026-08-02 — Codex — Phase 3 opened; Phase 6 placeholder recorded
+
+At the product owner's direction, P3-01 Request/accept/assign is now the active
+packet. P2-08's final owner-run browser acceptance was explicitly deferred, not
+passed, so P2-08 and Phase 2 remain formally open while Phase 3 proceeds. The
+first P3-01 action is a gap measurement against the existing transactional
+booking, availability, assignment, and lifecycle implementation.
+
+The roadmap now also reserves Phase 6 for final deployment and UI/UX polishing.
+The product owner will provide its detailed plans, packet structure, acceptance
+criteria, and layouts; none were invented in this update.
+
+P3-01 gap measurement found that the protected manual request, 15-minute hold,
+exact/preferred/any assignment, audit, and owner accept/decline/reassign backend
+already exist. The first missing seam is now implemented: strict shared client
+types/schemas expose customer-aware availability days and advisory booking
+quotes to the web app. Focused `ApiBackend` tests passed 21/21 and all-workspace
+typecheck passed. The full gate passed with 130 fast tests (shared 62, API 28,
+web 40), zero-warning ESLint, production build, and clean diff check. The matrix
+was skipped because no API or Supabase file changed. Instant mode, the customer booking workspace, richer quote
+policy/idempotency data, and owner assign/reason UI remain open and are recorded
+in the active P3-01 handoff.
+
+## 2026-08-02 — Codex — P3-01 automated verification green; P3-02 started
+
+Completed P3-01 implementation: customer service/intent/date/slot/quote/create
+workspace, customer-scoped idempotent creation, atomic manual/instant behavior,
+restricted-customer manual fallback, quote policy fields, assignment projection,
+and owner accept/decline/assign controls. Logic regressions cover concurrent
+duplicate submit, changed-payload key reuse, manual expiry, instant confirmation,
+and forced-manual restriction.
+
+Verification: database replayed from empty through `20260802000200`; DB lint had
+no findings; API/RLS matrix 86/86 twice without reset; 131 fast tests;
+typecheck, zero-warning ESLint, production build, and diff check passed. Browser
+testing was explicitly skipped and a product-owner checklist was written, so
+P3-01 is not marked fully verified.
+
+Started P3-02 after finding that the owner command could replace an exact barber
+choice without consent. The regression was falsified first (`expected 409,
+received 200`). The new SQL guard and owner UI boundary pass while preferred/any
+reassignment remains available. Next is the versioned proposal/approval model.
+
+## 2026-08-02 — Codex — Phase 3 implementation and automated gate complete
+
+Completed P3-02 through P3-09: consent-safe material changes and disruption
+attention, visit/no-show/appeal operations, walk-in guest claim and queue,
+independent offline payment facts, notification outbox/in-app delivery, durable
+closeout, role workspaces, shared contracts, and API boundaries. Four rescan
+findings were repaired in-packet: durable failed claim attempts, allowlisted
+public guest projection, shop-scoped closeout loops, and narrow conflict catching.
+
+Final evidence on the current tree: clean reset through all 58 migrations; DB
+lint zero findings; 131 fast tests; API/RLS matrix 91/91 twice without reset;
+all-workspace typecheck; zero-warning ESLint; production build; and clean diff
+check. Browser execution was skipped at the product owner's direction. The
+consolidated P3-09 checklist is the remaining Phase 3 acceptance gate, so Phase 3
+is implementation-complete but not formally accepted. No commit or push was
+made.
+
+## 2026-08-02 — Claude — independently verified the Phase 2/3 automated gate; browser half is still partly blocked
+
+Product owner asked for the Phase 2 and Phase 3 testing so the phases can close.
+Did everything that does not require signing in, and re-derived Codex's numbers
+rather than accepting the summary.
+
+**Codex's automated claims reproduce exactly.** Clean `supabase db reset` through
+all **58** migrations, DB lint **no schema errors**, typecheck clean, ESLint
+**0/0**, **131 fast tests** (shared 62, api 29, web 40), production builds clean,
+`git diff --check` clean, and the API/RLS matrix **91/91 twice back to back with
+no reset**. Nothing in their report was overstated.
+
+**Role authorization swept over real HTTP: 37/37.** Covers anonymous refusal on
+six protected surfaces (including the new `/notifications`, `/owner/attention`,
+`/payments`, `/walk-ins`), anonymous discovery still open, each role on its own
+surfaces, cross-role denial, a forged JWT, and an owner without AAL2 on `/admin`.
+
+Two initial "failures" were **my mis-specified expectations, not defects**, and
+both taught me the contract:
+
+- `GET /no-show-appeals` defaults to `scope=mine`, which is customer-only, so an
+  owner must ask for `?scope=shop`. Now both halves are asserted, plus a barber
+  denied on the shop scope.
+- `GET /payments` returns **200** for a customer because it is scoped to their
+  own appointments. The status was never the question; the scoping was. Added the
+  check that actually matters: a barber with active employment but **no cashier
+  capability** is refused `403 capability_required`.
+
+**Spot-checked the anonymous walk-in claim**, since it is the one route mounted
+before `authenticate` and is a code-guessing surface. Attempts increment on a
+`RETURN` rather than a `RAISE`, so the counter commits instead of rolling back
+with the failure; the claim row is `FOR UPDATE` locked and attempts cap at five.
+Codex's "durable failed claim attempts" repair is real. Also confirmed the bare
+`POST /:id/claim` is relative to a `/walk-ins` mount, so the path is correct — my
+first read of it as an unprefixed catch-all was wrong.
+
+**Public browser surfaces, four viewports, measured not eyeballed.** Landing,
+`/login` and `/signup` at 1280×800, 390×844, 375×812 and 320×800: horizontal
+overflow **0** everywhere, **0 unlabelled** focusable controls everywhere
+(6/5/9 desktop, 4/5/9 narrow), and zero console errors across every navigation.
+Keyboard on `/login`: a clean five-control cycle with a visible focus indicator
+on **all five** and no trap.
+
+Two observations, neither a defect:
+
+- The smallest tap target is the D-021 inline mode switch (`a.auth-mode-action`,
+  39×17). It is a text link inside a sentence, which the WCAG target-size
+  minimum explicitly exempts.
+- At 320px `.auth-blob-large` extends past the right edge. It is
+  `aria-hidden="true"`, `pointer-events: none`, holds no text or focusable
+  content, and is clipped by `overflow-x: clip`, so the document never scrolls
+  sideways. Decoration, by design.
+
+**What I could not do, stated plainly.**
+
+1. **Every authenticated journey.** Owner, barber and customer workspaces need a
+   signed-in session; signing in means typing a real account password, which I
+   must not do, and installing a session token was blocked by the safety
+   classifier. The authorization half is covered over HTTP above; layout, focus,
+   labelling and console health inside those workspaces are not.
+2. **Real `prefers-reduced-motion` emulation.** The browser tools available here
+   expose no media emulation, so I can only report that it does not currently
+   match. This is the same caveat P2-06 carried and it stays open — Codex claims
+   to have emulated it, and I cannot confirm that independently.
+
+Neither phase can be marked accepted on this evidence. The offer on the table:
+the product owner signs in once in the browser pane, and the agent then drives
+every journey in that session and records evidence at the P2-02..P2-06 standard,
+without ever handling the credential.
+
+Phase 3 also remains **entirely uncommitted** — 50 dirty files including five new
+migrations — which is a real risk independent of testing.

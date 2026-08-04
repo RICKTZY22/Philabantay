@@ -70,6 +70,7 @@ schema parse fails closed if an unexpected field reaches the response.
 | Authenticated catalogue compatibility | `/shops`, `/barbers`, `/barbers/available`, `/services` |
 | Availability | owner-authoritative `/owner/staff/:barberId/shifts` weekly/exception routes, read-only barber schedule reads, `/availability/slots` |
 | Bookings | `/bookings`, versioned lifecycle commands, timeline, `/shops/:id/bookings` |
+| Phase 3 operations | booking change proposals/delays/appeals, `/walk-ins`, `/payments`, `/notifications`, `/owner/attention`, `/owner/closeouts`, cashier capability, and public `/walk-ins/:id/claim` |
 | Owner reporting | `/shops/:id/stats`, `/shops/:id/staff`, `/shops/:id/barbers/performance` |
 | Chat | `/conversations`, `/conversations/staff`, `/conversations/:id/messages`, `/messages`, read action |
 | Employment | hiring shops, applications, join codes, approval, attendance, canonical `/barber/shift-change-requests`, owner approve/decline, staff notes |
@@ -118,10 +119,27 @@ status updates are revoked.
 
 The API server runs an idempotent one-minute worker that expires unanswered
 requests and completes finished cuts whose customer confirmation window ended.
-Service names, durations, and prices are snapshotted onto appointments, so
-historical reports do not change when the service menu is edited. Until payment
-collection is modeled, `revenue_cents` is retained as a compatibility alias for
-`completed_service_value_cents` and is marked `revenue_is_estimate: true`.
+Service names, durations, prices, timezone, and cancellation cutoff are
+snapshotted onto appointments, so historical policy and service facts do not
+change when the shop edits its current configuration. `revenue_cents` remains a
+legacy compatibility alias for completed service value; Phase 3 payment records
+are separate collection/correction/refund/void facts and never change visit
+state implicitly.
+
+## Phase 3 operational commands
+
+The authenticated Phase 3 router exposes participant/shop-scoped change
+proposals, delays, appeals, attention items, walk-ins, payments, notifications,
+cashier capability, and closeout. The one public mutation,
+`POST /walk-ins/:id/claim`, is mounted before bearer authentication and returns
+an allowlisted guest projection without staff notes or creator identity.
+
+Operational writes call versioned or idempotent PostgreSQL commands. Appointment
+change acceptance rechecks the canonical slot gate; rejection/conflict leaves
+the original untouched. Guest-code failures return a command result rather than
+raising, so the attempt count commits. Payment mutation appends events separately
+from visit state. Notification attempts and closeout runs are replay-safe; an
+unresolved fact creates attention instead of an inferred state.
 
 ## Tests
 

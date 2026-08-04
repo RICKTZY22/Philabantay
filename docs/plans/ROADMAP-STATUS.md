@@ -1,6 +1,6 @@
-# V1 roadmap status - 2026-07-30
+# V1 roadmap status - 2026-08-02
 
-Single source of truth for packet-by-packet progress across all five phases.
+Single source of truth for packet-by-packet progress across all six phases.
 Records **verified evidence**, not visual completion. When a claim is only
 partially verified, it says so. Per-test detail lives in
 [`../testing/`](../testing/README.md).
@@ -13,9 +13,11 @@ Legend: ✅ done and verified · 🔨 in progress · ⬜ not started · 🧹 nee
 ## Progress at a glance
 
 - **Phase 1 (foundation + identity): ✅ complete** — 7/7 packets, automated gate green.
-- **Phase 2 (shops + workforce + availability): 🔨 in progress** — P2-01 through P2-07 are verified. P2-08's backend race gate is proven and its frontend fixes/code gate are ready; final product-owner browser acceptance remains.
-- Phases 3–5: ⬜ not started.
-- **Overall: 14 of ~39 packets** verified complete.
+- **Phase 2 (shops + workforce + availability): 🔨 closeout deferred** — P2-01 through P2-07 are verified. P2-08's backend race gate and frontend code gate are proven, but the product owner explicitly deferred the final browser acceptance on 2026-08-02. This is not a pass and Phase 2 is not formally closed.
+- **Phase 3 (booking + live operations): 🔨 browser acceptance pending** — P3-01 through P3-09 are implemented and the clean automated gate is green; the product owner will run the written browser journey gate before formal closure.
+- Phases 4–5: ⬜ not started.
+- Phase 6: ⬜ product-owner plan pending; packet count is intentionally TBD.
+- **Overall: 14 verified packets; 39 packets are currently defined, with Phase 6 still TBD.**
 
 ## Phase 1 — foundation and identity ✅
 
@@ -42,19 +44,39 @@ Automated gate re-run and verified on 2026-07-23 (see "Latest gate" below).
 | P2-05 Provider capabilities | ✅ | Explicit shop-scoped owner provider profile without role switching; owner-authoritative per-service barber/owner qualifications, accepting state, barber requests, immutable audit, version/idempotency/race guards, Staff/Professional UI. Clean reset through `20260727000300`; matrix 59/59; 93 fast tests; typecheck/build/diff and authenticated browser smoke green. |
 | P2-06 Schedule authority | ✅ | Slices 1, 2a, and 2c are implemented and locally verified. Migration `20260728000600` drops legacy self-write RPCs, requires request idempotency keys, and enforces pending/resolved invariants. Canonical owner routes version weekly patterns and exceptions; the barber view is read-only and submits structured change requests; approval applies the exception, links it, advances the revision, and appends an event transactionally. Clean reset through `00600`; matrix 69/69 twice; 116 fast tests; typecheck/lint/build/DB-lint/diff green. Authenticated desktop/mobile smoke passed weekly and exception edits, approval, stale-session refresh, keyboard-native controls, reduced motion, and no console errors. Follow-up `20260728000700` closes the last known gap: the booking-conflict guard now takes the resulting window, so narrowing hours or approving a `different_hours` request is refused when it would leave an active booking outside availability (previously only a full day off was checked, and times were ignored). Regression covers the narrowed-window refusal and a wide window still being accepted. **Workflow scenarios 1-4 functionally verified 2026-07-30** against the live stack through the real API and browser UI with no SQL shortcuts: concurrent owner writes gave one 200 and one 409, a barber token got 403 on the owner route and `/schedule` rendered zero time inputs, approval alone wrote the exception and advanced the revision, and both removing and narrowing availability on a booked date returned `409 schedule_has_active_bookings` naming exactly 1 booking while a still-covering window was accepted. Accessibility recorded at the same standard as P2-02..P2-05: **0 unreachable and 0 unlabelled** interactive controls on both surfaces (owner 47/39, barber 41/40, remainder disabled), all 14 shift-editor time inputs labelled, and reduced motion satisfied structurally because `BarberShiftCalendar.css` and `DashboardPage.css` declare no motion at all while `OwnerStaffPanel.css` carries a blanket `prefers-reduced-motion` guard. **Signed off 2026-07-30 by the product owner on the strength of that agent-executed functional and accessibility pass, accepted in lieu of a personal visible-workflow review.** Two caveats stay on the record: reduced motion was verified structurally rather than by emulating the OS setting, and no human has visually reviewed the two surfaces. `ModalPortal` focus was listed here in error and is re-scoped to the landing/auth slice, since no P2-06 surface imports it. |
 | P2-07 Availability engine | ✅ | **All ten required inputs implemented and verified 2026-07-30.** Measured before building: the authoritative claim gate `private.require_bookable_appointment_slot` contained zero references to `lifecycle_status`, `shop_operating_hours`, `shop_closures`, `service_qualifications`, `owner_provider_profiles`, `chair_count`, `default_buffer_min`, or `booking_mode`. Two bypasses were reproduced live through the real HTTP API, both `201 Created`: a customer booked a barber at a `draft` shop that the public catalogue correctly refused to list, and a customer booked a date the owner had marked as a full-day closure. Ten forward migrations `20260730000100`..`01000` add the booking window (`min_lead_minutes`, nullable `max_advance_days`), per-service `buffer_min`, BOOK-02 assignment intent (`barber_preference`, `requested_barber_id`, `assignment_source`, `assignment_reason`, `booked_buffer_min`), a qualification backfill, grant-on-hire, the rebuilt gate, the slot projection, and the read-only quote. The gate now enforces publication, the shop's own timezone instead of a hardcoded Manila, lead/advance bounds, opening hours, closures and replacement hours, qualification, a buffer-aware provider gap, and chair capacity as **peak concurrency** under a new shop-scoped advisory lock (D-023). The projection and quote answer by calling that same gate per candidate rather than reimplementing it, so an offered slot is a claimable slot by construction (D-022). Express gained `GET /availability`, `POST /bookings/quote`, and five error codes (`chairs_unavailable`, `shop_not_bookable`, `outside_shop_hours`, `outside_booking_window`, `provider_not_qualified`, plus `no_provider_available`); the old Express slot math is deleted. Gate on a database replayed from empty through all 52 migrations: typecheck, lint, API + web production build, **124 fast tests** (shared 56, api 28, web 40), **matrix 81/81 twice back to back with no reset**, DB lint no schema errors, `git diff --check` clean. The matrix gained 12 gated regressions, including owner-provider bookability and the publish readiness check: publication refusal with a positive control, closures and replacement hours, qualification revoke/restore, lead and advance bounds, the cleanup buffer, chair capacity across two providers with a two-chair control and a concurrent race, projection-equals-claim, and exact/preferred/any intent. Two live end-to-end suites through the real API passed 14/14 and 16/16 and restored the dev shop to `draft`; the matrix then passed 81/81 twice again with zero published shops left behind. **A pre-push self-review found three more defects that no test covered, all fixed in `20260730000600` and `20260730000700`:** automatic assignment was not actually ordered, because a sub-select’s sort does not survive a UNION ALL, so `any` could pick an arbitrary free provider and retries were not guaranteed to agree; an unrecognised `shops.timezone` had become a 500 that made a shop entirely unbookable, since the engine now evaluates wall-clock rules in the shop’s zone while nothing had ever validated it beyond a length check; and quote and claim disagreed about *why* an `any`/`preferred` slot was refused. The assignment regression was falsified before being trusted — inverting the ordering in the live database made it fail. The quote also now returns one object rather than PostgREST’s one-row array, the two new authenticated endpoints carry the same 60/min slot limiter as the anonymous route because P2-07 made slot computation far more expensive, and `slot_is_bookable` no longer swallows `42501`. **Input 4 completed 2026-07-30 (Q20 answered, D-028).** A shop whose only provider was its owner could publish, appear in the catalogue, and refuse every customer — availability returned `200` with zero slots and a booking returned `409 no_provider_available` — because the engine never read `owner_provider_profiles` at all. `20260730000800`/`00900` give a provider-enabled owner a one-way-mirrored `barbers` shadow row as the foreign-key anchor and teach the gate, the balanced-assignment order, and the slot projection about them; an owner has no roster, so their working window is the shop own opening hours and the grid anchors to opening time. Three pre-existing guards were extended rather than weakened. `20260730001000` adds the missing readiness check so a shop cannot publish with nobody bookable (D-029). Verified live: booking the owner by name returned `201`, the same request on a Sunday returned `409 outside_shop_hours` for a Mon-Sat shop, and the owner could accept, check in, and start the visit. Matrix **81/81 twice**. |
-| P2-08 Race gate + smoke journeys | 🔨 | **Backend race gate proven 2026-08-01; no migrations were needed.** The four widened races all held, the three new regressions were falsified, and matrix 85/85 passed twice on a clean replay. Six focused frontend files fix the defects found, and the deterministic gate passed: 129 fast tests, typecheck, ESLint, production build, and diff check. An agent-run browser pass recorded the required four viewports, interactive counts, keyboard, reduced motion, LR-033, stale-session, and console evidence in [Phase 2 tests](../testing/PHASE-2-TESTS.md#p2-08), but this is preliminary. **Final product-owner browser acceptance remains before P2-08 or Phase 2 can close.** Matrix intentionally not rerun because no API/Supabase file changed. The customer slot picker remains the explicitly excluded feature in open item 6. |
+| P2-08 Race gate + smoke journeys | 🔨 deferred acceptance | **Backend race gate proven 2026-08-01; no migrations were needed.** The four widened races all held, the three new regressions were falsified, and matrix 85/85 passed twice on a clean replay. Six focused frontend files fix the defects found, and the deterministic gate passed: 129 fast tests, typecheck, ESLint, production build, and diff check. An agent-run browser pass recorded the required four viewports, interactive counts, keyboard, reduced motion, LR-033, stale-session, and console evidence in [Phase 2 tests](../testing/PHASE-2-TESTS.md#p2-08), but this is preliminary. **The product owner explicitly deferred/skipped final browser acceptance on 2026-08-02. This is not a pass; P2-08 and Phase 2 remain open while P3 work proceeds.** Matrix intentionally not rerun because no API/Supabase file changed. The customer slot picker moves into its planned P3 booking scope rather than being backfilled as P2 smoke polish. |
 
 The agent's preliminary P2-08 pass exercised real reduced-motion media
 emulation and visually inspected the owner Staff/barber Schedule workflows.
-The product owner will perform the final browser acceptance, so the two carried
-P2-06 follow-ups remain open until that result is recorded.
+The product owner deferred the final browser acceptance on 2026-08-02, so the
+two carried P2-06 follow-ups remain open until that result is recorded.
 
-## Phases 3–5 ⬜
+## Phase 3 — booking and live operations 🔨
 
-- Phase 3 (booking + live operations): P3-01…P3-09.
+P3-01 through P3-09 are **implementation-complete and automated-green as of
+2026-08-02**. Delivered scope includes manual/instant/idempotent booking;
+consent-safe change proposals and disruption attention; check-in, start, finish,
+confirmation and dispute; no-show appeals/strikes; walk-in claim/link/queue;
+offline payment facts; outbox/in-app delivery; and idempotent closeout that never
+guesses.
+
+Evidence on the final tree: empty-database replay through all 58 migrations,
+zero-finding DB lint, 131 fast tests, API/RLS matrix **91/91 twice** without a
+reset, all-workspace typecheck, zero-warning ESLint, production build, and clean
+diff check. See the [Phase 3 handoff](P3-09-PHASE-3-JOURNEY-HANDOFF.md).
+
+**Browser execution was skipped at the product owner's direction.** The owner
+will run the [consolidated manual checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md),
+so P3-09 and Phase 3 remain acceptance-pending rather than formally complete.
+
+## Phases 4–6 ⬜
+
 - Phase 4 (trust, insights, settings, workspaces): P4-01…P4-09, now including the
   **staff admin console** (see below).
 - Phase 5 (production hardening + rollout): P5-01…P5-06.
+- [Phase 6](06-PHASE-6-DEPLOYMENT-UI-UX-POLISH.md): final deployment and
+  product-owner-directed UI/UX polishing. Detailed plans, packet IDs, acceptance
+  criteria, and layouts remain with the product owner and are intentionally TBD.
 
 ### Staff admin console (Phase 4)
 
@@ -74,14 +96,14 @@ and adds the operator tools needed at PH scale:
 
 ## Needs polishing / open items
 
-1. **Phase 1 final browser/accessibility smoke (LR-033)** — the agent's preliminary P2-08 pass observed the neutral session-restore shell with no forbidden-content flash; final product-owner browser acceptance remains.
+1. **Phase 1 final browser/accessibility smoke (LR-033)** — the agent's preliminary P2-08 pass observed the neutral session-restore shell with no forbidden-content flash; final product-owner browser acceptance was deferred on 2026-08-02 and remains open.
 2. **Independent adversarial re-scan (P1-07)** — Codex wrote both the code and its tests; a fresh adversarial pass raises confidence before Phase 1 is formally locked.
 3. **Catalogue helper naming** — `is_legacy_catalogue_eligible_shop` now means "published + eligible"; rename for clarity in a later packet.
 4. **Remote rollout (Phase 5)** — the P2-04 hotfix and bounded hardening migrations/API intentionally remain local until the production-rollout phase selects and configures the hosted Supabase/API/web targets.
 4a. **P5-RL-01 `trust proxy` is not set (raised 2026-07-30).** `apps/api/src/app.ts` rate-limits on client IP and its own comment says to set `app.set('trust proxy', <hops>)` in production, but it is not set. Behind any proxy or CDN, `req.ip` becomes the proxy address and all traffic shares one bucket, so per-IP limits stop working and one abusive client can exhaust everyone's. Numeric hop count only, never `true`. Detail in [Phase 5](05-PHASE-5-PRODUCTION-ROLLOUT.md).
 4b. **P5-RL-02 rate-limit store is per-process (raised 2026-07-30).** `express-rate-limit` uses its default `MemoryStore`, so N API instances allow roughly N times the intended limit. Fine on one instance. Not a security hole on its own: join-code brute-force protection lives in the `employment_join_attempts` Postgres table and is already shared across instances. Decide the store before scaling out, preferring edge rate limiting over introducing Redis, which would be the project's first non-Postgres dependency.
-5. **P2-06 visible-workflow/reduced-motion follow-up** — the agent recorded a preliminary real-media and visual pass during P2-08; final product-owner browser confirmation remains.
-6. **Customer detail UI** — the real public-detail contract exists, but the customer-facing detail screen still needs to consume all of it; honest live availability remains P2-07. **Still open as of 2026-08-01.** The engine is honest and the screen is not built: a customer reads "Busy — puno ang chairs" off the barber's live shift status, which says nothing about whether tomorrow at 14:00 is free. `/availability` and `/bookings/quote` have no consumer. Frontend lane.
+5. **P2-06 visible-workflow/reduced-motion follow-up** — the agent recorded a preliminary real-media and visual pass during P2-08; final product-owner browser confirmation was deferred on 2026-08-02 and remains open.
+6. **Customer booking UI / P3-01 scope — implemented, browser pending.** The customer shop dialog now consumes `/availability` and `/bookings/quote`, collects exact/preferred/any intent, reviews real service/policy facts, and creates through the idempotent transactional command. Automated gates are green; product-owner browser acceptance remains.
 8. **No automated rendered-component tests exist for the web app (raised 2026-08-01).** 62 files and 11,690 lines of React are covered by three test files that exercise pure helpers (`access`, `appointmentStatus`, `philippineHeroTime`). There is no `@testing-library/react` and no jsdom, so no component or page is rendered in a unit test. The API has an 85-case local matrix; frontend regressions still depend on manual browser passes such as P2-08. ESLint covers `rules-of-hooks` and `exhaustive-deps`, but cannot prove a booking screen renders the right thing. Standing up the harness is a packet of its own; schedule it before frontend scope grows materially.
 9. **Three pre-existing high-severity `npm audit` advisories (raised 2026-08-01).** `postcss` path traversal via source-map auto-loading, and `react-router` / `react-router-dom` RSC-mode CSRF bypass. None were introduced by the ESLint install. We do not use RSC mode, so the router pair looks inert here, but both want a version bump with its own gate. Deliberately not bundled into an unrelated change.
 10. **`ARCHITECTURE.md` needs a real rewrite (raised 2026-08-01).** Every false statement of current fact is corrected and the mock sections are labelled history, but the narrative still walks through a `~1,500-line MockBackend`, a `bsh_mock_db_v1` localStorage blob, and `BroadcastChannel` realtime — all deleted 2026-07-24. It is one of the seven files `CLAUDE.md` orders every agent to read before changing code, so the rot has a real cost.
@@ -148,27 +170,25 @@ pass or a dedicated pre-launch polish slice, not mid-packet.
   CSS disables the crossfade and internal UI animations.
   This polish does not start P2-07 or change packet counts.
 
-## Latest automated gate (2026-08-01)
+## Latest automated gate (2026-08-02)
 
 Re-measured this session:
 
 ```text
 Typecheck: all workspaces passed
-Unit:      shared 61, api 28, web 40 (129 total; 57 integration skipped)
+Unit:      shared 62, api 29, web 40 (131 total; 62 integration skipped)
 Lint:      ESLint 9, 0 errors 0 warnings, all three workspaces
 Build:     API + web production build passed
 DB lint:   no schema errors
-Matrix:    API integration/direct-RLS workspace 85/85 twice back to back,
+Matrix:    API integration/direct-RLS workspace 91/91 twice back to back,
            no reset between runs, against a database replayed from empty
-           through all 53 migrations up to 20260730001100
-Browser:   preliminary agent instrumentation at 1280x800, 390x844,
-           375x812, 320x800;
-           0 overflow/clipped/unreachable/unlabelled, clean role consoles,
-           keyboard, real reduced motion, stale tabs, and LR-033 observed;
-           final product-owner acceptance pending
+           through all 58 migrations up to 20260802000500
+Browser:   Phase 3 acceptance not run; product-owner checklist pending.
+           Historical P2-08 preliminary instrumentation remains separate and
+           final P2-08 owner acceptance is also deferred, not passed.
 Diff:      git diff --check clean
-Tree:      P2-08 frontend closeout is uncommitted; main remains 2 commits ahead
-           of origin from the incoming clean handoff
+Tree:      P3-01..P3-09 implementation and roadmap updates are uncommitted; main was already
+           5 commits ahead of origin at the incoming clean handoff
 ```
 
 **Read "Lint: passed" in any block dated before 2026-08-01 as meaning nothing.**
@@ -201,25 +221,24 @@ hardening, P4021 catalogue-invariant checks, P2-04 ownerless-resolution and
 invitation-provenance regressions, and repeat-run fixture cleanup. Anonymous
 clients receive only the published shop's allowlisted public facts, future
 closures without private reasons, active services/prices, and ready+approved
-media through short-lived signed URLs. P2-07 is the latest completed packet;
-P2-08 remains active pending product-owner browser acceptance.
+media through short-lived signed URLs. Phase 3 is the latest implementation
+milestone; its browser acceptance and P2-08's browser acceptance remain open.
 The per-test breakdown lives in
 [`../testing/`](../testing/README.md).
 
 ## Next up
 
-**Finish P2-08's product-owner browser acceptance.** Its backend race gate is
-already proven, and the frontend fixes/code gate are ready. Record the owner's
-responsive owner/barber/customer result before marking P2-08 or Phase 2
-complete. Phase 3 has not started. Keep the customer slot picker visible as an
-explicit feature gap rather than folding it into this smoke-polish closeout.
+**Run the product-owner Phase 3 browser acceptance, then record the result.**
+P3-01 through P3-09 implementation and automated verification are green. The
+consolidated checklist covers the owner/barber/customer journeys and four
+required viewports without SQL shortcuts. It must not be recorded as passed
+until executed. P2-08 browser acceptance is likewise still deferred.
 
 Three follow-ups ride along rather than blocking anything:
 
-- the customer detail UI still does not consume the new `/availability` or
-  `/bookings/quote` contracts. The engine is honest now; the screen that shows it
-  is not built. This is the long-standing customer-detail-UI open item and it
-  belongs to the frontend lane;
+- Phase 3 browser acceptance is not run; use the written customer/owner responsive,
+  keyboard, reduced-motion, console, stale-session, duplicate-submit, manual,
+  and instant checklist;
 - the slot projection spends one subtransaction per candidate by design (D-022),
   measured at roughly fifty savepoints for a thirteen-hour day. That is fine at
   V1 volume. If a real shop's slot query ever gets slow, add a cheap pre-filter in

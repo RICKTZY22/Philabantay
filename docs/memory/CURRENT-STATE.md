@@ -2,7 +2,7 @@
 tags:
   - philabantay
   - current-state
-updated: 2026-08-01
+updated: 2026-08-02
 ---
 
 # Current state
@@ -11,9 +11,12 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 
 ## Active phase
 
-**Phase 2 — shops, workforce, and availability: in progress.** P2-08's final
-product-owner browser acceptance is the only remaining closeout. Phase 3 has
-not started.
+**Phase 3 — booking and live operations: implementation/automated gate complete,
+browser acceptance pending.** P3-01 through P3-09 are implemented. The product
+owner will run the consolidated browser checklist; it has not been run. The
+product owner explicitly deferred the
+remaining P2-08 browser acceptance; that evidence is skipped for now, not passed,
+so Phase 2 is still not formally closed.
 
 - P2-01 Shop lifecycle: verified complete.
 - P2-02 Shop facts: verified complete.
@@ -25,13 +28,56 @@ not started.
   agent evidence from P2-08 and await product-owner browser confirmation.
 - P2-07 Availability engine: **verified complete 2026-07-30**, all ten required
   inputs. Q20 was answered the same day (D-028).
-- P2-08 Race gate + frontend smoke: **in progress.** Backend matrix 85/85 twice
-  on the recorded clean replay; frontend fixes and the deterministic code gate
-  are green. Final product-owner browser acceptance remains.
+- P2-08 Race gate + frontend smoke: **acceptance deferred, still open.** Backend
+  matrix 85/85 twice on the recorded clean replay; frontend fixes and the
+  deterministic code gate are green. Final product-owner browser acceptance was
+  explicitly skipped for now on 2026-08-02 and must not be recorded as a pass.
+- P3-01 through P3-08: **implementation/automated verification complete.** The
+  final tree passed an empty replay through 58 migrations, zero-finding DB lint,
+  131 fast tests, matrix 91/91 twice, typecheck/lint/build/diff.
+- P3-09 Phase 3 journey gate: **product-owner browser acceptance pending.** No
+  browser result is claimed. Use the written consolidated checklist.
 
 ## Active packet
 
-### P2-08 race gate + responsive browser smoke — fixes ready, owner acceptance pending
+### P3-09 Phase 3 journey gate — browser acceptance pending
+
+All planned Phase 3 contracts, migrations, API routes, role UI, and automated
+regressions are implemented. The authoritative evidence and packet-by-packet
+scope are in the [Phase 3 handoff](../plans/P3-09-PHASE-3-JOURNEY-HANDOFF.md).
+The product owner must now run the
+[browser checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md). Do not mark
+P3-09 or Phase 3 formally complete until that result is recorded.
+
+### P3-02 Change and disruption — implementation gate green
+
+The old owner command silently reassigned exact choices. A focused regression
+was falsified first (expected 409, received 200), then passed after migration
+`20260802000200`. The completed versioned proposal/customer-response path locks
+and rechecks availability on acceptance and preserves the original on rejection
+or conflict. Disruption capture creates attention and alternatives without
+silently mutating the booking. See the
+[P3-02 handoff](../plans/P3-02-CHANGE-DISRUPTION-HANDOFF.md).
+
+### P3-01 Request/accept/assign — automated gate green, browser pending
+
+P3-01 starts from the verified P2-07 availability engine rather than rebuilding
+it. The packet owns manual approval by default, optional instant mode, 15-minute
+request expiry, exact/preferred/any provider intent, deterministic assignment and
+audit, and owner accept/decline/assign actions.
+
+The implementation and evidence are in the
+[P3-01 handoff](../plans/P3-01-REQUEST-ACCEPT-ASSIGN-HANDOFF.md). Existing
+behavior that was already transactional remains the authority. The customer
+workspace, idempotent manual/instant create, quote policy, restricted fallback,
+and owner decision/assignment controls are implemented. Clean replay and DB lint
+passed; the final Phase 3 matrix is 91/91 twice; 131 fast tests;
+typecheck/lint/build/diff green.
+Codex did not run a browser. The product owner must use the
+[manual checklist](../testing/P3-01-MANUAL-BROWSER-CHECKLIST.md) before P3-01 is
+marked fully verified.
+
+### Deferred P2-08 closeout — owner browser acceptance still open
 
 The backend half remained untouched: its four widened race classes were already
 proven and matrix 85/85 was green twice. Before the product owner clarified that
@@ -68,10 +114,9 @@ is restored: shop draft, hiring Off with no note/count, owner provider Off,
 Bruno qualified for both active services, no pending shift request, and no
 closure or booking created.
 
-**Exact next action:** the product owner runs the responsive owner/barber/customer
-browser acceptance and records the result. Only after it is green should P2-08
-and Phase 2 be marked complete or Phase 3 begin. Do not silently absorb the
-customer slot-picker feature into this smoke-polish task.
+**Deferred action:** the product owner may later run the responsive owner/barber/
+customer browser acceptance and record the result. Until then P2-08 and Phase 2
+remain open even though work has begun on P3-01 at the owner's direction.
 
 ### P2-07 availability engine — verified complete
 
@@ -456,16 +501,14 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Close P2-08, and with it Phase 2, after the product-owner browser pass.** The backend race gate is done as of
-2026-08-01 and needed no migrations: holds returning to the pool, the
-claim/expiry boundary, owner-provider slot contention, and owner-provider versus
-barber for the last chair all hold, each falsified before being trusted. Matrix
-82 → 85, green twice on a database replayed from empty.
+**Run P3-09 product-owner browser acceptance using the consolidated checklist.**
+The change-proposal/customer-response path, remaining Phase 3 operations, and
+final automated gate are complete. Record failures, fix them, and retest the
+affected journeys. Do not record the skipped browser check as passed.
 
-**The one thing left is final product-owner acceptance of the responsive owner/
-barber/customer smoke journeys.** Six frontend fixes and the deterministic code
-gate are ready. The agent recorded a preliminary browser pass, but per the
-owner's 2026-08-01 clarification it is not the final acceptance result.
+P2-08's product-owner browser pass was explicitly deferred on 2026-08-02. Its
+backend race gate remains proven (matrix 85/85 twice after a clean replay), but
+the skipped browser acceptance is not a pass and Phase 2 remains formally open.
 
 Two follow-ups from the P2-08 work, neither blocking:
 
@@ -536,21 +579,24 @@ Environment updated 2026-08-02 after Windows reserved the former local port rang
 
 - Docker and the local Supabase stack are healthy on the unreserved ports
   (API/storage `54321`, database `54322`, studio `54323`);
-- the database was reset from empty and carries every migration through
-  `20260730001000`;
+- the database was reset from empty and carries all 58 migrations through
+  `20260802000500_p3_walk_in_payment_closeout.sql`;
 - **`npm run seed:accounts` now also creates shop operating hours.** Since P2-07
   the shop's own hours are a booking input, so a shop with none is closed every
   day. Without this the seeded environment signs in fine and then refuses every
   slot, which reads as a bug rather than as missing setup. The dev shop is open
   Mon-Sat 09:00-18:00, matching the demo barber's shift;
-- the API dev server runs on `4000` and the web dev server on `5174`. `5174` is
+- the API and web dev servers were started for product-owner browser acceptance
+  on `4000` and `5174`. `5174` is
   not optional: `vite.config.ts` uses `strictPort` and the API's `WEB_ORIGIN`
   allowlist only trusts that port, so any other port fails CORS;
-- `owner@phila.test`, `barber@phila.test`, and `customer@phila.test` were
-  re-seeded. The owner owns "Philabantay · Dev Shop" (draft, 1 chair, 2 active
+- after the final clean replay, `npm run seed:accounts -w @barbershop/api`
+  recreated `owner@phila.test`, `barber@phila.test`, and
+  `customer@phila.test` for browser acceptance. The owner owns
+  "Philabantay · Dev Shop" (draft, 1 chair, 2 active
   services, Mon-Sat 09:00-18:00) and the barber has active employment there and is
-  qualified for both services through the grant-on-hire trigger. **The shop is
-  back to `draft` and no closures or bookings remain**: the two P2-07 live suites
+  qualified for both services through the grant-on-hire trigger. The seeded shop
+  starts in `draft` with no closures or bookings. Historically, the P2-07 live suites
   published it, exercised every rule, then cancelled their bookings, deleted their
   closures, reset the buffer and booking window, and unpublished. The earlier
   P2-06 schedule state described in previous entries was cleared by the clean
@@ -601,5 +647,5 @@ owner routes call the versioned commands; the barber self-write routes and old
 RPCs are absent; migration `20260728000600` applies the deferred constraints;
 the owner and barber interfaces expose the new authority model. The clean-reset
 matrix passed 69/69 twice and the full local gate/browser smoke is recorded
-above. P2-06 remains in progress only for independent review/product sign-off,
-and P2-07 has not started.
+above. This is historical P2-06 evidence; P2-07 is verified and Phase 3 is now
+implementation-complete with product-owner browser acceptance pending.

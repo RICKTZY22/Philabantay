@@ -1,5 +1,10 @@
 # Phase 3 — booking, fulfillment, walk-ins, and live operations
 
+Status 2026-08-02: P3-01 through P3-09 implementation and automated verification
+are complete. Product-owner browser acceptance remains pending; see the
+[completion handoff](P3-09-PHASE-3-JOURNEY-HANDOFF.md) and
+[manual checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md).
+
 ## Outcome
 
 At the end of Phase 3, a customer, barber, and owner can run a normal booking or

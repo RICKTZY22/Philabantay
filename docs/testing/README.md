@@ -98,3 +98,25 @@ RUN_LOCAL_SUPABASE_TESTS=1 npm run test -w @barbershop/api  # repeatability proo
 The matrix archives exact-name fixtures before setup and archives the current
 published fixtures in `afterAll`. This makes an immediate rerun deterministic
 and also recovers from an interrupted previous run.
+
+## Phase 3 final automated gate — 2026-08-02
+
+Measured against an empty local database replayed through all 58 migrations,
+ending at `20260802000500_p3_walk_in_payment_closeout.sql`:
+
+```text
+shared   62 passed
+api      29 passed | 62 skipped (fast/default)
+web      40 passed
+----------------------------------------------
+default fast total   131 passed
+
+api with RUN_LOCAL_SUPABASE_TESTS=1
+         91 passed, then 91 passed again
+```
+
+All-workspace typecheck, zero-warning ESLint, API/web production build,
+`git diff --check`, clean database reset, and database lint with zero findings
+passed on the same final tree. Browser acceptance was not run; it remains with
+the product owner in
+[P3-09-MANUAL-BROWSER-CHECKLIST.md](P3-09-MANUAL-BROWSER-CHECKLIST.md).

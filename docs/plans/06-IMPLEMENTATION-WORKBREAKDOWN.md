@@ -92,6 +92,16 @@ otherwise expose or accept invalid state.
 | P3-08 Durable closeout | CLOSE-01 | Expiry, no-show-review and completion jobs use leases/idempotency and never infer attendance or payment. | P3-07 |
 | P3-09 Phase-3 journey gate | all Phase 3 | Customer, barber and owner finish happy, cancel, late, no-show, disruption, walk-in, payment and retry scenarios without SQL/manual repair. | P3-08 |
 
+### Phase 3 implementation status — 2026-08-02
+
+P3-01 through P3-08 are implemented and automated-green. P3-09's automated
+API/RLS/race/retry half is green on a clean 58-migration replay: 131 fast tests,
+91/91 matrix twice, zero-finding DB lint, typecheck, zero-warning lint,
+production build, and diff check. Product-owner browser acceptance is the only
+remaining Phase 3 gate and is intentionally not claimed as passed. See the
+[completion handoff](P3-09-PHASE-3-JOURNEY-HANDOFF.md) and
+[browser checklist](../testing/P3-09-MANUAL-BROWSER-CHECKLIST.md).
+
 ## 6. Phase 4 — trust, insights, settings, and role workspaces
 
 | Packet | Requirements | Outcome | Depends on |
@@ -117,7 +127,16 @@ otherwise expose or accept invalid state.
 | P5-05 Release candidate | REL-01 | All roles complete clean-environment journeys without seed accounts, SQL or service-role intervention. | P5-02 through P5-04 |
 | P5-06 Pilot rollout | REL-01 | Staged rollout, telemetry review, support ownership and stop/rollback thresholds are active. | P5-05 |
 
-## 8. Logic-rescan gate used after every packet
+## 8. Phase 6 — final deployment and UI/UX polishing
+
+**Product-owner plan pending.** Phase 6 follows Phase 5 and owns the final
+deployment plus the product-owner-directed UI/UX polishing pass. The product
+owner will supply the detailed plan, packet breakdown, acceptance criteria, and
+layouts. Do not invent packet IDs or a packet count before those artifacts are
+recorded. See
+[the Phase 6 placeholder](06-PHASE-6-DEPLOYMENT-UI-UX-POLISH.md).
+
+## 9. Logic-rescan gate used after every packet
 
 The QA lane repeats these probes after integration:
 
@@ -136,10 +155,9 @@ Each failure becomes a dated `LR-###` row in the rescan report. A P0 blocks all
 dependent packets; a P1 blocks its phase gate; a P2 must have an owner and due
 phase; P3 may enter the post-V1 backlog.
 
-## 9. Safe next assignment
+## 10. Safe next assignment
 
-Start with **P1-01 + P1-04**. They repair current booking truth without asking
-the frontend to redesign unstable workflows. In parallel, the frontend lane
-may prepare the P1-02 verification lock screen from the frozen access-state
-contract, but it must not change operational routes until backend denial tests
-pass.
+Run **P3-09 product-owner browser acceptance** using the consolidated checklist,
+record defects, fix any failures, and rerun only the affected journeys plus the
+automated gate. P3-01 through P3-08 implementation is complete. P2-08's deferred
+browser acceptance remains a separate open item and is not a pass.

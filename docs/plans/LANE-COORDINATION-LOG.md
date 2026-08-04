@@ -2084,3 +2084,37 @@ Product-owner direction removed the shared chat composer's three automatic
 quick-reply chips for all roles. Base/notebook/mobile/studio styling for those
 chips is also deleted; typed sending is unchanged. Focused web gate and diff
 check passed, with visual acceptance left to the product owner.
+
+## 2026-08-02 — Codex — P3-01 active; Phase 6 reserved
+
+The product owner explicitly deferred P2-08's browser acceptance and directed
+work to continue with Phase 3. P3-01 Request/accept/assign is the active lane;
+P2-08 remains open evidence and is not recorded as passed. Phase 6 is reserved
+for final deployment and owner-directed UI/UX polishing, with detailed plans and
+layouts pending from the product owner.
+
+P3-01 slice 1 is now in the shared client lane. It adds strict availability-day
+and booking-quote parsing plus authenticated adapter calls and focused tests.
+No API or Supabase file changed; instant mode and the customer booking workspace
+remain later P3-01 slices.
+
+## 2026-08-02 — Codex — P3-01 technical gate green; P3-02 consent guard active
+
+P3-01 implementation now spans shared, API, Supabase, customer booking, and
+owner Reservations. Clean replay, DB lint, 131 fast tests, matrix 86/86 twice,
+typecheck/lint/build/diff are green. Browser execution remains with the product
+owner using the written checklist and is not recorded as passed.
+
+P3-02 is the active implementation lane. Its first migration blocks exact-choice
+owner reassignment pending a customer-approved proposal. The regression was
+falsified against the old behavior before passing after migration.
+
+## 2026-08-02 — Phase 3 integrated gate
+
+Contract, data/security, API/adapter, and frontend lanes for P3-01 through P3-08
+are integrated in the working tree. The adversarial automated lane passed after
+a clean 58-migration replay: 131 fast tests, 91/91 API/RLS matrix twice,
+zero-finding DB lint, typecheck, lint, build, and diff check. The product owner
+owns the remaining P3-09 browser/a11y journey lane using the consolidated manual
+checklist. Do not begin Phase 4 or mark Phase 3 accepted until that evidence is
+recorded or the owner explicitly directs otherwise.

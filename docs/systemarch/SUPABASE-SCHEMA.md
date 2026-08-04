@@ -76,6 +76,9 @@ The schema also includes persistence already required by `DataBackend`:
 | Notification preferences | Read/write own | Read/write own | Read/write own |
 | Staff notes/change requests | None | Own notes/requests | Staff in own shop |
 | Favorites and bug reports | Own rows only | Own rows only | Own rows only |
+| Change proposals, delays, appeals, notifications | Participant rows | Assigned/shop rows | Own-shop rows |
+| Walk-ins and queue events | Linked own visit | Active-shop rows | Own-shop rows |
+| Payment records/events and closeouts | Own linked receipt | Only with narrow cashier capability | Own-shop rows |
 
 Shop identity, active services, barber cards, and open hiring listings are
 catalogue data, so authenticated customers can discover shops before booking.
@@ -114,6 +117,15 @@ the server-side Auth Admin API and must never be stored in a migration or seed.
   from the live rating rows after insert, update, or delete.
 - Security-definer RLS helpers live in the unexposed `private` schema and set an
   empty `search_path`.
+- Phase 3 operational state is split across change proposals, delays,
+  disruption/attention, no-show appeals/strike facts, walk-ins/queue events,
+  payment records/events, notification outbox/deliveries/in-app rows, and
+  closeout runs. Direct authenticated writes are revoked; commands enforce role,
+  tenant, version/idempotency, and immutable history.
+- Walk-in claim tokens and phones are hashed. Failed attempts persist, claims
+  are single-use, and the public projection excludes private staff facts.
+- Closeout is unique per shop/local date and creates attention for unresolved
+  facts; it never infers attendance, completion, or payment.
 
 ## Contract notes
 

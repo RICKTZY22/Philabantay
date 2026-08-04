@@ -412,6 +412,9 @@ document horizontal overflow** after the focused fixes.
 final browser acceptance belongs to the product owner. The measurements above
 record the agent's defect-finding pass and are not a substitute for that pass.
 Do not mark P2-08 or Phase 2 complete until the owner records the browser result.
+On 2026-08-02 the product owner explicitly deferred/skipped that acceptance and
+directed P3-01 to start. This is **not a pass**: P2-08 and Phase 2 remain open
+evidence while Phase 3 work proceeds.
 
 ---
 

@@ -415,6 +415,13 @@ must be explicit:
 
 ## 5.15 Migration order for the planned design
 
+Implementation note (2026-08-02): Phase 3 steps 6-8 below are now implemented
+in migrations `20260802000300` through `20260802000500`. Attention/closeout,
+notification outbox/in-app delivery, and offline payment records/events are
+separate facts with RLS and command boundaries. Payment remains independent of
+visit completion as intended. The numbered list is retained as the original
+design sequence.
+
 1. Reconcile current shared types with current Postgres fields.
 2. Add verification tables, private storage policies, events, and approval RPC.
 3. Add shop lifecycle, hours, media metadata, and publication filters.
