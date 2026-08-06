@@ -661,10 +661,10 @@ Carried out of the 2026-08-01 full-repo sweep, none of them blocking P2-08:
 - **`ARCHITECTURE.md` needs a real rewrite.** The false statements are corrected
   and the mock sections are labelled history, but the narrative still describes a
   system that no longer exists.
-- **Rive is now referenced by nothing** after the landing trim: `RiveScene`,
-  `public/rive/rive.wasm` (2.0 MB), and `character-follow.riv`. Deleting them
-  also makes `'wasm-unsafe-eval'` removable from both CSP definitions. Left in
-  place pending your call.
+- ~~**Rive is now referenced by nothing**~~ **Done, confirmed 2026-08-06.**
+  `RiveScene`, `public/rive/` and `character-follow.riv` are gone, no source file
+  references Rive, and `'wasm-unsafe-eval'` is absent from both CSP definitions
+  (`public/_headers` and `vite.config.ts` each carry a comment saying why).
 
 ### Prior P2-06 detail
 
