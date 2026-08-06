@@ -1,0 +1,210 @@
+/*
+ * Shared shell for the staff admin console: the dispute queue, the rating
+ * moderation queue, and the notification operations view.
+ *
+ * Two things are deliberate here, both learned from the P4-09 gate.
+ *
+ * Target sizing is scoped under `.app-shell.is-workspace` because
+ * `.app-shell.is-workspace .btn-sm` is three classes and beats an unscoped
+ * `.admin-console .btn`. Five Phase 4 rules were written unscoped, silently lost
+ * on specificity, and measured 36px against a stated 44px.
+ *
+ * Every wide table lives inside `.admin-scroll` so the container scrolls and the
+ * page never does. A scrollable region with no focusable children is still
+ * keyboard reachable in current Chrome, so the off-screen columns stay usable.
+ */
+
+/*
+ * `minmax(0, 1fr)` here and `min-width: 0` below are defensive, not a bug fix.
+ * A grid item defaults to `min-width: auto` and refuses to shrink below its
+ * content's min-content width, which with a `min-width: 560px` table inside is
+ * the usual way a scroll container stops constraining anything. Measured at
+ * 320px: `.admin-scroll` is 273px wide around 763px of table and the page itself
+ * does not scroll sideways, so these keep a working layout working.
+ */
+.admin-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  padding-bottom: 48px;
+}
+
+.admin-console-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+.admin-console-head h1 { margin: 4px 0 6px; }
+.admin-console-head p { margin: 0; color: var(--muted); max-width: 68ch; }
+
+.admin-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.admin-filters label { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+.admin-filters select {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.admin-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-soft);
+}
+.admin-section h2 { margin: 0; }
+.admin-section h3 { margin: 0; font-size: 17px; }
+.admin-section-note { margin: 0; color: var(--muted); font-size: 15px; max-width: 72ch; }
+
+.admin-scroll { min-width: 0; overflow-x: auto; }
+.admin-scroll table { width: 100%; border-collapse: collapse; min-width: 560px; background: var(--paper); }
+.admin-scroll caption { text-align: left; padding: 6px 0; color: var(--muted); font-size: 14px; }
+.admin-scroll th,
+.admin-scroll td { padding: 9px 10px; border-bottom: 1.5px solid var(--line); text-align: left; vertical-align: top; }
+.admin-scroll thead th { color: var(--muted); font-size: 14px; }
+.admin-scroll small { display: block; color: var(--faint); font-size: 13px; }
+
+/* Status is never colour alone: the pill's text is the status. */
+.admin-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-soft);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-pill.is-escalated,
+.admin-pill.is-open { border-color: var(--ink); background: var(--yellow); }
+.admin-pill.is-resolved,
+.admin-pill.is-upheld { background: var(--green); }
+.admin-pill.is-rejected,
+.admin-pill.is-dead_letter { background: var(--pink); }
+
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 0; }
+.admin-metric {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.admin-metric dt { color: var(--muted); font-size: 14px; }
+.admin-metric dd { margin: 0; font-size: 22px; font-weight: 700; }
+.admin-metric-hint { margin: 0; color: var(--faint); font-size: 13px; }
+
+/*
+ * Disclosures are real touch targets, not 18px slivers. The rest of the app
+ * still has 24-32px summaries and that is recorded as an app-wide decision, but
+ * new code should not add another instance of it.
+ */
+.admin-definition summary,
+.admin-timeline summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.admin-definition p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+.admin-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.admin-case { display: grid; gap: 14px; }
+.admin-case-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+.admin-case-reason {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--line);
+  border-radius: 0 12px 12px 0;
+  background: var(--paper);
+}
+
+.admin-form { display: grid; gap: 10px; }
+.admin-form label { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+.admin-form textarea,
+.admin-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.admin-form fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+}
+.admin-form fieldset legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
+.admin-form fieldset label { display: flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 400; }
+
+/*
+ * Exceptional actions are visually separated from ordinary facts, per plan
+ * section 1. A resolution is not a filter.
+ */
+.admin-danger-zone {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 2px dashed var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.admin-danger-zone h3 { margin: 0; }
+.admin-audit-note { margin: 0; color: var(--muted); font-size: 13px; }
+
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.admin-timeline summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.admin-timeline ol { display: grid; gap: 8px; margin: 8px 0 0; padding: 0 0 0 18px; }
+.admin-timeline li { display: grid; gap: 2px; }
+.admin-timeline strong { text-transform: capitalize; }
+.admin-timeline span { color: var(--muted); font-size: 14px; }
+.admin-timeline time { color: var(--faint); font-size: 13px; }
+
+.admin-back { justify-self: start; }
+
+/* Scoped so they beat `.app-shell.is-workspace .btn` / `.btn-sm`. */
+.app-shell.is-workspace .admin-console .btn,
+.app-shell.is-workspace .admin-actions .btn,
+.app-shell.is-workspace .admin-form .btn,
+.app-shell.is-workspace .admin-danger-zone .btn { min-height: 44px; }
+
+@media (max-width: 720px) {
+  .admin-console-head,
+  .admin-case-header { grid-template-columns: 1fr; }
+  .admin-section { padding: 14px; }
+}

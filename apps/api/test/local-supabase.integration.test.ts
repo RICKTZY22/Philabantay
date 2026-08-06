@@ -4907,9 +4907,25 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     const { data: changed } = await service.from('appointments').select('starts_at').eq('id', accepted.id as string).single()
     expect(changed?.starts_at).toBe('2030-06-10T03:00:00+00:00')
 
-    const { data: inbox } = await service.from('in_app_notifications').select('id,outbox_id').eq('recipient_id', customer.id)
+    // Scoped to this appointment and to a notice that has not been delivered
+    // yet. This used to take `.at(-1)` of every notification the customer had
+    // ever received, from an unordered query: on a repeat run without a reset it
+    // picked up an already-delivered notice from the previous run, and recording
+    // a failed attempt against it left the row `delivered`, so the retry
+    // assertion failed. The queue is global and accumulates; the fixture must
+    // name its own row.
+    const { data: pendingOutbox } = await service
+      .from('notification_outbox')
+      .select('id')
+      .eq('recipient_id', customer.id)
+      .eq('appointment_id', accepted.id as string)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const outboxId = pendingOutbox?.[0]?.id as string
+    expect(outboxId, 'the approved change should have queued a notice for this appointment').toBeTruthy()
+    const { data: inbox } = await service.from('in_app_notifications').select('id').eq('outbox_id', outboxId)
     expect((inbox ?? []).length).toBeGreaterThan(0)
-    const outboxId = inbox?.at(-1)?.outbox_id as string
     const failed = await service.rpc('api_record_notification_attempt', {
       p_outbox_id: outboxId,
       p_provider: 'test-provider',
@@ -5055,6 +5071,18 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     const startsAt = new Date(`${localDate}T02:00:00.000Z`).toISOString()
     const { error: moveError } = await service.from('appointments').update({ starts_at: startsAt }).eq('id', accepted.id as string)
     expect(moveError, JSON.stringify(moveError)).toBeNull()
+    // A closeout run is a singleton per shop-day and returns immediately once it
+    // is `completed`, which is correct: a day is closed once. It also means a
+    // second matrix run on the same calendar day inherited the first run's
+    // completed row and never processed this appointment, so the attention
+    // assertion saw an empty array. The fixture clears the row it is about to
+    // exercise rather than the assertion being loosened to accept nothing.
+    const { error: clearRunError } = await service
+      .from('closeout_runs')
+      .delete()
+      .eq('shop_id', fixtures.primaryShopId)
+      .eq('local_date', localDate)
+    expect(clearRunError, JSON.stringify(clearRunError)).toBeNull()
     const first = await service.rpc('api_run_shop_closeout', { p_shop_id: fixtures.primaryShopId, p_local_date: localDate })
     const second = await service.rpc('api_run_shop_closeout', { p_shop_id: fixtures.primaryShopId, p_local_date: localDate })
     expect(first.error, JSON.stringify(first.error)).toBeNull()

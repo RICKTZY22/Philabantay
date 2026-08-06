@@ -22,6 +22,10 @@ const ProfessionalProfilePage = lazy(() => import('./pages/ProfessionalProfilePa
 const ChatPage = lazy(() => import('./pages/ChatPage').then((m) => ({ default: m.ChatPage })))
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage').then((m) => ({ default: m.RoleSelectionPage })))
 const VerificationLockPage = lazy(() => import('./pages/VerificationLockPage').then((m) => ({ default: m.VerificationLockPage })))
+const AdminDisputesPage = lazy(() => import('./pages/AdminDisputesPage').then((m) => ({ default: m.AdminDisputesPage })))
+const AdminDisputeDetailPage = lazy(() => import('./pages/AdminDisputesPage').then((m) => ({ default: m.AdminDisputeDetailPage })))
+const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })))
+const AdminOperationsPage = lazy(() => import('./pages/AdminOperationsPage').then((m) => ({ default: m.AdminOperationsPage })))
 const AdminVerificationPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminVerificationPage })))
 const AdminVerificationDetailPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminVerificationDetailPage })))
 const AdminProfessionalPage = lazy(() => import('./pages/AdminVerificationPage').then((m) => ({ default: m.AdminProfessionalPage })))
@@ -166,6 +170,10 @@ export function App() {
         />
         <Route path="dashboard/barber" element={<Navigate to="/schedule" replace />} />
         <Route path="professional" element={<RequireAuth role="barber"><ProfessionalProfilePage /></RequireAuth>} />
+        <Route path="admin/disputes" element={<RequireAuth role="admin"><AdminDisputesPage /></RequireAuth>} />
+        <Route path="admin/disputes/:caseId" element={<RequireAuth role="admin"><AdminDisputeDetailPage /></RequireAuth>} />
+        <Route path="admin/moderation" element={<RequireAuth role="admin"><AdminModerationPage /></RequireAuth>} />
+        <Route path="admin/operations" element={<RequireAuth role="admin"><AdminOperationsPage /></RequireAuth>} />
         <Route path="admin/verifications" element={<RequireAuth role="admin"><AdminVerificationPage /></RequireAuth>} />
         <Route path="admin/verifications/:submissionId" element={<RequireAuth role="admin"><AdminVerificationDetailPage /></RequireAuth>} />
         <Route path="admin/users/:userId" element={<RequireAuth role="admin"><AdminProfessionalPage /></RequireAuth>} />

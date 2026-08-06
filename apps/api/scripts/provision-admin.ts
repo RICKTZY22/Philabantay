@@ -15,11 +15,25 @@ import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { createClient, type User } from '@supabase/supabase-js'
 
+/*
+ * The database is the authority on what may be granted:
+ * `api_provision_verification_admin` accepts one to six capabilities and
+ * excludes only `professional_access`. This list mirrors it so a typo fails
+ * before a command id is minted.
+ *
+ * `content_moderation` and `dispute_review` arrived with Phase 4 and were
+ * missing here, which meant the only sanctioned way to provision an admin could
+ * not grant the capabilities the Phase 4 admin console requires. Migration
+ * `20260805000300` had already raised the database ceiling from four to six for
+ * exactly these two; this list had not followed.
+ */
 const ADMIN_CAPABILITIES = new Set([
   'verification_queue_read',
   'verification_assign',
   'verification_review',
   'professional_suspend',
+  'content_moderation',
+  'dispute_review',
 ] as const)
 
 type AdminCapability = typeof ADMIN_CAPABILITIES extends Set<infer Value> ? Value : never

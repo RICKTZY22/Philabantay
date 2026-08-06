@@ -65,6 +65,9 @@ const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
 
 const ADMIN_MENU_ITEMS: MenuItem[] = [
   { to: '/admin/verifications', icon: 'search', label: 'Verification queue', end: true },
+  { to: '/admin/disputes', icon: 'chat', label: 'Dispute review' },
+  { to: '/admin/moderation', icon: 'star', label: 'Rating moderation' },
+  { to: '/admin/operations', icon: 'send', label: 'Notification delivery' },
   { to: '/settings/security', icon: 'gear', label: 'Security' },
 ]
 
