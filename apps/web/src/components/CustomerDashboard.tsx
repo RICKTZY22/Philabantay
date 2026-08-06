@@ -87,6 +87,7 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
+/** Manila-fixed. See the timezone note in `lib/date.ts` before copying this. */
 function todayDateKey(): string {
   const today = new Date()
   const parts = new Intl.DateTimeFormat('en-PH', {

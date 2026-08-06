@@ -303,7 +303,11 @@ On performance, the single biggest cost is the hand-drawn `#rough` SVG filter ap
 - **File:** `apps/web/src/pages/useJourneyScroll.ts:26-28` (also LandingPage.tsx:353-355, Storefront.tsx:102-106, LandingPage.css:888-890)
 - **Category:** rendering
 - **What:** The IntersectionObserver pauses only `.phil-hero-main` children, and the paused rule fires only when the tab is hidden. The Storefront outro's dozens of infinite animations (walk cycle, birds, clouds, lamps, wheel spins) run whenever the landing is mounted, even scrolled out of view. Battery/CPU drain while idling.
-- **Fix:** Observe the outro section with the same `data-animation-paused` mechanism, or gate `Storefront` rendering on an IntersectionObserver.
+- **Fix:** Moot as of 2026-08-06. `Storefront.tsx`, `WalkFigure.tsx` and
+  `Storefront.css` were imported by nothing and have been deleted, so the
+  infinite animations described above no longer run at all. Confirmed by
+  production build: their markers appear in zero `dist/` files while control
+  tokens from live pages appear in three each. **Closed, not fixed.**
 
 ### P-8 [Low] Each cursor-tracking DoodleAvatar adds a window pointermove listener doing layout reads per frame
 - **File:** `apps/web/src/components/DoodleAvatar.tsx:102` (also :81-88; instances at SettingsPage.tsx:106, 124 and CustomerDashboard.tsx:368)

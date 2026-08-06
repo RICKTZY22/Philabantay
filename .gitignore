@@ -2,6 +2,13 @@ node_modules/
 dist/
 build/
 *.local
+# `*.local` does not match `*.local.ts`. Scratch scripts written next to the
+# source have included service-role helpers that mint auth users, and one sat
+# untracked and committable until it tripped the lint gate.
+*.local.ts
+*.local.tsx
+*.local.mjs
+*.local.js
 .env
 .env.*
 !.env.example

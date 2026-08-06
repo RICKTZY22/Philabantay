@@ -10,6 +10,8 @@ const rawEnvironmentSchema = z.object({
   // Comma-separated allowlist so the exact browser origin(s) are matched. The
   // web app is served on port 5174 and reachable as both localhost and 127.0.0.1.
   WEB_ORIGIN: z.string().min(1).default('http://localhost:5174,http://127.0.0.1:5174'),
+  // Hop count, not a boolean. `true` would let a client forge X-Forwarded-For.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 })
 
@@ -19,6 +21,7 @@ export interface ApiConfig {
   supabaseServiceRoleKey: string
   port: number
   webOrigin: string[]
+  trustProxyHops: number
   nodeEnv: 'development' | 'test' | 'production'
 }
 
@@ -50,6 +53,7 @@ export function readConfig(environment: NodeJS.ProcessEnv): ApiConfig {
     supabaseServiceRoleKey: serviceRoleKey,
     port: parsed.API_PORT,
     webOrigin,
+    trustProxyHops: parsed.TRUST_PROXY_HOPS,
     nodeEnv: parsed.NODE_ENV,
   }
 }

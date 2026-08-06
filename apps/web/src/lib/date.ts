@@ -1,3 +1,15 @@
+/*
+ * Four helpers in this repo format a date as YYYY-MM-DD and they do NOT agree:
+ *   lib/date.ts            localDateKey  device-local
+ *   CustomerDashboard.tsx  todayDateKey  Manila-fixed
+ *   AppointmentsPage.tsx   shopDateKey   the shop's own timezone
+ *   shared/attendance.ts   dateKey       caller-supplied
+ * Booking rules are evaluated in `shops.timezone`, so the shop-timezone one is
+ * the only correct choice anywhere a booking date is computed. Picking by
+ * convenience is how a Manila-hardcoded pre-check shipped and refused valid
+ * slots for non-Manila shops (see D-056). Check which one you want.
+ */
+
 const LOCAL_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 
 /** Format a Date as a device-local calendar key without converting to UTC. */

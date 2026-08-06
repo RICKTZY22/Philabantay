@@ -54,14 +54,24 @@ export function createAuthRouter(dependencies: ApiDependencies): Router {
     // so an identity with a verified factor is told it can step up rather than
     // being held at the door. `mfa_required` is the client's cue to ask for a
     // code; without it the browser had no way to reach AAL2 at all.
-    const factors = await listFactors(data.session.access_token).catch(() => [])
-    const verified = factors.find((factor) => factor.status === 'verified')
+    // "Could not ask" is not the same as "no factors". Swallowing the failure
+    // would omit `mfa_required`, the client would never offer the challenge, and
+    // an administrator would simply find every /admin call returning 403 with
+    // nothing explaining why. Reported so the client can say so.
+    let factors: Awaited<ReturnType<typeof listFactors>> | null = null
+    try {
+      factors = await listFactors(data.session.access_token)
+    } catch {
+      factors = null
+    }
+    const verified = factors?.find((factor) => factor.status === 'verified')
 
     response.json({
       data: {
         profile,
         session: data.session,
         ...(verified ? { mfa_required: true, factor_id: verified.id } : {}),
+        ...(factors === null ? { mfa_status_unavailable: true } : {}),
       },
     })
   })

@@ -104,13 +104,15 @@ export function AppointmentsPage() {
     } finally { setWorkingAction('') }
   }
 
-  async function cancel(id: string) {
+  async function cancel(appointment: AppointmentDetailed) {
     setCancelling(true)
     setCancelError('')
     try {
-      const appointment = appts?.find((candidate) => candidate.id === id)
-      await backend.bookings.cancelWithReason(id, {
-        expected_version: appointment?.version ?? 1,
+      // The selected appointment is authoritative and already in scope. This
+      // used to re-find the row and fall back to `?? 1`, which would send a
+      // wrong expected version rather than fail honestly.
+      await backend.bookings.cancelWithReason(appointment.id, {
+        expected_version: appointment.version ?? 1,
         reason: 'Customer cancelled the booking from the appointment action center.',
       })
       setSelected(null)
@@ -119,7 +121,7 @@ export function AppointmentsPage() {
       setCancelError(error instanceof DataError ? error.message : 'Hindi ma-cancel ang booking. Subukan ulit.')
       try {
         const refreshed = await load()
-        setSelected(refreshed.find((appointment) => appointment.id === id) ?? null)
+        setSelected(refreshed.find((candidate) => candidate.id === appointment.id) ?? null)
       } catch {
         // Keep the original actionable error if the background refresh fails.
       }
@@ -208,13 +210,13 @@ export function AppointmentsPage() {
 
             <div className="booking-notebook-actions">
               {(selected.allowed_actions?.includes('cancel') ?? canModifyAppointment(selected, nowEpochMs)) && (
-                <button type="button" className="btn btn-danger" disabled={cancelling} onClick={() => void cancel(selected.id)}>{cancelling ? 'Cancelling...' : 'Cancel booking'}</button>
+                <button type="button" className="btn btn-danger" disabled={cancelling} onClick={() => void cancel(selected)}>{cancelling ? 'Cancelling...' : 'Cancel booking'}</button>
               )}
               {selected.allowed_actions?.includes('check_in') && !isBarber && <label className="booking-checkin-field"><span>6-digit shop code</span><input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={checkInCode} onChange={(event) => setCheckInCode(event.target.value.replace(/\D/g, ''))} /><button type="button" className="btn btn-green" disabled={Boolean(workingAction) || checkInCode.length !== 6} onClick={() => void customerAction('check-in', () => backend.bookings.checkIn(selected.id, { expected_version: selected.version ?? 1, code: checkInCode }), 'You are checked in.')}>Check in</button></label>}
               {selected.allowed_actions?.includes('confirm_completion') && !isBarber && <button type="button" className="btn btn-green" disabled={Boolean(workingAction)} onClick={() => void customerAction('confirm', () => backend.bookings.confirmCompletion(selected.id, { expected_version: selected.version ?? 1 }), 'Visit confirmed complete.')}>Confirm completion</button>}
               {selected.allowed_actions?.includes('appeal_no_show') && !isBarber && !appeals.some((appeal) => appeal.appointment_id === selected.id) && <button type="button" className="btn" disabled={Boolean(workingAction)} onClick={() => void customerAction('appeal', () => backend.bookings.appealNoShow(selected.id, { reason: 'Customer requests review of the no-show record.' }), 'Appeal submitted before the deadline.')}>Appeal no-show</button>}
             </div>
-            {(selected.allowed_actions?.includes('reschedule') ?? canModifyAppointment(selected, nowEpochMs)) && !isBarber && <CustomerRescheduleForm appointment={selected} onAction={customerAction} />}
+            {(selected.allowed_actions?.includes('reschedule') ?? canModifyAppointment(selected, nowEpochMs)) && !isBarber && <CustomerRescheduleForm appointment={selected} onAction={customerAction} busy={workingAction} />}
             {cancelError && <p className="form-error" role="alert">{cancelError}</p>}
             {actionMessage && <p className="booking-review-message" role="status">{actionMessage}</p>}
 
@@ -253,9 +255,17 @@ export function AppointmentsPage() {
   )
 }
 
-function CustomerRescheduleForm({ appointment, onAction }: {
+function CustomerRescheduleForm({ appointment, onAction, busy }: {
   appointment: AppointmentDetailed
   onAction: (key: string, operation: () => Promise<unknown>, success: string) => Promise<void>
+  /**
+   * Whichever action is in flight, or empty. Every sibling action button on this
+   * page disables while one is running; the slot buttons could not, because this
+   * component was never given the flag. Two fast clicks sent two PATCHes with the
+   * same `expected_version`, and the second returned `409 stale_appointment`, so
+   * the customer saw a failure immediately after a reschedule that had worked.
+   */
+  busy: string
 }) {
   const backend = useBackend()
   const [shop, setShop] = useState<PublicShopDetail | null>(null)
@@ -276,9 +286,10 @@ function CustomerRescheduleForm({ appointment, onAction }: {
     finally { setLoading(false) }
   }
 
-  return <details className="booking-reschedule"><summary>Reschedule using live availability</summary><form onSubmit={findSlots}><label>Service<select value={serviceId} onChange={(event) => setServiceId(event.target.value)}>{shop?.services.map((service) => <option value={service.id} key={service.id}>{service.name} · {service.duration_min} min</option>) ?? <option value={appointment.service_id}>{appointment.service.name}</option>}</select></label><label>Shop-local date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><button className="btn btn-sm" disabled={loading}>{loading ? 'Checking...' : 'Find available times'}</button></form>{error && <p className="form-error" role="alert">{error}</p>}<div className="booking-reschedule-slots">{slots.map((slot) => <button className="btn btn-sm" type="button" key={`${slot.provider_user_id}-${slot.starts_at}`} onClick={() => void onAction(`reschedule-${slot.starts_at}`, () => backend.bookings.rescheduleWithVersion(appointment.id, { expected_version: appointment.version ?? 1, barber_id: slot.provider_user_id, service_id: serviceId, starts_at: slot.starts_at, notes: appointment.notes ?? undefined }), 'Booking moved after an authoritative capacity recheck.')}>{timeOfDay(slot.starts_at)}</button>)}{!loading && slots.length === 0 && <small>Refresh a date to see currently claimable slots.</small>}</div></details>
+  return <details className="booking-reschedule"><summary>Reschedule using live availability</summary><form onSubmit={findSlots}><label>Service<select value={serviceId} onChange={(event) => setServiceId(event.target.value)}>{shop?.services.map((service) => <option value={service.id} key={service.id}>{service.name} · {service.duration_min} min</option>) ?? <option value={appointment.service_id}>{appointment.service.name}</option>}</select></label><label>Shop-local date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><button className="btn btn-sm" disabled={loading}>{loading ? 'Checking...' : 'Find available times'}</button></form>{error && <p className="form-error" role="alert">{error}</p>}<div className="booking-reschedule-slots">{slots.map((slot) => <button className="btn btn-sm" type="button" disabled={Boolean(busy)} key={`${slot.provider_user_id}-${slot.starts_at}`} onClick={() => void onAction(`reschedule-${slot.starts_at}`, () => backend.bookings.rescheduleWithVersion(appointment.id, { expected_version: appointment.version ?? 1, barber_id: slot.provider_user_id, service_id: serviceId, starts_at: slot.starts_at, notes: appointment.notes ?? undefined }), 'Booking moved after an authoritative capacity recheck.')}>{timeOfDay(slot.starts_at)}</button>)}{!loading && slots.length === 0 && <small>Refresh a date to see currently claimable slots.</small>}</div></details>
 }
 
+/** The shop's own timezone: the correct choice for anything booking-related. */
 function shopDateKey(value: string, timezone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',

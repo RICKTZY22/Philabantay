@@ -20,7 +20,7 @@ import {
   type AppointmentAllowedAction,
 } from '@barbershop/shared'
 import type { ApiDependencies } from '../lib/supabase'
-import { manilaDateTimeParts, wallMinute } from '../lib/manila-time'
+import { manilaDateTimeParts } from '../lib/manila-time'
 import { requireActiveEmployment, requireOwnedShop, requireRole } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams, parseQuery } from '../http/validation'
@@ -110,120 +110,166 @@ function requireEligibleBookingCustomer(request: Request): void {
   }
 }
 
+/**
+ * Resolve the shop a provider serves, for the cross-shop guard on reschedule.
+ *
+ * Since Q20/D-028 a provider is either an employed barber **or** an owner with
+ * an active provider capability at their own shop. This used to require a
+ * `barber_employment` row and `role = 'barber'`, which an owner-provider has
+ * neither of by design, so `GET /availability` advertised their slots (it reads
+ * `owner_provider_profiles`), the claim gate would have accepted them (it reads
+ * the same table), and this pre-check refused with "Barber and service must be
+ * active at the same shop." The seam was completed in the database and in
+ * authorization but not here.
+ *
+ * Authority still lives in `private.require_bookable_appointment_slot`. This
+ * only answers "which shop is this provider serving", so the caller can refuse a
+ * cross-shop move with a useful message.
+ */
 async function bookingScope(
   dependencies: ApiDependencies,
   barberId: string,
   serviceId: string,
 ) {
-  const [{ data: employment, error: employmentError }, { data: service, error: serviceError }, { data: barber, error: barberError }, { data: profile, error: profileError }] = await Promise.all([
+  const [
+    { data: employment, error: employmentError },
+    { data: ownerCapability, error: ownerError },
+    { data: service, error: serviceError },
+  ] = await Promise.all([
     dependencies.database
       .from('barber_employment')
-      .select('id,shop_id')
+      .select('id,shop_id,barber:barbers!barber_employment_barber_id_fkey(accepting_bookings,profile:users!barbers_id_fkey(role,requested_role,verification_status,onboarding_completed))')
       .eq('barber_id', barberId)
       .eq('status', 'active')
       .is('ended_at', null)
       .lte('hired_at', manilaDateTimeParts().date)
       .maybeSingle(),
-    dependencies.database.from('services').select('id,shop_id,duration_min,active').eq('id', serviceId).maybeSingle(),
-    dependencies.database.from('barbers').select('accepting_bookings').eq('id', barberId).maybeSingle(),
     dependencies.database
-      .from('users')
-      .select('role,requested_role,verification_status,onboarding_completed')
-      .eq('id', barberId)
+      .from('owner_provider_profiles')
+      .select('shop_id,shop:shops!owner_provider_profiles_shop_id_fkey(owner_id),profile:users!owner_provider_profiles_owner_id_fkey(role,requested_role,verification_status,onboarding_completed)')
+      .eq('owner_id', barberId)
+      .eq('active', true)
+      .eq('accepting_bookings', true)
       .maybeSingle(),
+    dependencies.database.from('services').select('id,shop_id,duration_min,active').eq('id', serviceId).maybeSingle(),
   ])
   if (employmentError) throw fromDatabaseError(employmentError)
+  if (ownerError) throw fromDatabaseError(ownerError)
   if (serviceError) throw fromDatabaseError(serviceError)
-  if (barberError) throw fromDatabaseError(barberError)
-  if (profileError) throw fromDatabaseError(profileError)
-  const verifiedBarber = profile?.role === 'barber'
-    && profile.requested_role === 'barber'
-    && profile.verification_status === 'verified'
-    && profile.onboarding_completed === true
-  if (!employment || !service || !service.active || !barber?.accepting_bookings || !verifiedBarber
-      || employment.shop_id !== service.shop_id) {
+
+  const providerShopId = resolveProviderShopId(barberId, employment, ownerCapability)
+  if (!service || !service.active || providerShopId === null || providerShopId !== service.shop_id) {
     throw new ApiError(400, 'validation', 'Barber and service must be active at the same shop.')
   }
-  return { employmentId: employment.id as string, shopId: employment.shop_id as string, durationMin: Number(service.duration_min) }
+  return { shopId: providerShopId, durationMin: Number(service.duration_min) }
 }
 
+/**
+ * `barber_employment` has no direct relationship to `users`: it points at
+ * `barbers`, and `barbers.id` points at `users.id`. The profile is one hop
+ * further out, the same shape the appointment selects already use. Embedding
+ * `users` directly here answers PGRST200 and surfaces as a 500.
+ */
+type EmploymentProviderRow = {
+  shop_id: string
+  barber: {
+    accepting_bookings?: boolean
+    profile?: { role?: string; requested_role?: string | null; verification_status?: string; onboarding_completed?: boolean } | null
+  } | null
+} | null
+
+type OwnerProviderRow = {
+  shop_id: string
+  shop: { owner_id?: string } | null
+  profile: { role?: string; requested_role?: string | null; verification_status?: string; onboarding_completed?: boolean } | null
+} | null
+
+/**
+ * Mirrors the two branches of `private.lock_appointment_barber_assignment`: an
+ * employed, verified, accepting barber, or a verified owner with an active
+ * provider capability at the shop they own. Returns null when neither holds.
+ */
+function resolveProviderShopId(
+  providerId: string,
+  employment: unknown,
+  ownerCapability: unknown,
+): string | null {
+  const employed = employment as EmploymentProviderRow
+  const employedProfile = employed?.barber?.profile
+  if (employed?.barber?.accepting_bookings
+    && employedProfile?.role === 'barber'
+    && employedProfile.requested_role === 'barber'
+    && employedProfile.verification_status === 'verified'
+    && employedProfile.onboarding_completed === true) {
+    return employed.shop_id
+  }
+  const owner = ownerCapability as OwnerProviderRow
+  if (owner?.shop?.owner_id === providerId
+    && owner.profile?.role === 'shop_owner'
+    && owner.profile.requested_role === 'shop_owner'
+    && owner.profile.verification_status === 'verified'
+    && owner.profile.onboarding_completed === true) {
+    return owner.shop_id
+  }
+  return null
+}
+
+/** Same two provider branches as `bookingScope`, pinned to one shop. */
 async function reassignmentScope(
   dependencies: ApiDependencies,
   barberId: string,
   shopId: string,
   bookedDurationMin: number,
 ) {
-  const [{ data: employment, error: employmentError }, { data: barber, error: barberError }, { data: profile, error: profileError }] = await Promise.all([
+  const [{ data: employment, error: employmentError }, { data: ownerCapability, error: ownerError }] = await Promise.all([
     dependencies.database
       .from('barber_employment')
-      .select('id,shop_id')
+      .select('id,shop_id,barber:barbers!barber_employment_barber_id_fkey(accepting_bookings,profile:users!barbers_id_fkey(role,requested_role,verification_status,onboarding_completed))')
       .eq('barber_id', barberId)
       .eq('shop_id', shopId)
       .eq('status', 'active')
       .is('ended_at', null)
       .lte('hired_at', manilaDateTimeParts().date)
       .maybeSingle(),
-    dependencies.database.from('barbers').select('accepting_bookings').eq('id', barberId).maybeSingle(),
     dependencies.database
-      .from('users')
-      .select('role,requested_role,verification_status,onboarding_completed')
-      .eq('id', barberId)
+      .from('owner_provider_profiles')
+      .select('shop_id,shop:shops!owner_provider_profiles_shop_id_fkey(owner_id),profile:users!owner_provider_profiles_owner_id_fkey(role,requested_role,verification_status,onboarding_completed)')
+      .eq('owner_id', barberId)
+      .eq('shop_id', shopId)
+      .eq('active', true)
+      .eq('accepting_bookings', true)
       .maybeSingle(),
   ])
   if (employmentError) throw fromDatabaseError(employmentError)
-  if (barberError) throw fromDatabaseError(barberError)
-  if (profileError) throw fromDatabaseError(profileError)
-  const verifiedBarber = profile?.role === 'barber'
-    && profile.requested_role === 'barber'
-    && profile.verification_status === 'verified'
-    && profile.onboarding_completed === true
-  if (!employment || !barber?.accepting_bookings || !verifiedBarber) {
-    throw new ApiError(400, 'validation', 'The new barber must be verified, active at this shop, and accepting bookings.')
+  if (ownerError) throw fromDatabaseError(ownerError)
+
+  if (resolveProviderShopId(barberId, employment, ownerCapability) !== shopId) {
+    throw new ApiError(400, 'validation', 'The new provider must be verified, active at this shop, and accepting bookings.')
   }
   if (!Number.isInteger(bookedDurationMin) || bookedDurationMin < 5 || bookedDurationMin > 480) {
     throw new ApiError(409, 'invalid_booking_snapshot', 'The booking duration snapshot is invalid; refresh before reassigning.')
   }
-  return { employmentId: employment.id as string, durationMin: bookedDurationMin }
+  return { durationMin: bookedDurationMin }
 }
 
-async function assertBookableSlot(
-  dependencies: ApiDependencies,
-  scope: { employmentId: string; durationMin: number },
-  barberId: string,
-  startsAt: Date,
-  excludeAppointmentId?: string,
-): Promise<void> {
-  const local = manilaDateTimeParts(startsAt)
-  const [{ data: exceptions, error: exceptionError }, { data: rules, error: ruleError }] = await Promise.all([
-    dependencies.database.from('shift_exceptions').select('is_available,start_time,end_time').eq('employment_id', scope.employmentId).eq('date', local.date),
-    dependencies.database.from('shift_patterns').select('weekday,start_time,end_time').eq('employment_id', scope.employmentId).eq('weekday', local.weekday),
-  ])
-  if (exceptionError) throw fromDatabaseError(exceptionError)
-  if (ruleError) throw fromDatabaseError(ruleError)
-  const exception = exceptions?.[0]
-  const blocks = exception ? exception.is_available ? [exception] : [] : (rules ?? [])
-  const startMinute = wallMinute(local.time)
-  const selectedBlock = blocks.find((block) => startMinute >= wallMinute(block.start_time)
-    && startMinute + scope.durationMin <= wallMinute(block.end_time))
-  if (!selectedBlock) throw new ApiError(400, 'validation', 'Selected time is outside the barber schedule.')
-  const gridOffset = startMinute - wallMinute(selectedBlock.start_time)
-  if (gridOffset % 15 !== 0 || startsAt.getUTCSeconds() !== 0 || startsAt.getUTCMilliseconds() !== 0) {
-    throw new ApiError(400, 'validation', 'Appointment start time must use the 15-minute booking grid.')
-  }
-
-  const endAt = new Date(startsAt.getTime() + scope.durationMin * 60_000)
-  let query = dependencies.database
-    .from('appointments')
-    .select('id')
-    .eq('barber_id', barberId)
-    .in('status', CAPACITY_BLOCKING_APPOINTMENT_STATUSES)
-    .lt('starts_at', endAt.toISOString())
-    .gt('ends_at', startsAt.toISOString())
-  if (excludeAppointmentId) query = query.neq('id', excludeAppointmentId)
-  const { data: overlaps, error: overlapError } = await query.limit(1)
-  if (overlapError) throw fromDatabaseError(overlapError)
-  if ((overlaps ?? []).length > 0) throw new ApiError(409, 'slot_taken', 'That appointment slot is already taken.')
-}
+/*
+ * `assertBookableSlot` was deleted here during the 2026-08-06 audit.
+ *
+ * It re-implemented, in Express and approximately, two of the six checks the
+ * authoritative claim gate already performs under lock: shift blocks and the
+ * 15-minute grid, plus a same-provider overlap probe. It did not check shop
+ * hours, closures, the lead/advance window, qualification, buffer, or chair
+ * capacity. Worse, it derived weekday, local date and the grid offset from
+ * `manilaDateTimeParts`, while `private.require_bookable_appointment_slot`
+ * evaluates the same rules in `shops.timezone` — a per-shop, owner-editable
+ * value. For any non-Manila shop it compared the wrong wall clock and rejected
+ * slots the gate would have accepted.
+ *
+ * Both write paths call the real gate anyway, so its only remaining effect was
+ * to refuse valid requests early, with a different message, in the wrong
+ * timezone. `errors.ts` maps every `P40xx` the gate raises to a specific client
+ * code, so deleting it does not degrade the error the customer sees.
+ */
 
 async function getAppointment(dependencies: ApiDependencies, appointmentId: string): Promise<AppointmentRecord> {
   const { data, error } = await dependencies.database.from('appointments').select(appointmentColumns).eq('id', appointmentId).maybeSingle()
@@ -320,7 +366,12 @@ function allowedAppointmentActions(row: AppointmentRecord, request: Request): Ap
   const now = Date.now()
   const startsAt = Date.parse(row.starts_at)
   const isCustomer = request.auth.profile.role === 'customer' && row.customer_id === request.auth.profile.id
-  const isProvider = request.auth.profile.role === 'barber' && row.barber_id === request.auth.profile.id
+  // Derived from the assignment, not from the role, to match
+  // `requireAssignedProvider`. Since Q20 an owner can be the assigned provider,
+  // and gating this on `role === 'barber'` meant the authorization layer
+  // accepted `start`/`finish` from an owner-provider while nothing ever rendered
+  // the control: their own visit stranded at `checked_in` with no way forward.
+  const isProvider = row.barber_id === request.auth.profile.id
   const isOwner = request.auth.profile.role === 'shop_owner'
   if (isCustomer) {
     if ((status === 'requested' || status === 'confirmed') && startsAt > now) actions.push('cancel', 'reschedule')
@@ -342,7 +393,9 @@ function allowedAppointmentActions(row: AppointmentRecord, request: Request): Ap
     if (status === 'checked_in' || status === 'in_progress') actions.push('report_delay', 'propose_change')
     if (status === 'disputed') actions.push('resolve_dispute')
   }
-  return actions
+  // An owner-provider matches both branches, so the overlapping affordances
+  // (`report_delay`, `propose_change`) would otherwise appear twice.
+  return [...new Set(actions)]
 }
 
 function snapshotAppointmentRows(rows: unknown[] | null, request: Request): unknown[] {
@@ -480,7 +533,6 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     if (!Number.isFinite(startsAt.getTime()) || startsAt.getTime() <= Date.now()) {
       throw new ApiError(400, 'validation', 'Appointment must start in the future.')
     }
-    await assertBookableSlot(dependencies, scope, input.barber_id, startsAt, id)
     const { data, error } = await dependencies.database.rpc('api_reschedule_appointment', {
       p_appointment_id: id,
       p_expected_version: input.expected_version ?? appointment.version ?? 0,
@@ -623,13 +675,15 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const appointment = await getAppointment(dependencies, id)
     await requireAppointmentOwner(dependencies, request, appointment)
     const bookedDurationMin = Number(appointment.booked_duration_min)
-    const scope = await reassignmentScope(
+    // Still called for its guards: it refuses a provider who is not bookable at
+    // this shop and an invalid duration snapshot, both with clearer messages than
+    // the gate's. It no longer returns a scope, because nothing needs one.
+    await reassignmentScope(
       dependencies,
       input.barber_id,
       appointment.shop_id,
       bookedDurationMin,
     )
-    await assertBookableSlot(dependencies, scope, input.barber_id, new Date(appointment.starts_at), id)
     const { data, error } = await dependencies.database.rpc('api_reassign_appointment', {
       p_appointment_id: id,
       p_expected_version: input.expected_version,

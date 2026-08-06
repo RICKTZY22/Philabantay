@@ -43,6 +43,39 @@ function ownerCapability(shopId: string, ownerId: string, row: Row | null): Owne
   }
 }
 
+/**
+ * Batched form of `qualificationRequest` for list endpoints.
+ *
+ * The per-row helper issues one or two queries each, so a queue of N pending
+ * requests cost 2N round trips. Every other router in this app batches with
+ * `.in(...)`; this was the outlier. The single-row helper is kept for the two
+ * command responses, where there is exactly one row and a batch would be noise.
+ */
+async function qualificationRequests(
+  dependencies: ApiDependencies,
+  rows: Row[],
+  includeBarber: boolean,
+): Promise<ServiceQualificationRequest[]> {
+  if (rows.length === 0) return []
+  const serviceIds = [...new Set(rows.map((row) => row.service_id as string))]
+  const barberIds = includeBarber ? [...new Set(rows.map((row) => row.barber_id as string))] : []
+  const [servicesResult, barbersResult] = await Promise.all([
+    dependencies.database.from('services').select('id,name,active').in('id', serviceIds),
+    barberIds.length > 0
+      ? dependencies.database.from('users').select('id,full_name,avatar_url').in('id', barberIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  if (servicesResult.error) throw fromDatabaseError(servicesResult.error)
+  if (barbersResult.error) throw fromDatabaseError(barbersResult.error)
+  const services = new Map((servicesResult.data ?? []).map((row) => [row.id as string, row]))
+  const barbers = new Map((barbersResult.data ?? []).map((row) => [row.id as string, row]))
+  return rows.map((row) => buildQualificationRequest(
+    row,
+    services.get(row.service_id as string) ?? null,
+    includeBarber ? barbers.get(row.barber_id as string) ?? null : null,
+  ))
+}
+
 async function qualificationRequest(
   dependencies: ApiDependencies,
   row: Row,
@@ -64,6 +97,15 @@ async function qualificationRequest(
   ])
   if (serviceResult.error) throw fromDatabaseError(serviceResult.error)
   if (barberResult.error) throw fromDatabaseError(barberResult.error)
+  return buildQualificationRequest(row, serviceResult.data, barberResult.data)
+}
+
+/** Shared projection, so the single-row and batched paths cannot drift apart. */
+function buildQualificationRequest(
+  row: Row,
+  service: unknown,
+  barber: unknown,
+): ServiceQualificationRequest {
   return {
     id: row.id as string,
     shop_id: row.shop_id as string,
@@ -74,10 +116,8 @@ async function qualificationRequest(
     version: row.version as number,
     created_at: row.created_at as string,
     resolved_at: (row.resolved_at as string | null) ?? null,
-    service: serviceResult.data as ServiceQualificationRequest['service'],
-    ...(barberResult.data
-      ? { barber: barberResult.data as ServiceQualificationRequest['barber'] }
-      : {}),
+    service: service as ServiceQualificationRequest['service'],
+    ...(barber ? { barber: barber as ServiceQualificationRequest['barber'] } : {}),
   }
 }
 
@@ -210,8 +250,10 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
       }
     }
 
-    const requests = await Promise.all(
-      ((requestsResult.data ?? []) as unknown as Row[]).map((row) => qualificationRequest(dependencies, row, true)),
+    const requests = await qualificationRequests(
+      dependencies,
+      (requestsResult.data ?? []) as unknown as Row[],
+      true,
     )
     return {
       shop_id: shopId,
@@ -289,7 +331,7 @@ export function createQualificationsRouter(dependencies: ApiDependencies): Route
     }
     const qualified = new Set(((qualificationsResult.data ?? []) as Row[]).map((row) => row.service_id as string))
     const requestRows = (requestsResult.data ?? []) as unknown as Row[]
-    const requests = await Promise.all(requestRows.map((row) => qualificationRequest(dependencies, row, false)))
+    const requests = await qualificationRequests(dependencies, requestRows, false)
     const requestByService = new Map(requests.map((item) => [item.service_id, item]))
     const data: BarberQualificationView = {
       shop_id: shopId,

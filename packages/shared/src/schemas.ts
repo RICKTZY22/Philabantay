@@ -105,6 +105,23 @@ const WALL_CLOCK = /^(?:[01]\d|2[0-3]):[0-5]\d$/
 const PHONE = /^\+?[0-9]{7,15}$/
 const SPECIAL_CHAR = /[^\p{L}\p{N}\s]/u
 
+/**
+ * An IANA zone the runtime can actually resolve, not just a non-empty string.
+ *
+ * `shops.timezone` is a per-shop owner input and the booking engine evaluates
+ * every wall-clock rule against it, so an unrecognised value used to surface as
+ * a database error at booking time rather than at save time. D-027 stopped that
+ * being a 500; this stops it being stored at all.
+ */
+export const timezoneSchema = z.string().trim().min(1).max(64).refine((value) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
+}, 'Enter a valid IANA timezone, for example Asia/Manila.')
+
 export const uuidSchema = z.string().uuid()
 export const dateKeySchema = z.string().regex(DATE_KEY, 'Expected YYYY-MM-DD.')
 export const wallClockSchema = z.string().regex(WALL_CLOCK, 'Expected HH:MM.')
@@ -201,6 +218,8 @@ export const publicShopDetailSchema: z.ZodType<PublicShopDetail> = z.strictObjec
   available_barber_count: z.number().int().nonnegative(),
   description: z.string().trim().max(2000).nullable(),
   public_contact_phone: z.string().trim().max(32).nullable(),
+  // Response projection: reflects what is stored. Input validation is where a
+  // bad zone is refused; re-validating here would 500 on existing data.
   timezone: z.string().trim().min(1).max(100),
   booking_mode: z.enum(['manual', 'instant']),
   chair_count: z.number().int().min(1).max(200),
@@ -799,7 +818,7 @@ const ownerShopWritableSchema = z.strictObject({
   city: z.string().trim().min(1).max(120),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  timezone: z.string().trim().min(1).max(64).optional(),
+  timezone: timezoneSchema.optional(),
   description: z.string().trim().max(2000).nullable().optional(),
   public_contact_phone: z.string().trim().min(5).max(40).nullable().optional(),
   booking_mode: z.enum(['manual', 'instant']).optional(),

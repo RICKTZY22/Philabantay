@@ -1,7 +1,11 @@
 export const SHOP_NAME = 'Philabantay'
 
-/** Single-shop MVP: all times are interpreted in this timezone. */
-export const SHOP_TIMEZONE = 'Asia/Manila'
+/*
+ * `SHOP_TIMEZONE = 'Asia/Manila'` was removed on 2026-08-06. It was a survivor
+ * of the single-shop era, imported by nothing, and it contradicted the per-shop
+ * `shops.timezone` column that the booking engine actually evaluates against.
+ * A default here is a trap: use the shop's own timezone.
+ */
 
 export const WEEKDAY_LABELS = [
   'Sunday',

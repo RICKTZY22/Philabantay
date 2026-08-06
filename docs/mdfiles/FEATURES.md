@@ -70,7 +70,7 @@ a single hamburger drawer (`components/AppMenu.tsx`), whose items come from
 
 | Feature | What it does | Lives in |
 | --- | --- | --- |
-| **Landing page** | Marketing "billboard" whose hero *is* the auth form, plus an animated "how it works" street scene. `/login` and `/signup` just redirect here with a mode flag. | `pages/LandingPage.tsx`, `pages/useJourneyScroll.ts`, `components/AuthSlider.tsx`, `components/Storefront.tsx`, `components/WalkFigure.tsx` |
+| **Landing page** | Marketing "billboard" whose hero *is* the auth form, plus an animated "how it works" street scene. `/login` and `/signup` just redirect here with a mode flag. | `pages/LandingPage.tsx`, `pages/useJourneyScroll.ts`, `components/AuthSlider.tsx` |
 | **Barber directory** | Browse all barbers, filter to nearby (GPS) or favorites, see who is available now. Two entry points share one component: `BarbersPage` and `FavoriteBarbersPage`. | `pages/BarbersPage.tsx` |
 | **Barber detail + booking** | A barber's public page: rating, portfolio, and the booking workspace (service, date, open time slots). Also handles reschedule. | `pages/BarberDetailPage.tsx` |
 | **Shop profile** | One shop's page: services menu, barbers on duty, a live-queue widget, hours, and a "Chat shop" button. | `pages/ShopProfilePage.tsx` |

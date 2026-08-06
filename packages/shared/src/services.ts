@@ -723,6 +723,12 @@ interface ApiAuthPayload {
   /** Present when the identity has a verified factor and can step up to AAL2. */
   mfa_required?: boolean
   factor_id?: string
+  /**
+   * The factor listing failed, so the absence of `mfa_required` means "could not
+   * ask", not "no factors". Distinguished so a provider outage does not look
+   * like an account with MFA switched off.
+   */
+  mfa_status_unavailable?: boolean
 }
 
 interface ApiErrorPayload {

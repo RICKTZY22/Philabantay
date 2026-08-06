@@ -25,6 +25,11 @@ import { createAnalyticsRouter } from './routes/analytics'
 
 export interface CreateAppOptions {
   webOrigin: string | string[]
+  /**
+   * Number of reverse-proxy hops in front of this process, from
+   * `TRUST_PROXY_HOPS`. Omitted or 0 means the process is reached directly.
+   */
+  trustProxyHops?: number
 }
 
 export function createApp(dependencies: ApiDependencies, options: CreateAppOptions): Express {
@@ -34,9 +39,19 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   app.use(cors({ origin: options.webOrigin, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], allowedHeaders: ['Authorization', 'Content-Type'] }))
   app.use(express.json({ limit: '64kb' }))
 
-  // Rate limiting keys on the client IP. Behind a reverse proxy in production,
-  // set `app.set('trust proxy', 1)` (or the proxy hop count) so the real client
-  // IP is used instead of the proxy's, and never a permissive `true`.
+  // Rate limiting keys on the client IP, so behind a reverse proxy every request
+  // would otherwise present the proxy's address: the 120/min general limiter and
+  // the credential limiter collapse into one shared bucket, which throttles
+  // legitimate users and defeats brute-force protection at the same time.
+  //
+  // Deliberately a hop count from configuration, never a permissive `true`.
+  // Trusting every hop lets a client forge `X-Forwarded-For` and mint a fresh
+  // rate-limit bucket per request, which is worse than not trusting at all.
+  // Unset means no proxy, which is correct for local development.
+  if (options.trustProxyHops && options.trustProxyHops > 0) {
+    app.set('trust proxy', options.trustProxyHops)
+  }
+
   const rateLimitMessage = (message: string) => ({ error: { code: 'rate_limited', message } })
   const generalLimiter = rateLimit({
     windowMs: 60_000,

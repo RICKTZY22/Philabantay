@@ -8,7 +8,7 @@ import { processPhase3Operations } from './routes/phase3-operations'
 
 const config = readConfig(process.env)
 const dependencies = createSupabaseDependencies(config)
-const app = createApp(dependencies, { webOrigin: config.webOrigin })
+const app = createApp(dependencies, { webOrigin: config.webOrigin, trustProxyHops: config.trustProxyHops })
 
 let lifecycleWorkerRunning = false
 async function runLifecycleWorker(): Promise<void> {

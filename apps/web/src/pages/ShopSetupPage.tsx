@@ -75,6 +75,19 @@ const STATUS_LABEL: Record<OwnerShop['lifecycle_status'], string> = {
   archived: 'Archived',
 }
 
+/**
+ * Zones this runtime can resolve, so the picker cannot offer something the
+ * validator would then refuse. Philippine zones lead because that is the market;
+ * the full list follows for shops elsewhere.
+ */
+const SUPPORTED_TIMEZONES: string[] = (() => {
+  const all = typeof Intl.supportedValuesOf === 'function'
+    ? Intl.supportedValuesOf('timeZone')
+    : ['Asia/Manila']
+  const preferred = ['Asia/Manila']
+  return [...preferred, ...all.filter((zone) => !preferred.includes(zone))]
+})()
+
 export function ShopSetupPage() {
   const backend = useBackend()
   const [shop, setShop] = useState<OwnerShop | null | undefined>(undefined)
@@ -474,7 +487,15 @@ export function ShopSetupPage() {
               </label>
               <label className="shop-field">
                 <span>Timezone</span>
-                <input value={form.timezone} onChange={(e) => update({ timezone: e.target.value })} maxLength={64} required />
+                {/* A list, not free text. The booking engine evaluates every
+                    wall-clock rule in this zone, so a typo used to surface as a
+                    refusal at booking time rather than an error at save time. */}
+                <select value={form.timezone} onChange={(e) => update({ timezone: e.target.value })} required>
+                  {!SUPPORTED_TIMEZONES.includes(form.timezone) && form.timezone && (
+                    <option value={form.timezone}>{form.timezone} (unrecognised)</option>
+                  )}
+                  {SUPPORTED_TIMEZONES.map((zone) => <option value={zone} key={zone}>{zone}</option>)}
+                </select>
               </label>
               <label className="shop-field is-wide">
                 <span>Street address</span>
