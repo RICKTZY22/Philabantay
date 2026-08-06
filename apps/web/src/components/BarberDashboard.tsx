@@ -20,6 +20,7 @@ import { straightLineKm } from '../lib/geo'
 import { dayLabel, timeOfDay } from '../lib/format'
 import { Loading } from './Loading'
 import { BarberShiftCalendar } from './BarberShiftCalendar'
+import { BarberPerformancePanel } from './BarberPerformancePanel'
 import { DoodleBoard } from './DoodleBoard'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import './BarberDashboard.css'
@@ -420,6 +421,11 @@ function EmployedBarberHome({ barberName, shop, appointments, conversations, rul
         <HomeStat icon="chair" value={String(upcoming.length)} label="Upcoming bookings" tone="yellow" />
         <HomeStat icon="chat" value={String(unread)} label="Unread messages" tone="pink" />
       </section>
+
+      {/* Performance is the barber's own record, not owner analytics shrunk into a
+          smaller card: it separates customer absence from shop-caused failures and
+          ships the definition of every figure. */}
+      <BarberPerformancePanel />
 
       <div className="barber-home-grid">
         <section className="barber-home-card barber-paper-stack barber-shifts-card">

@@ -11,6 +11,7 @@ import {
   type ConversationDetailed,
   type Service,
   type ShopWithStatus,
+  type CustomerRatingWorkspace,
 } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useCurrentTime } from '../hooks/useCurrentTime'
@@ -21,6 +22,7 @@ import { AppointmentCalendar } from './AppointmentCalendar'
 import { DoodleBoard } from './DoodleBoard'
 import { ModalPortal } from './ModalPortal'
 import { DoodleIcon } from '../theme/DoodleDefs'
+import { RatingPanel } from './RatingPanel'
 import { money } from '../lib/format'
 import { googleDrivingDirectionsUrl, straightLineKm } from '../lib/geo'
 import { routeSegment } from '../lib/security'
@@ -326,6 +328,7 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
   const [openingShopChat, setOpeningShopChat] = useState(false)
   const [shopActionError, setShopActionError] = useState('')
   const [query, setQuery] = useState('')
+  const [ratings, setRatings] = useState<CustomerRatingWorkspace>({ pending: [], reviews: [] })
 
   // One live GPS stream keeps both nearby filtering and the map viewport fresh.
   const { location: userLoc, status: locState, retry: retryLiveLocation } = useLiveLocation()
@@ -341,7 +344,9 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
       backend.chat.listConversations(),
       backend.favorites.list(),
       backend.services.list(),
-    ]).then(([shopList, all, available, mine, convos, favs, serviceList]) => {
+      // The rating prompt belongs on home, not only buried in booking history.
+      backend.reviews.myWorkspace(),
+    ]).then(([shopList, all, available, mine, convos, favs, serviceList, ratingWorkspace]) => {
       if (!active) return
       setShops(shopList)
       setAllBarbers(all)
@@ -350,6 +355,7 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
       setConversations(convos)
       setFavoriteIds(favs)
       setServices(serviceList)
+      setRatings(ratingWorkspace)
     }).catch((error: unknown) => {
       if (!active) return
       console.error('[dashboard] Failed to load discovery data.', error)
@@ -630,6 +636,21 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
           </div>
 
         </section>
+
+        {/* Next action first: a visit that unlocked a review is the most useful
+            thing on this screen, and it disappears once it is spent. */}
+        {ratings.pending.length > 0 && (
+          <section className="cd-rating-prompt" aria-labelledby="cd-rating-title">
+            <h2 id="cd-rating-title" className="sr-only">Visits you can review</h2>
+            <RatingPanel
+              eligibility={ratings.pending[0]}
+              heading={ratings.pending.length === 1
+                ? 'Rate your last visit'
+                : `Rate your last visit (${ratings.pending.length} waiting)`}
+              onSaved={() => void backend.reviews.myWorkspace().then(setRatings)}
+            />
+          </section>
+        )}
 
         {/* ---- Map + top rated ---- */}
         <section className="cd-map-grid" id="cd-discover" aria-label="Barbershop map">

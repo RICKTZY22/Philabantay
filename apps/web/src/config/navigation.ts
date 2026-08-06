@@ -17,7 +17,7 @@ export type MenuContext = {
   icon: DoodleIconName
 }
 
-export const OWNER_DASHBOARD_SECTIONS = ['overview', 'reservations', 'staff', 'barbers'] as const
+export const OWNER_DASHBOARD_SECTIONS = ['overview', 'reservations', 'staff', 'barbers', 'analytics', 'trust'] as const
 export type OwnerDashboardSection = typeof OWNER_DASHBOARD_SECTIONS[number]
 
 export function isOwnerDashboardSection(value: string | undefined): value is OwnerDashboardSection {
@@ -54,6 +54,11 @@ const SHOP_OWNER_MENU_ITEMS: MenuItem[] = [
   { to: '/dashboard/owner/hiring', icon: 'search', label: 'Hiring', end: true },
   { to: '/chat', icon: 'chat', label: 'Messages' },
   { to: '/dashboard/owner/barbers', icon: 'scissors', label: 'Barbers', end: true },
+  // Analytics is a separate destination from Owner Home, which stays
+  // operations-first. One navigation surface only: the hamburger.
+  { to: '/dashboard/owner/analytics', icon: 'star', label: 'Analytics', end: true },
+  // Trust is where decisions get made; Analytics is where numbers get read.
+  { to: '/dashboard/owner/trust', icon: 'check', label: 'Trust', end: true },
   { to: '/dashboard/owner/shop', icon: 'pole', label: 'Shop Setup', end: true },
   { to: '/settings', icon: 'gear', label: 'Settings' },
 ]

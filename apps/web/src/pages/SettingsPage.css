@@ -304,3 +304,40 @@
   .settings-list-row { padding: 14px; }
   .settings-session-card { align-items: stretch; flex-direction: column; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* P4-08: server-stored preferences, mandatory notices, and accessibility.    */
+/* -------------------------------------------------------------------------- */
+
+.settings-subheading {
+  margin: 14px 0 -4px;
+  font-size: 17px;
+}
+
+.settings-stack-card { display: grid; gap: 12px; }
+
+/* A required notice is stated, not offered as a switch that cannot move. */
+.settings-list-row-locked { cursor: default; }
+.settings-locked-badge {
+  align-self: center;
+  padding: 4px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.settings-field { display: grid; gap: 5px; }
+.settings-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.settings-field-row label { display: grid; gap: 5px; }
+.settings-field-row input[type='time'] { min-height: 44px; }
+.settings-panel-card input[type='range'] { min-height: 44px; width: 100%; }
+.settings-panel-card input:disabled,
+.settings-panel-card select:disabled { opacity: .65; cursor: not-allowed; }

@@ -11,7 +11,7 @@ import {
   type NoShowAppeal,
   type PublicShopDetail,
   type AvailabilitySlot,
-  type Review,
+  type CustomerRatingWorkspace,
 } from '@barbershop/shared'
 import { useBackend } from '../services/backend'
 import { useAuth } from '../features/auth/AuthContext'
@@ -19,6 +19,8 @@ import { useCurrentTime } from '../hooks/useCurrentTime'
 import { Loading } from '../components/Loading'
 import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { ModalPortal } from '../components/ModalPortal'
+import { RatingPanel } from '../components/RatingPanel'
+import { DisputePanel } from '../components/DisputePanel'
 import { DoodleIcon } from '../theme/DoodleDefs'
 import { money, timeOfDay, dayLabel } from '../lib/format'
 import { appointmentStatusPresentation } from '../lib/appointmentStatus'
@@ -30,10 +32,7 @@ export function AppointmentsPage() {
   const nowEpochMs = useCurrentTime()
   const [appts, setAppts] = useState<AppointmentDetailed[] | null>(null)
   const [selected, setSelected] = useState<AppointmentDetailed | null>(null)
-  const [reviews, setReviews] = useState<Review[]>([])
-  const [drafts, setDrafts] = useState<Record<string, { barber_rating: number; shop_rating: number }>>({})
-  const [savingReview, setSavingReview] = useState<string | null>(null)
-  const [reviewMessage, setReviewMessage] = useState<Record<string, string>>({})
+  const [ratings, setRatings] = useState<CustomerRatingWorkspace>({ pending: [], reviews: [] })
   const [cancelError, setCancelError] = useState('')
   const [cancelling, setCancelling] = useState(false)
   const [proposals, setProposals] = useState<AppointmentChangeProposal[]>([])
@@ -46,22 +45,20 @@ export function AppointmentsPage() {
   const [workingAction, setWorkingAction] = useState('')
 
   const load = useCallback(async () => {
-    const [appointments, savedReviews, inbox, noShowAppeals] = await Promise.all([
+    const [appointments, ratingWorkspace, inbox, noShowAppeals] = await Promise.all([
       backend.bookings.listMine(),
-      backend.reviews.listMine(),
+      // Ratings are keyed on eligibility, not on appointment id, so the page has
+      // to read the workspace to know whether a completed visit unlocked one.
+      isBarber ? Promise.resolve<CustomerRatingWorkspace>({ pending: [], reviews: [] }) : backend.reviews.myWorkspace(),
       backend.notifications.list(),
-      backend.bookings.listMyNoShowAppeals(),
+      isBarber ? Promise.resolve<NoShowAppeal[]>([]) : backend.bookings.listMyNoShowAppeals(),
     ])
     setAppts(appointments)
-    setReviews(savedReviews)
+    setRatings(ratingWorkspace)
     setNotifications(inbox)
     setAppeals(noShowAppeals)
-    setDrafts(Object.fromEntries(savedReviews.map((review) => [review.appointment_id, {
-      barber_rating: review.barber_rating,
-      shop_rating: review.shop_rating,
-    }])))
     return appointments
-  }, [backend])
+  }, [backend, isBarber])
 
   useEffect(() => {
     void load()
@@ -131,36 +128,6 @@ export function AppointmentsPage() {
     }
   }
 
-  function setRating(id: string, target: 'barber_rating' | 'shop_rating', score: number) {
-    setDrafts((current) => ({
-      ...current,
-      [id]: {
-        barber_rating: current[id]?.barber_rating ?? 0,
-        shop_rating: current[id]?.shop_rating ?? 0,
-        [target]: score,
-      },
-    }))
-    setReviewMessage((current) => ({ ...current, [id]: '' }))
-  }
-
-  async function saveRating(appointment: AppointmentDetailed) {
-    const draft = drafts[appointment.id]
-    if (!draft?.barber_rating || !draft.shop_rating) {
-      setReviewMessage((current) => ({ ...current, [appointment.id]: 'Rate both the barber and barbershop first.' }))
-      return
-    }
-    setSavingReview(appointment.id)
-    try {
-      const saved = await backend.reviews.rateAppointment({ appointment_id: appointment.id, ...draft })
-      setReviews((current) => [...current.filter((review) => review.appointment_id !== appointment.id), saved])
-      setReviewMessage((current) => ({ ...current, [appointment.id]: 'Rating saved. Salamat!' }))
-    } catch {
-      setReviewMessage((current) => ({ ...current, [appointment.id]: 'Hindi ma-save ang rating. Subukan ulit.' }))
-    } finally {
-      setSavingReview(null)
-    }
-  }
-
   if (!appts) return <Loading label="Pulling up your bookings..." />
 
   const upcoming = appts
@@ -169,6 +136,12 @@ export function AppointmentsPage() {
   const upcomingIds = new Set(upcoming.map((appointment) => appointment.id))
   const history = appts.filter((appointment) => !upcomingIds.has(appointment.id))
     .sort((a, b) => b.starts_at.localeCompare(a.starts_at))
+  const selectedReview = selected
+    ? ratings.reviews.find((review) => review.appointment_id === selected.id)
+    : undefined
+  const selectedEligibility = selected
+    ? ratings.pending.find((entry) => entry.appointment_id === selected.id)
+    : undefined
 
   return (
     <div className="appointments-page">
@@ -239,7 +212,6 @@ export function AppointmentsPage() {
               )}
               {selected.allowed_actions?.includes('check_in') && !isBarber && <label className="booking-checkin-field"><span>6-digit shop code</span><input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={checkInCode} onChange={(event) => setCheckInCode(event.target.value.replace(/\D/g, ''))} /><button type="button" className="btn btn-green" disabled={Boolean(workingAction) || checkInCode.length !== 6} onClick={() => void customerAction('check-in', () => backend.bookings.checkIn(selected.id, { expected_version: selected.version ?? 1, code: checkInCode }), 'You are checked in.')}>Check in</button></label>}
               {selected.allowed_actions?.includes('confirm_completion') && !isBarber && <button type="button" className="btn btn-green" disabled={Boolean(workingAction)} onClick={() => void customerAction('confirm', () => backend.bookings.confirmCompletion(selected.id, { expected_version: selected.version ?? 1 }), 'Visit confirmed complete.')}>Confirm completion</button>}
-              {selected.allowed_actions?.includes('dispute') && !isBarber && <button type="button" className="btn btn-danger" disabled={Boolean(workingAction)} onClick={() => void customerAction('dispute', () => backend.bookings.dispute(selected.id, { expected_version: selected.version ?? 1, reason: 'Customer reported that the recorded service outcome needs review.' }), 'Dispute opened for owner review.')}>Dispute result</button>}
               {selected.allowed_actions?.includes('appeal_no_show') && !isBarber && !appeals.some((appeal) => appeal.appointment_id === selected.id) && <button type="button" className="btn" disabled={Boolean(workingAction)} onClick={() => void customerAction('appeal', () => backend.bookings.appealNoShow(selected.id, { reason: 'Customer requests review of the no-show record.' }), 'Appeal submitted before the deadline.')}>Appeal no-show</button>}
             </div>
             {(selected.allowed_actions?.includes('reschedule') ?? canModifyAppointment(selected, nowEpochMs)) && !isBarber && <CustomerRescheduleForm appointment={selected} onAction={customerAction} />}
@@ -248,14 +220,32 @@ export function AppointmentsPage() {
 
             <details className="booking-timeline"><summary>Appointment timeline ({timeline.length})</summary><ol>{timeline.map((event) => <li key={event.id}><strong>{event.event_type.replaceAll('_', ' ')}</strong><span>{event.reason ?? 'Recorded by the system.'}</span><time>{new Date(event.created_at).toLocaleString('en-PH')}</time></li>)}</ol></details>
 
-            {selected.status === 'completed' && !isBarber && (
-              <section className="booking-notebook-review">
-                <div><span className="eyebrow">AFTER YOUR CUT</span><h3>{reviews.some((review) => review.appointment_id === selected.id) ? 'Edit your rating' : 'Rate this visit'}</h3><p>Hiwalay ang rating para sa barber at shop.</p></div>
-                <RatingRow label="Barber" value={drafts[selected.id]?.barber_rating ?? 0} onRate={(score) => setRating(selected.id, 'barber_rating', score)} />
-                <RatingRow label="Barbershop" value={drafts[selected.id]?.shop_rating ?? 0} onRate={(score) => setRating(selected.id, 'shop_rating', score)} />
-                <button type="button" className="btn btn-primary" disabled={savingReview === selected.id} onClick={() => void saveRating(selected)}>{savingReview === selected.id ? 'Saving...' : 'Save rating'}</button>
-                {reviewMessage[selected.id] && <span className="booking-review-message" role="status">{reviewMessage[selected.id]}</span>}
-              </section>
+            {/* The dispute control was a button that posted a hardcoded sentence on
+                the customer's behalf. A dispute needs the customer's own words, and
+                a place to follow the decision and escalate it. */}
+            {!isBarber && (
+              <DisputePanel
+                appointmentId={selected.id}
+                appointmentVersion={selected.version ?? 1}
+                canOpen={selected.allowed_actions?.includes('dispute') ?? false}
+                onChanged={() => void load()}
+              />
+            )}
+
+            {!isBarber && (selectedReview ?? selectedEligibility) && (
+              <RatingPanel
+                eligibility={selectedEligibility}
+                review={selectedReview}
+                onSaved={() => void load()}
+              />
+            )}
+            {/* A completed visit with neither a review nor an eligibility is not a
+                bug: a disputed or reopened visit deliberately loses its unlock. */}
+            {!isBarber && selected.status === 'completed' && !selectedReview && !selectedEligibility && (
+              <p className="booking-review-message" role="status">
+                This visit does not unlock a review right now. Disputed or reopened visits stay unrated
+                until the record is final.
+              </p>
             )}
         </ModalPortal>
       )}
@@ -295,19 +285,6 @@ function shopDateKey(value: string, timezone: string): string {
   }).formatToParts(new Date(value))
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
   return `${part('year')}-${part('month')}-${part('day')}`
-}
-
-function RatingRow({ label, value, onRate }: { label: string; value: number; onRate: (score: number) => void }) {
-  return (
-    <div className="appt-rating-row">
-      <span>{label}</span>
-      <div role="group" aria-label={`Rate ${label.toLowerCase()}`}>
-        {[1, 2, 3, 4, 5].map((score) => (
-          <button type="button" className={score <= value ? 'is-rated' : ''} onClick={() => onRate(score)} aria-label={`${score} stars for ${label.toLowerCase()}`} key={score}><DoodleIcon name="star" size={22} /></button>
-        ))}
-      </div>
-    </div>
-  )
 }
 
 function ScheduleList({ title, tone, appointments, empty, onSelect }: {

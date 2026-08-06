@@ -680,7 +680,7 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
     const ranged = completed.filter((appointment) => Date.parse((appointment.completed_at ?? appointment.starts_at) as string) >= cutoff)
     const customerCounts = new Map<string, number>()
     const serviceCounts = new Map<string, { id: string; name: string; bookings: number }>()
-    const daily = new Map<string, { date: string; completed_service_value_cents: number; revenue_cents: number; completed: number }>()
+    const daily = new Map<string, { date: string; completed_service_value_cents: number; completed: number }>()
 
     for (const appointment of ranged) {
       const customerId = appointment.customer_id as string
@@ -692,10 +692,9 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
       const service = serviceCounts.get(serviceId) ?? { id: serviceId, name: serviceName, bookings: 0 }
       service.bookings += 1
       serviceCounts.set(serviceId, service)
-      const point = daily.get(date) ?? { date, completed_service_value_cents: 0, revenue_cents: 0, completed: 0 }
+      const point = daily.get(date) ?? { date, completed_service_value_cents: 0, completed: 0 }
       point.completed += 1
       point.completed_service_value_cents += price
-      point.revenue_cents += price // Compatibility alias; payment collection is not yet modeled.
       daily.set(date, point)
     }
 
@@ -713,9 +712,12 @@ export function createBookingsRouter(dependencies: ApiDependencies): Router {
         upcoming_count: all.filter((appointment) => CAPACITY_BLOCKING_APPOINTMENT_STATUSES.some((status) => status === appointment.status) && Date.parse(appointment.starts_at as string) > now).length,
         completed_all_time: completed.length,
         completed_count: ranged.length,
+        // `revenue_cents` and `revenue_is_estimate` are deliberately gone. Contract
+        // section 10 forbids calling any of these figures revenue, and an estimate
+        // labelled revenue was the specific mistake it names. Collected, refunded,
+        // and net collected now come from the payment ledger through
+        // `GET /shops/:id/analytics`; this route reports service value only.
         completed_service_value_cents: completedServiceValue,
-        revenue_cents: completedServiceValue,
-        revenue_is_estimate: true,
         series: [...daily.values()].sort((a, b) => a.date.localeCompare(b.date)),
         top_visitors: [...customerCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([customerId, visits]) => ({ ...profileMap.get(customerId), visits })),
         top_services: [...serviceCounts.values()].sort((a, b) => b.bookings - a.bookings).slice(0, 5),

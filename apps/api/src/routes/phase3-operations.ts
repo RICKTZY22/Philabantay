@@ -455,12 +455,22 @@ export function createPhase3OperationsRouter(dependencies: ApiDependencies): Rou
 }
 
 export async function processPhase3Operations(dependencies: ApiDependencies): Promise<void> {
-  const [appeals, notifications, closeouts] = await Promise.all([
+  const results = await Promise.all([
     dependencies.database.rpc('api_process_due_no_show_reviews'),
     dependencies.database.rpc('api_deliver_due_in_app_notifications', { p_limit: 100 }),
     dependencies.database.rpc('api_run_due_closeouts'),
+    // The seven-day review lock is enforced by `api_edit_rating` regardless of
+    // this sweep; the sweep exists so "then lock" becomes a recorded event
+    // instead of an inference from a timestamp.
+    dependencies.database.rpc('api_lock_due_ratings', { p_limit: 200 }),
+    // A shop decision the customer never answered becomes final, and the closure
+    // is a recorded fact rather than an open case nobody is working.
+    dependencies.database.rpc('api_close_unanswered_dispute_decisions', { p_limit: 200 }),
+    // Message retention is two years (plan section 3). Bounded per cycle so a
+    // long-neglected deployment cannot turn one worker tick into a table scan.
+    dependencies.database.rpc('api_purge_expired_messages', { p_limit: 500 }),
   ])
-  for (const result of [appeals, notifications, closeouts]) {
+  for (const result of results) {
     if (result.error) throw fromDatabaseError(result.error)
   }
 }

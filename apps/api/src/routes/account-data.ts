@@ -2,11 +2,10 @@ import { Router } from 'express'
 import {
   idParamsSchema,
   notificationPreferencesInputSchema,
-  rateAppointmentInputSchema,
 } from '@barbershop/shared/schemas'
 import type { ApiDependencies } from '../lib/supabase'
-import { requireOwnedShop, requireRole } from '../http/authorization'
-import { ApiError, fromDatabaseError } from '../http/errors'
+import { requireOwnedShop } from '../http/authorization'
+import { fromDatabaseError } from '../http/errors'
 import { parseBody, parseParams } from '../http/validation'
 
 export function createAccountDataRouter(dependencies: ApiDependencies): Router {
@@ -62,59 +61,60 @@ export function createAccountDataRouter(dependencies: ApiDependencies): Router {
     response.json({ data: (updated ?? []).map((row) => row.barber_id) })
   })
 
-  router.get('/ratings', async (request, response) => {
-    requireRole(request, 'customer')
-    const { data, error } = await dependencies.database.from('ratings').select('*').eq('customer_id', request.auth.profile.id).order('created_at', { ascending: false })
-    if (error) throw fromDatabaseError(error)
-    response.json({ data: data ?? [] })
-  })
-
-  router.post('/ratings', async (request, response) => {
-    requireRole(request, 'customer')
-    const input = parseBody(request, rateAppointmentInputSchema)
-    const { data: appointment, error: appointmentError } = await dependencies.database
-      .from('appointments')
-      .select('customer_id,barber_id,shop_id,status')
-      .eq('id', input.appointment_id)
-      .maybeSingle()
-    if (appointmentError) throw fromDatabaseError(appointmentError)
-    if (!appointment) throw new ApiError(404, 'not_found', 'Appointment not found.')
-    if (appointment.customer_id !== request.auth.profile.id) throw new ApiError(403, 'forbidden', 'You can only rate your own appointment.')
-    if (appointment.status !== 'completed') throw new ApiError(400, 'validation', 'Only completed appointments can be rated.')
-    const { data, error } = await dependencies.database
-      .from('ratings')
-      .upsert({
-        ...input,
-        customer_id: request.auth.profile.id,
-        barber_id: appointment.barber_id,
-        shop_id: appointment.shop_id,
-        comment: input.comment ?? null,
-      }, { onConflict: 'appointment_id' })
-      .select('*')
-      .single()
-    if (error) throw fromDatabaseError(error)
-    response.status(201).json({ data })
-  })
+  // `GET`/`POST /ratings` moved to `routes/ratings.ts` in P4-03. They used to
+  // upsert `public.ratings` on the service-role client, which made them the last
+  // mutation in the application that did not go through a SQL command.
 
   router.get('/notification-preferences', async (request, response) => {
     const { data, error } = await dependencies.database
       .from('notification_preferences')
-      .select('booking_reminders,chat_notifications,email_updates,nearby_alerts')
+      .select('*')
       .eq('user_id', request.auth.profile.id)
       .maybeSingle()
     if (error) throw fromDatabaseError(error)
+    // An account with no stored row gets the documented defaults rather than an
+    // empty object, so a first-time device renders the same thing as a saved one.
     response.json({
-      data: data ?? { booking_reminders: true, chat_notifications: true, email_updates: false, nearby_alerts: false },
+      data: data ?? {
+        user_id: request.auth.profile.id,
+        booking_reminders: true,
+        chat_notifications: true,
+        email_updates: false,
+        nearby_alerts: false,
+        nearby_radius_km: 5,
+        quiet_hours_start: null,
+        quiet_hours_end: null,
+        language: 'en',
+        text_size: 'default',
+        high_contrast: false,
+        reduce_motion: false,
+        transactional_notices: true,
+        version: 0,
+        created_at: null,
+        updated_at: null,
+      },
     })
   })
 
   router.put('/notification-preferences', async (request, response) => {
     const input = parseBody(request, notificationPreferencesInputSchema)
-    const { data, error } = await dependencies.database
-      .from('notification_preferences')
-      .upsert({ user_id: request.auth.profile.id, ...input })
-      .select('booking_reminders,chat_notifications,email_updates,nearby_alerts')
-      .single()
+    // Through the command, not an upsert: it version-checks, validates the quiet
+    // hours pair, and forces `transactional_notices` true regardless of input.
+    const { data, error } = await dependencies.database.rpc('api_set_notification_preferences', {
+      p_user_id: request.auth.profile.id,
+      p_expected_version: input.expected_version ?? null,
+      p_booking_reminders: input.booking_reminders,
+      p_chat_notifications: input.chat_notifications,
+      p_email_updates: input.email_updates,
+      p_nearby_alerts: input.nearby_alerts,
+      p_nearby_radius_km: input.nearby_radius_km ?? 5,
+      p_quiet_hours_start: input.quiet_hours_start ?? null,
+      p_quiet_hours_end: input.quiet_hours_end ?? null,
+      p_language: input.language ?? 'en',
+      p_text_size: input.text_size ?? 'default',
+      p_high_contrast: input.high_contrast ?? false,
+      p_reduce_motion: input.reduce_motion ?? false,
+    })
     if (error) throw fromDatabaseError(error)
     response.json({ data })
   })

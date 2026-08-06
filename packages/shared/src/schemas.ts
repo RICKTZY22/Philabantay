@@ -33,8 +33,24 @@ import type {
   NotificationPreferencesInput,
   OwnerServiceInput,
   OpenConversationInput,
+  BlockConversationPeerInput,
+  ReportConversationInput,
   OpenStaffConversationInput,
-  RateAppointmentInput,
+  SubmitRatingInput,
+  EditRatingInput,
+  PublishRatingResponseInput,
+  EditRatingResponseInput,
+  ReportRatingInput,
+  ModerateRatingReportInput,
+  SetRatingEditWindowInput,
+  OpenAppointmentDisputeInput,
+  DecideAppointmentDisputeInput,
+  RespondToDisputeDecisionInput,
+  CaseVersionInput,
+  CaseReasonInput,
+  AddCaseEvidenceInput,
+  ResolveSupportCaseInput,
+  EscalateRatingReportInput,
   ReassignAppointmentInput,
   RescheduleAppointmentInput,
   RefreshSessionInput,
@@ -345,11 +361,97 @@ export const availabilityDaySchema: z.ZodType<AvailabilityDay> = z.strictObject(
   slots: z.array(availabilitySlotSchema),
 })
 
-export const rateAppointmentInputSchema: z.ZodType<RateAppointmentInput> = z.strictObject({
-  appointment_id: uuidSchema,
-  barber_rating: z.number().int().min(1).max(5),
-  shop_rating: z.number().int().min(1).max(5),
-  comment: z.string().trim().max(2000).optional(),
+const ratingScoreSchema = z.number().int().min(1).max(5)
+const ratingCommentSchema = z.string().trim().max(2000).optional()
+const ratingDisplayModeSchema = z.enum(['short_name', 'anonymous']).optional()
+
+export const submitRatingInputSchema: z.ZodType<SubmitRatingInput> = z.strictObject({
+  eligibility_id: uuidSchema,
+  barber_rating: ratingScoreSchema,
+  shop_rating: ratingScoreSchema,
+  comment: ratingCommentSchema,
+  display_mode: ratingDisplayModeSchema,
+})
+
+export const editRatingInputSchema: z.ZodType<EditRatingInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  barber_rating: ratingScoreSchema,
+  shop_rating: ratingScoreSchema,
+  comment: ratingCommentSchema,
+  display_mode: ratingDisplayModeSchema,
+})
+
+export const publishRatingResponseInputSchema: z.ZodType<PublishRatingResponseInput> = z.strictObject({
+  body: z.string().trim().min(3).max(2000),
+})
+
+export const editRatingResponseInputSchema: z.ZodType<EditRatingResponseInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  body: z.string().trim().min(3).max(2000),
+})
+
+export const reportRatingInputSchema: z.ZodType<ReportRatingInput> = z.strictObject({
+  response_id: uuidSchema.optional(),
+  reason_category: z.enum(['abusive', 'spam', 'private_information', 'off_topic', 'not_a_customer', 'other']),
+  reason: z.string().trim().min(3).max(1000),
+})
+
+export const moderateRatingReportInputSchema: z.ZodType<ModerateRatingReportInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  decision: z.enum(['hide_text', 'restore_text', 'reject']),
+  reason: z.string().trim().min(3).max(1000),
+})
+
+const caseReasonSchema = z.string().trim().min(3).max(2000)
+
+export const openAppointmentDisputeInputSchema: z.ZodType<OpenAppointmentDisputeInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  reason: caseReasonSchema,
+  evidence_note: z.string().trim().min(3).max(4000).optional(),
+})
+
+export const decideAppointmentDisputeInputSchema: z.ZodType<DecideAppointmentDisputeInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  decision: z.enum(['completed', 'cancelled']),
+  reason: caseReasonSchema,
+})
+
+export const respondToDisputeDecisionInputSchema: z.ZodType<RespondToDisputeDecisionInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  response: z.enum(['accept', 'escalate']),
+  reason: caseReasonSchema.optional(),
+})
+
+export const caseVersionInputSchema: z.ZodType<CaseVersionInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+})
+
+export const caseReasonInputSchema: z.ZodType<CaseReasonInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  reason: caseReasonSchema,
+})
+
+export const addCaseEvidenceInputSchema: z.ZodType<AddCaseEvidenceInput> = z.strictObject({
+  note: z.string().trim().min(3).max(4000),
+  visibility: z.enum(['case', 'admin_only']).optional(),
+})
+
+export const resolveSupportCaseInputSchema: z.ZodType<ResolveSupportCaseInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  resolution: z.enum(['upheld_owner', 'overturned_owner', 'no_action']),
+  reason: caseReasonSchema,
+  corrected_status: z.enum(['completed', 'cancelled']).optional(),
+})
+
+export const escalateRatingReportInputSchema: z.ZodType<EscalateRatingReportInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  reason: caseReasonSchema,
+})
+
+export const setRatingEditWindowInputSchema: z.ZodType<SetRatingEditWindowInput> = z.strictObject({
+  expected_version: z.number().int().positive(),
+  editable_until: isoTimestampSchema,
+  reason: z.string().trim().min(3).max(1000),
 })
 
 export const sendMessageInputSchema: z.ZodType<SendMessageInput> = z.strictObject({
@@ -609,14 +711,39 @@ export const resolveShiftChangeRequestBodySchema = z.strictObject({
   expected_version: z.number().int().min(1),
   note: z.string().trim().min(3).max(500).nullable().optional(),
 })
-export const openConversationInputSchema: z.ZodType<OpenConversationInput> = z.strictObject({ shop_id: uuidSchema })
+export const openConversationInputSchema: z.ZodType<OpenConversationInput> = z.strictObject({
+  shop_id: uuidSchema,
+  appointment_id: uuidSchema.optional(),
+  barber_id: uuidSchema.optional(),
+})
+
+export const blockConversationPeerInputSchema: z.ZodType<BlockConversationPeerInput> = z.strictObject({
+  blocked: z.boolean(),
+  reason: z.string().trim().min(3).max(1000).optional(),
+})
+
+export const reportConversationInputSchema: z.ZodType<ReportConversationInput> = z.strictObject({
+  message_id: uuidSchema.optional(),
+  reason_category: z.enum(['abusive', 'spam', 'scam', 'private_information', 'off_platform_payment', 'other']),
+  reason: z.string().trim().min(3).max(1000),
+})
 export const openStaffConversationInputSchema: z.ZodType<OpenStaffConversationInput> = z.strictObject({ barber_id: uuidSchema })
 
 export const notificationPreferencesInputSchema: z.ZodType<NotificationPreferencesInput> = z.strictObject({
+  expected_version: z.number().int().positive().optional(),
   booking_reminders: z.boolean(),
   chat_notifications: z.boolean(),
   email_updates: z.boolean(),
   nearby_alerts: z.boolean(),
+  nearby_radius_km: z.number().int().min(1).max(50).optional(),
+  // Both or neither: half a quiet-hours window is not a window.
+  quiet_hours_start: wallClockSchema.nullable().optional(),
+  quiet_hours_end: wallClockSchema.nullable().optional(),
+  language: z.enum(['en', 'fil']).optional(),
+  text_size: z.enum(['default', 'large', 'larger']).optional(),
+  high_contrast: z.boolean().optional(),
+  reduce_motion: z.boolean().optional(),
+  // No `transactional_notices`: it cannot be switched off, so there is no field.
 })
 
 export const createServiceInputSchema: z.ZodType<CreateServiceInput> = z.strictObject({
@@ -751,6 +878,8 @@ export const barberIdParamsSchema = z.strictObject({ barberId: uuidSchema })
 export const dateQuerySchema = z.strictObject({ date: dateKeySchema })
 export const messagesQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(200).default(100),
+  /** Cursor: return messages strictly older than this ISO timestamp. */
+  before: isoTimestampSchema.optional(),
 })
 
 export {

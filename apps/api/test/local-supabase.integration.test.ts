@@ -296,18 +296,38 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       }), otherOwner.id),
     ]
 
-    const { data: conversations, error: conversationError } = await service.from('conversations').insert([
-      { kind: 'customer_shop', customer_id: customer.id, barber_id: barber.id, shop_id: primaryShop.id },
-      { kind: 'customer_shop', customer_id: otherCustomer.id, barber_id: barber.id, shop_id: primaryShop.id },
-      { kind: 'customer_shop', customer_id: otherCustomer.id, barber_id: otherBarber.id, shop_id: secondShop.id },
-    ]).select('*')
-    if (conversationError || !conversations || conversations.length !== 3) throw conversationError ?? new Error('Could not create conversations.')
-    const { data: messages, error: messageError } = await service.from('messages').insert([
-      { conversation_id: conversations[0].id, sender_id: customer.id, body: 'Primary customer message' },
-      { conversation_id: conversations[1].id, sender_id: otherCustomer.id, body: 'Other customer message' },
-      { conversation_id: conversations[2].id, sender_id: otherCustomer.id, body: 'Second shop message' },
-    ]).select('*')
-    if (messageError || !messages || messages.length !== 3) throw messageError ?? new Error('Could not create messages.')
+    // P4-01 revoked every direct write on `conversations` and `messages`, including
+    // from `service_role`, because a send rate limit and a block that a caller can
+    // step around are not controls. The fixture therefore uses the same commands
+    // the application does.
+    const conversations: Array<Record<string, unknown>> = []
+    for (const seed of [
+      { customerId: customer.id, shopId: primaryShop.id },
+      { customerId: otherCustomer.id, shopId: primaryShop.id },
+      { customerId: otherCustomer.id, shopId: secondShop.id },
+    ]) {
+      const opened = await service.rpc('api_open_customer_conversation', {
+        p_customer_id: seed.customerId,
+        p_shop_id: seed.shopId,
+        p_appointment_id: null,
+      })
+      if (opened.error || !opened.data) throw opened.error ?? new Error('Could not open a conversation.')
+      conversations.push(opened.data as Record<string, unknown>)
+    }
+    const messages: Array<Record<string, unknown>> = []
+    for (const seed of [
+      { conversationId: conversations[0].id as string, senderId: customer.id, body: 'Primary customer message' },
+      { conversationId: conversations[1].id as string, senderId: otherCustomer.id, body: 'Other customer message' },
+      { conversationId: conversations[2].id as string, senderId: otherCustomer.id, body: 'Second shop message' },
+    ]) {
+      const sent = await service.rpc('api_send_message', {
+        p_conversation_id: seed.conversationId,
+        p_sender_id: seed.senderId,
+        p_body: seed.body,
+      })
+      if (sent.error || !sent.data) throw sent.error ?? new Error('Could not send a fixture message.')
+      messages.push(sent.data as Record<string, unknown>)
+    }
 
     fixtures = {
       primaryShopId: primaryShop.id,
@@ -320,9 +340,9 @@ localDescribe('local Supabase RLS and Express authorization', () => {
       customerAppointmentId: appointments.find((row) => row.customer_id === customer.id)?.id as string,
       otherCustomerAppointmentId: appointments.find((row) => row.customer_id === otherCustomer.id && row.shop_id === primaryShop.id)?.id as string,
       secondShopAppointmentId: appointments.find((row) => row.shop_id === secondShop.id)?.id as string,
-      customerMessageId: messages[0].id,
-      otherCustomerMessageId: messages[1].id,
-      secondShopMessageId: messages[2].id,
+      customerMessageId: messages[0].id as string,
+      otherCustomerMessageId: messages[1].id as string,
+      secondShopMessageId: messages[2].id as string,
     }
   }, 60_000)
 
@@ -2471,26 +2491,20 @@ localDescribe('local Supabase RLS and Express authorization', () => {
     expect(cancellationError).toBeNull()
     expect(cancelledAppointment).toMatchObject({ status: 'cancelled' })
 
-    const { data: conversation, error: conversationError } = await service
-      .from('conversations')
-      .insert({
-        kind: 'customer_shop',
-        customer_id: historyCustomerId,
-        barber_id: formerId,
-        shop_id: fixtures.primaryShopId,
-      })
-      .select('*')
-      .single()
+    // Opened through the command while this barber is still active, and pointed at
+    // them specifically rather than at the shop's longest-serving provider.
+    const { data: conversation, error: conversationError } = await service.rpc('api_open_customer_conversation', {
+      p_customer_id: historyCustomerId,
+      p_shop_id: fixtures.primaryShopId,
+      p_appointment_id: null,
+      p_barber_id: formerId,
+    })
     expect(conversationError).toBeNull()
-    const { data: message, error: messageError } = await service
-      .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: formerId,
-        body: 'Historical message retained after departure.',
-      })
-      .select('*')
-      .single()
+    const { data: message, error: messageError } = await service.rpc('api_send_message', {
+      p_conversation_id: (conversation as { id: string }).id,
+      p_sender_id: formerId,
+      p_body: 'Historical message retained after departure.',
+    })
     expect(messageError).toBeNull()
 
     const beforeRevocation = await Promise.all([

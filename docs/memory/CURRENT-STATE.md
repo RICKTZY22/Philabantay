@@ -11,6 +11,60 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 
 ## Active phase
 
+**Phase 4 — trust, insights, settings, workspaces: backend complete and
+falsified, experience gate not run.** P4-01 through P4-08 are implemented, with
+every claim falsified before being trusted. P4-09 has not started, and it owes
+required test 11 (keyboard, screen reader, contrast, reduced motion, 320 px,
+tablet, desktop, per role and admin) and the render-time and image-payload half of
+required test 12. **Phase 4 is not closed.**
+
+Evidence: [Phase 4 test catalogue](../testing/PHASE-4-TESTS.md). Measurement taken
+before any code: [Phase 4 gap measurement](../testing/PHASE-4-GAP-MEASUREMENT.md).
+
+Gate on the current tree, from a database replayed from empty:
+
+```text
+migrations      69 applied from empty
+DB lint         no schema errors
+functions       219 / 219 pin `search_path = ''`  (100%)
+typecheck       all workspaces passed
+lint            ESLint 0/0
+fast tests      131
+matrix          143 / 143 twice back to back, no reset
+build           API + web production build passed
+diff            git diff --check clean
+```
+
+Eleven forward migrations, `20260805000100` through `20260805001100`. Nothing is
+committed or pushed; the working tree holds all of it.
+
+### Security findings beyond the handoff card, all fixed and falsified
+
+1. **A customer could delete their own review through PostgREST.**
+   `authenticated` held INSERT *and DELETE* on `public.ratings` with permissive
+   policies, so a review could be published outside Express and deleted at any
+   time, defeating the seven-day immutability, the audit, and any shop response
+   attached to it.
+2. **`service_role` held write grants on `messages`**, which would have let a
+   caller step around the new block and send rate limit.
+3. **`authenticated` held INSERT on `conversations`** — a second creation path
+   around the command.
+4. **`authenticated` held UPDATE and DELETE on `notification_preferences`**, so a
+   browser could reset somebody to defaults with no version check.
+5. **`revenue_is_estimate: true`** was live in `GET /shops/:id/stats`, with a
+   "Revenue" column on the owner dashboard. Contract §10 forbids exactly that.
+6. **The owner-provider rating mirror was one-way and stale**: aggregates wrote
+   only `public.barbers`, so the next capability change copied a stale zero back
+   over a real score.
+7. **Two events appended in one transaction shared `created_at`**, leaving the
+   trust audit with no total order. `rating_events.seq` and `case_events.seq` fix
+   it.
+8. **DB-backed test files raced each other.** `apps/api` had no vitest config, so
+   files ran in parallel against one Postgres while several matrix assertions are
+   written against global state. Latent before Phase 4; now serialized.
+
+### Prior phase (unchanged)
+
 **Phase 3 — booking and live operations: implementation/automated gate complete,
 browser acceptance partially executed.** P3-01 through P3-09 are implemented.
 The 2026-08-05 browser run covered responsive owner/barber/customer surfaces,
@@ -511,6 +565,24 @@ Remaining risks / deliberately excluded work:
   the existing P2-02 through P2-05 authenticated smoke evidence remains intact.
 
 ## Exact next action
+
+**Run P4-09: required test 11 and the rest of required test 12.** Everything else
+in Phase 4 is implemented and falsified. The new surfaces were built to the
+accessibility contract — 44 px targets, visible focus, `prefers-reduced-motion`
+paths, no colour-only status, an accessible table beside every chart, wide tables
+scrolling inside their own container — but built to the contract is not the same as
+observed passing, and none of them has been opened in a browser.
+
+Surfaces to sweep: Owner Analytics, Owner Trust, Barber Performance, the customer
+rating prompt on home, the customer dispute panel, and the rewritten Notification
+settings panel. Then record render time and image payload against the bundle-size
+baseline already in the test catalogue.
+
+Three items are implemented at the API with no screen, and are the natural next
+build after the gate: the admin dispute queue, the admin moderation queue, and the
+notification operations view. Plan section 11's staff admin console is their home.
+
+### Also still open, from Phase 3
 
 **Finish the explicit skips in the consolidated P3-09 browser checklist.** The
 change-proposal/customer-response path and responsive role sweep passed on

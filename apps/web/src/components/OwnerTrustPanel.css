@@ -1,0 +1,102 @@
+.owner-trust { display: grid; gap: 18px; }
+.owner-trust section { display: grid; gap: 12px; }
+.owner-trust h2 { margin: 0; }
+
+.trust-head h1 { margin: 4px 0 6px; }
+.trust-head p { margin: 0; color: var(--muted); max-width: 66ch; }
+
+.trust-review,
+.trust-case {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper-soft);
+}
+
+.trust-review > header,
+.trust-case > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.trust-review > header time,
+.trust-case > header time { color: var(--faint); font-size: 14px; }
+.trust-review-sub { display: block; color: var(--muted); font-size: 14px; }
+.trust-case-subject { margin: 0; font-weight: 600; }
+.trust-review-body { margin: 0; }
+
+.trust-moderation-label,
+.trust-report-open,
+.trust-message,
+.trust-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 14px;
+}
+.trust-message { border-color: var(--green); }
+.trust-empty { border-style: dashed; }
+
+.trust-response {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 4px solid var(--line);
+  background: var(--paper);
+  border-radius: 0 10px 10px 0;
+}
+.trust-response-label { display: block; font-weight: 600; font-size: 14px; }
+.trust-response p { margin: 4px 0 0; }
+
+.trust-form { display: grid; gap: 8px; }
+.trust-form label { display: grid; gap: 4px; }
+.trust-form label > span { font-weight: 600; font-size: 14px; }
+.trust-form textarea,
+.trust-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.trust-form fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+}
+.trust-form fieldset legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
+.trust-form fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.trust-form .btn { justify-self: start; min-height: 44px; }
+
+.trust-hint { margin: 0; color: var(--faint); font-size: 13px; }
+.trust-report summary,
+.trust-closed summary { cursor: pointer; color: var(--muted); font-size: 14px; min-height: 32px; }
+.trust-report { display: grid; gap: 8px; }
+.trust-closed { display: grid; gap: 10px; }
+
+@media (max-width: 520px) {
+  .trust-review,
+  .trust-case { padding: 13px; }
+}

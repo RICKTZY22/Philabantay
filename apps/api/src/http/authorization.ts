@@ -26,7 +26,8 @@ export const requireAal2: RequestHandler = (request, _response, next) => {
 export async function requireAccountCapability(
   dependencies: ApiDependencies,
   request: Request,
-  capability: 'professional_access' | 'verification_queue_read' | 'verification_assign' | 'verification_review' | 'professional_suspend',
+  capability: 'professional_access' | 'verification_queue_read' | 'verification_assign' | 'verification_review'
+    | 'professional_suspend' | 'content_moderation' | 'dispute_review',
 ): Promise<void> {
   requireRole(request, 'admin')
   if (request.auth.profile.verification_status !== 'verified') {

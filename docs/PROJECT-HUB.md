@@ -40,6 +40,8 @@ Git-tracked Markdown that Codex, Claude, Antigravity, and humans can all read.
 | Active Phase 3 acceptance | [P3-09 completion handoff](plans/P3-09-PHASE-3-JOURNEY-HANDOFF.md) |
 | Product-owner browser gate | [P3-09 manual browser checklist](testing/P3-09-MANUAL-BROWSER-CHECKLIST.md) |
 | Phase 4 | [Trust, insights, experience](plans/04-PHASE-4-TRUST-INSIGHTS-EXPERIENCE.md) |
+| Active Phase 4 acceptance | [P4-09 experience gate handoff](plans/P4-09-EXPERIENCE-GATE-HANDOFF.md) |
+| Phase 4 evidence | [Phase 4 test catalogue](testing/PHASE-4-TESTS.md) |
 | Phase 5 | [Production rollout](plans/05-PHASE-5-PRODUCTION-ROLLOUT.md) |
 | Phase 6 | [Final deployment and UI/UX polishing](plans/06-PHASE-6-DEPLOYMENT-UI-UX-POLISH.md) — detailed plan/layouts pending product owner |
 | UI contract | [UI/frontend master spec](plans/UI-FRONTEND-MASTER-SPEC.md) |

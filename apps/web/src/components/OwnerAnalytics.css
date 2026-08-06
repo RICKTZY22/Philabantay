@@ -1,0 +1,161 @@
+.owner-analytics { display: grid; gap: 20px; }
+
+.analytics-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+.analytics-head h1 { margin: 4px 0 6px; }
+.analytics-head p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.analytics-range { display: flex; flex-wrap: wrap; gap: 8px; }
+.analytics-range .btn { min-height: 44px; }
+
+.analytics-custom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper-soft);
+}
+.analytics-custom label { display: grid; gap: 4px; }
+.analytics-custom input {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.analytics-cutoff {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--paper-soft);
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.analytics-section {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-soft);
+}
+.analytics-section h2 { margin: 0; }
+.analytics-section-note { margin: 0; color: var(--muted); font-size: 15px; max-width: 70ch; }
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.analytics-metric {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.analytics-metric dt { color: var(--muted); font-size: 14px; }
+.analytics-metric dd { margin: 0; font-size: 22px; font-weight: 700; }
+.analytics-metric-hint { margin: 0; color: var(--faint); font-size: 13px; }
+
+.analytics-definition summary,
+.analytics-table-toggle summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 24px;
+}
+.analytics-definition p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+.analytics-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.analytics-series { display: grid; gap: 10px; }
+.analytics-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 140px;
+  padding: 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  overflow-x: auto;
+}
+.analytics-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  flex: 1 0 34px;
+  min-width: 34px;
+  height: 120px;
+}
+.analytics-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: var(--yellow);
+  border: 1.5px solid var(--ink);
+  /* Transform/opacity only, and nothing at all under reduced motion. */
+  transition: height 240ms ease;
+}
+.analytics-bar-label { color: var(--faint); font-size: 11px; white-space: nowrap; }
+
+/* Wide tables scroll inside their own container so the page never does. */
+.analytics-table-scroll { overflow-x: auto; }
+.analytics-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+  background: var(--paper);
+}
+.analytics-table-scroll caption {
+  text-align: left;
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.analytics-table-scroll th,
+.analytics-table-scroll td {
+  padding: 8px 10px;
+  border-bottom: 1.5px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.analytics-table-scroll thead th { color: var(--muted); font-size: 14px; }
+.analytics-table-toggle { display: grid; gap: 8px; }
+.analytics-table-toggle .btn { justify-self: start; min-height: 44px; }
+
+@media (max-width: 720px) {
+  .analytics-head { grid-template-columns: 1fr; }
+  .analytics-section { padding: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-bar-fill { transition: none; }
+}

@@ -48,6 +48,16 @@ export function fromDatabaseError(error: PostgrestError): ApiError {
   if (error.code === 'P4029') return new ApiError(409, 'outside_booking_window', error.message)
   if (error.code === 'P4030') return new ApiError(409, 'provider_not_qualified', error.message)
   if (error.code === 'P4033') return new ApiError(409, 'no_provider_available', error.message)
+  // P4-03 trust. Both are preconditions rather than stale reads, and they get
+  // their own codes because a closed edit window and an ineligible visit call for
+  // different sentences: one is "you are too late", the other is "this visit
+  // never unlocked a review".
+  if (error.code === 'P4034') return new ApiError(409, 'rating_window_closed', error.message)
+  if (error.code === 'P4035') return new ApiError(409, 'rating_not_eligible', error.message)
+  // P4-01 messaging. A block is a deliberate user choice, not a server fault, and
+  // a send limit is a 429 so a client can back off rather than retry immediately.
+  if (error.code === 'P4036') return new ApiError(403, 'messages_blocked', error.message)
+  if (error.code === 'P4037') return new ApiError(429, 'rate_limited', error.message)
   if (error.code === 'P4041') return new ApiError(404, 'invalid_code', error.message)
   if (error.code === '23505') return new ApiError(409, 'conflict', 'That record already exists.')
   if (error.code === '23P01') return new ApiError(409, 'slot_taken', 'That appointment slot is already taken.')

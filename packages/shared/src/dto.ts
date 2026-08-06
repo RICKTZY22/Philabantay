@@ -101,11 +101,101 @@ export interface AvailabilityQueryInput {
   barber_id?: string
 }
 
-export interface RateAppointmentInput {
-  appointment_id: string
+/**
+ * A rating is submitted against an eligibility, not against an appointment id.
+ * The client cannot name the visit it wants to rate; it can only spend an
+ * eligibility the database already opened for it.
+ */
+export interface SubmitRatingInput {
+  eligibility_id: string
   barber_rating: number
   shop_rating: number
   comment?: string
+  display_mode?: 'short_name' | 'anonymous'
+}
+
+export interface EditRatingInput {
+  expected_version: number
+  barber_rating: number
+  shop_rating: number
+  comment?: string
+  display_mode?: 'short_name' | 'anonymous'
+}
+
+export interface PublishRatingResponseInput {
+  body: string
+}
+
+export interface EditRatingResponseInput {
+  expected_version: number
+  body: string
+}
+
+export interface ReportRatingInput {
+  /** Omit to report the review text; supply to report a public response. */
+  response_id?: string
+  reason_category: 'abusive' | 'spam' | 'private_information' | 'off_topic' | 'not_a_customer' | 'other'
+  reason: string
+}
+
+export interface ModerateRatingReportInput {
+  expected_version: number
+  decision: 'hide_text' | 'restore_text' | 'reject'
+  reason: string
+}
+
+export interface OpenAppointmentDisputeInput {
+  expected_version: number
+  reason: string
+  /** Optional safe text evidence. V1 has no attachments. */
+  evidence_note?: string
+}
+
+export interface DecideAppointmentDisputeInput {
+  expected_version: number
+  decision: 'completed' | 'cancelled'
+  reason: string
+}
+
+export interface RespondToDisputeDecisionInput {
+  expected_version: number
+  response: 'accept' | 'escalate'
+  /** Required when escalating. */
+  reason?: string
+}
+
+export interface CaseVersionInput {
+  expected_version: number
+}
+
+export interface CaseReasonInput {
+  expected_version: number
+  reason: string
+}
+
+export interface AddCaseEvidenceInput {
+  note: string
+  visibility?: 'case' | 'admin_only'
+}
+
+export interface ResolveSupportCaseInput {
+  expected_version: number
+  resolution: 'upheld_owner' | 'overturned_owner' | 'no_action'
+  reason: string
+  /** Required when overturning: the corrected final visit status. */
+  corrected_status?: 'completed' | 'cancelled'
+}
+
+export interface EscalateRatingReportInput {
+  expected_version: number
+  reason: string
+}
+
+/** Q15's support half: a moderator reopens or closes a review's edit window. */
+export interface SetRatingEditWindowInput {
+  expected_version: number
+  editable_until: string
+  reason: string
 }
 
 export interface SendMessageInput {
@@ -348,17 +438,49 @@ export interface ResolveShiftChangeRequestResult {
 
 export interface OpenConversationInput {
   shop_id: string
+  /** Optional booking context, so a thread can say which visit it is about. */
+  appointment_id?: string
+  /**
+   * Reach a specific active provider instead of the shop's longest-serving one.
+   * Refused if that barber is not currently active at the shop.
+   */
+  barber_id?: string
+}
+
+export interface BlockConversationPeerInput {
+  blocked: boolean
+  reason?: string
+}
+
+export interface ReportConversationInput {
+  message_id?: string
+  reason_category: 'abusive' | 'spam' | 'scam' | 'private_information' | 'off_platform_payment' | 'other'
+  reason: string
 }
 
 export interface OpenStaffConversationInput {
   barber_id: string
 }
 
+/**
+ * There is deliberately no field for mandatory transactional notices. They cannot
+ * be switched off, so offering a parameter for them would be a lie in the shape of
+ * an API.
+ */
 export interface NotificationPreferencesInput {
+  /** Omit on first save; supplied afterwards so two devices cannot silently race. */
+  expected_version?: number
   booking_reminders: boolean
   chat_notifications: boolean
   email_updates: boolean
   nearby_alerts: boolean
+  nearby_radius_km?: number
+  quiet_hours_start?: string | null
+  quiet_hours_end?: string | null
+  language?: 'en' | 'fil'
+  text_size?: 'default' | 'large' | 'larger'
+  high_contrast?: boolean
+  reduce_motion?: boolean
 }
 
 export interface CreateServiceInput {

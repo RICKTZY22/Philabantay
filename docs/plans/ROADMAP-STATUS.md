@@ -72,10 +72,49 @@ passed. Time-bound service/no-show paths, walk-in claim, payment/closeout, full
 keyboard traversal, and other listed rows remain open, so P3-09 and Phase 3 are
 not formally complete.
 
-## Phases 4–6 ⬜
+## Phase 4 — trust, insights, settings, workspaces 🟨
 
-- Phase 4 (trust, insights, settings, workspaces): P4-01…P4-09, now including the
-  **staff admin console** (see below).
+**Backend complete and falsified; the experience gate is not run, so Phase 4 is
+not closed.** Ten of the twelve required tests are covered by automated
+regressions. Required test 11 (keyboard, screen reader, contrast, reduced motion,
+320 px / tablet / desktop, per role and admin) has not been run at all, and
+required test 12 is partial: role bundle sizes are recorded, render time and image
+payload are not. Full detail and the falsification record are in the
+[Phase 4 test catalogue](../testing/PHASE-4-TESTS.md).
+
+The measurement that preceded the work is in the
+[Phase 4 gap measurement](../testing/PHASE-4-GAP-MEASUREMENT.md). It was taken
+against the live database before any code was written and corrected the handoff
+card in two places.
+
+- P4-01 Conversation membership: **implemented and falsified.** Creation is a
+  command, context is explicit, blocking is symmetric, sends are rate-limited in
+  the command, messages page by cursor, retention is two years with a purge.
+  Former and suspended staff were already refused; that is now pinned by tests.
+- P4-02 Disputes and moderation: **implemented and falsified.** `support_cases`,
+  `case_participants`, `case_evidence`, `case_events`; owner decision, customer
+  escalation, assigned admin review, audited access, explicit visit correction.
+- P4-03 Ratings: **implemented and falsified.** Eligibility records, seven-day
+  edit window then lock, separate shop and provider scores, public responses,
+  reports, and moderator hide/restore that preserves the score.
+- P4-04 Analytics facts: **implemented and falsified.** One reproducible SQL read;
+  the five contract §10 value concepts stay distinct and every metric ships its
+  own definition. The live `revenue_is_estimate` violation is removed.
+- P4-05/06/07 Role workspaces: **implemented, unobserved in a browser.** Owner
+  Analytics and Trust destinations, barber Performance, customer rating prompt and
+  dispute panel.
+- P4-08 Settings and access: **implemented and falsified.** Preferences are server
+  state, mandatory transactional notices cannot be switched off, quiet hours delay
+  optional delivery only, and operations can see and retry a provider failure.
+- P4-09 Experience gate: **not started.** This is the packet that owes required
+  tests 11 and 12.
+
+Outstanding work, listed in full at the end of the test catalogue: the admin
+console screens (dispute queue, moderation queue, notification operations), the
+rating-response editing UI, and a deliberately deferred `hiring` conversation kind.
+
+## Phases 5–6 ⬜
+
 - Phase 5 (production hardening + rollout): P5-01…P5-06.
 - [Phase 6](06-PHASE-6-DEPLOYMENT-UI-UX-POLISH.md): final deployment and
   product-owner-directed UI/UX polishing. Detailed plans, packet IDs, acceptance

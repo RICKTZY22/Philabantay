@@ -2132,3 +2132,41 @@ No backend, migration, or SQL file changed; matrix was not rerun. Browser
 acceptance remains partial because native date/time mutation, exhaustive
 keyboard traversal, and the remaining P3-09 operational journeys were skipped.
 Fixture cleanup is complete and the dev shop is draft.
+
+## 2026-08-05 — Claude — Phase 4 backend lane
+
+Delivered P4-01 through P4-08 in the working tree. Eleven forward migrations,
+`20260805000100`–`20260805001100`; nothing committed, nothing pushed.
+
+Files this lane owns and changed: `supabase/migrations/20260805*`,
+`apps/api/src/routes/{ratings,support-cases,analytics}.ts` (new),
+`apps/api/src/routes/{chat,account-data,bookings,phase3-operations,app}.ts`,
+`apps/api/src/http/{errors,authorization}.ts`, `apps/api/vitest.config.ts` (new),
+five new `apps/api/test/phase4-*.integration.test.ts`,
+`packages/shared/src/{types,dto,schemas,services}.ts`, and on the web side
+`components/{RatingPanel,OwnerAnalytics,OwnerTrustPanel,BarberPerformancePanel,DisputePanel}`
+(new) plus edits to `ShopOwnerDashboard`, `BarberDashboard`, `CustomerDashboard`,
+`AppointmentsPage`, `config/navigation.ts`, `theme/doodle.css`,
+`pages/SettingsPage.css`, and `pages/settings/NotificationSettingsPanel.tsx`.
+
+**Two changes another lane needs to know about, because they will break code that
+assumes the old behaviour:**
+
+1. `service_role` no longer has INSERT, UPDATE, DELETE, or TRUNCATE on `ratings`,
+   `conversations`, `messages`, `notification_preferences`, or any of the new trust
+   tables. Fixtures and routes must call the commands. The Phase 3 matrix fixture
+   was updated accordingly; anything else writing those tables directly will now
+   get `42501`.
+2. `apps/api` test files run serially now. They were racing each other against one
+   Postgres, which is what produced three intermittent matrix failures that passed
+   on a rerun. If a suite needs the queue or the published-shop set to itself, it
+   still has to clean up after itself — `afterAll` archival was added to all five
+   new suites.
+
+Phase 4 is **not** closed: required test 11 has not been run and required test 12
+is partial. That work is P4-09 and needs a browser, so it is the product owner's
+lane or a browser lane. Evidence and the full outstanding list are in
+`docs/testing/PHASE-4-TESTS.md`.
+
+P2-08 and P3-09 remain open on their own items. This lane did not touch them and
+does not depend on them.

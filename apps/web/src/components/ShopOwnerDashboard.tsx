@@ -18,6 +18,8 @@ import { DoodleIcon, type DoodleIconName } from '../theme/DoodleDefs'
 import { Avatar } from './Avatar'
 import { DoodleBoard } from './DoodleBoard'
 import { OwnerStaffPanel } from './OwnerStaffPanel'
+import { OwnerAnalytics } from './OwnerAnalytics'
+import { OwnerTrustPanel } from './OwnerTrustPanel'
 import './ShopOwnerDashboard.css'
 
 interface ShopOwnerDashboardProps {
@@ -30,7 +32,11 @@ const RANGE_LABEL: Record<RangeKey, string> = { week: 'Last 7 days', month: 'Las
 
 interface Bucket {
   label: string
-  revenue: number
+  /**
+   * Completed service value in cents, not revenue. Contract section 10 forbids
+   * that word for the creation-time price snapshot, which is all this is.
+   */
+  completedServiceValueCents: number
   deals: number
 }
 
@@ -47,7 +53,7 @@ function buildBuckets(appointments: AppointmentDetailed[], range: RangeKey, nowM
       const slice = completed.filter((appointment) => localDateKey(new Date(appointment.starts_at)) === key)
       return {
         label: day.toLocaleDateString('en-PH', { weekday: 'short' }),
-        revenue: slice.reduce((sum, appointment) => sum + appointment.service.price_cents, 0),
+        completedServiceValueCents: slice.reduce((sum, appointment) => sum + appointment.service.price_cents, 0),
         deals: slice.length,
       }
     })
@@ -67,7 +73,7 @@ function buildBuckets(appointments: AppointmentDetailed[], range: RangeKey, nowM
       })
       return {
         label: start.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }),
-        revenue: slice.reduce((sum, appointment) => sum + appointment.service.price_cents, 0),
+        completedServiceValueCents: slice.reduce((sum, appointment) => sum + appointment.service.price_cents, 0),
         deals: slice.length,
       }
     })
@@ -79,10 +85,10 @@ function buildBuckets(appointments: AppointmentDetailed[], range: RangeKey, nowM
     const key = `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}`
     const bucket = byMonth.get(key) ?? {
       label: startsAt.toLocaleDateString('en-PH', { month: 'short', year: '2-digit' }),
-      revenue: 0,
+      completedServiceValueCents: 0,
       deals: 0,
     }
-    bucket.revenue += appointment.service.price_cents
+    bucket.completedServiceValueCents += appointment.service.price_cents
     bucket.deals += 1
     byMonth.set(key, bucket)
   })
@@ -107,6 +113,7 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
   const [joinCode, setJoinCode] = useState<ShopJoinCodeDetails | null>(null)
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [shopId, setShopId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -115,11 +122,15 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
       backend.bookings.listForMyShop(),
       backend.employment.listMyShopStaff(),
       backend.employment.getMyShopJoinCode(),
-    ]).then(([shopAppointments, shopStaff, code]) => {
+      // Analytics is keyed on the shop, and an owner with no bookings yet still
+      // has one, so the id cannot be derived from the appointment list.
+      backend.ownerShop.getMine(),
+    ]).then(([shopAppointments, shopStaff, code, shop]) => {
       if (!active) return
       setAppointments(shopAppointments)
       setStaff(shopStaff)
       setJoinCode(code)
+      setShopId(shop?.id ?? null)
     }).catch((error: unknown) => {
       if (!active) return
       setLoadError(error instanceof DataError ? error.message : 'Hindi ma-load ang shop workspace.')
@@ -161,7 +172,7 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
     [appointments],
   )
   const buckets = useMemo(() => buildBuckets(appointments ?? [], range, nowEpochMs), [appointments, range, nowEpochMs])
-  const rangeRevenue = buckets.reduce((sum, bucket) => sum + bucket.revenue, 0)
+  const rangeCompletedServiceValue = buckets.reduce((sum, bucket) => sum + bucket.completedServiceValueCents, 0)
   const rangeDeals = buckets.reduce((sum, bucket) => sum + bucket.deals, 0)
 
   const topVisitors = useMemo(() => {
@@ -219,7 +230,7 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
               buckets={buckets}
               range={range}
               onRangeChange={setRange}
-              rangeRevenue={rangeRevenue}
+              rangeCompletedServiceValue={rangeCompletedServiceValue}
               rangeDeals={rangeDeals}
               completedTotal={completed.length}
               upcomingCount={upcoming.length}
@@ -247,6 +258,16 @@ export function ShopOwnerDashboard({ section }: ShopOwnerDashboardProps) {
           {loaded && section === 'barbers' && (
             <OwnerBarbersPerformance staff={staff} appointments={appointments ?? []} />
           )}
+
+          {/* Analytics is its own destination, not a card on Owner Home. Owner Home
+              stays operations-first, per the phase plan. */}
+          {section === 'trust' && <OwnerTrustPanel />}
+
+          {section === 'analytics' && (
+            shopId
+              ? <OwnerAnalytics shopId={shopId} />
+              : <p className="muted owner-loading-note" role="status">Kailangan mo munang i-set up ang shop bago may analytics.</p>
+          )}
       </>
     </DoodleBoard>
   )
@@ -258,7 +279,7 @@ function OwnerOverview({
   buckets,
   range,
   onRangeChange,
-  rangeRevenue,
+  rangeCompletedServiceValue,
   rangeDeals,
   completedTotal,
   upcomingCount,
@@ -271,7 +292,7 @@ function OwnerOverview({
   buckets: Bucket[]
   range: RangeKey
   onRangeChange: (range: RangeKey) => void
-  rangeRevenue: number
+  rangeCompletedServiceValue: number
   rangeDeals: number
   completedTotal: number
   upcomingCount: number
@@ -353,7 +374,7 @@ function OwnerOverview({
         <MetricCard icon="scissors" label="In progress" value={String(inProgressCount)} meta="cutting now" tone="green" />
         <MetricCard icon="check" label="Awaiting confirm" value={String(awaitingCount)} meta="customer action" tone="yellow" />
         <MetricCard icon="star" label="Completed" value={String(completedTotal)} meta="all time" tone="pink" />
-        <MetricCard icon="home" label="Service value" value={money(rangeRevenue)} meta={`${RANGE_LABEL[range]} · estimated`} tone="green" />
+        <MetricCard icon="home" label="Service value" value={money(rangeCompletedServiceValue)} meta={`${RANGE_LABEL[range]} · estimated`} tone="green" />
         <MetricCard icon="check" label="Completed deals" value={String(rangeDeals)} meta={RANGE_LABEL[range]} tone="blue" />
       </section>
 
@@ -365,13 +386,13 @@ function OwnerOverview({
               <h2>Completed service value</h2>
             </div>
             <div className="owner-value-summary">
-              <strong>{money(rangeRevenue)}</strong>
+              <strong>{money(rangeCompletedServiceValue)}</strong>
               <small>estimate · payments not tracked</small>
             </div>
           </div>
-          {rangeRevenue > 0 ? (
+          {rangeCompletedServiceValue > 0 ? (
             <DoodleBars
-              points={buckets.map((bucket) => ({ label: bucket.label, value: bucket.revenue }))}
+              points={buckets.map((bucket) => ({ label: bucket.label, value: bucket.completedServiceValueCents }))}
               format={shortMoney}
               ariaLabel={`Completed service value per ${range === 'week' ? 'day' : range === 'month' ? 'week' : 'month'}`}
             />
@@ -408,7 +429,7 @@ function OwnerOverview({
         <section className="owner-paper-card owner-mosaic-card owner-deals-panel">
           <div className="owner-card-heading compact">
             <div><span className="owner-card-kicker">throughput</span><h2>Completed deals</h2></div>
-            <strong className="owner-revenue-total">{rangeDeals}</strong>
+            <strong className="owner-metric-total">{rangeDeals}</strong>
           </div>
           {rangeDeals > 0 ? (
             <DoodleBars
@@ -480,7 +501,7 @@ export function OwnerOverviewLegacy({
   buckets,
   range,
   onRangeChange,
-  rangeRevenue,
+  rangeCompletedServiceValue,
   rangeDeals,
   completedTotal,
   upcomingCount,
@@ -492,7 +513,7 @@ export function OwnerOverviewLegacy({
   buckets: Bucket[]
   range: RangeKey
   onRangeChange: (range: RangeKey) => void
-  rangeRevenue: number
+  rangeCompletedServiceValue: number
   rangeDeals: number
   completedTotal: number
   upcomingCount: number
@@ -561,18 +582,18 @@ export function OwnerOverviewLegacy({
           <div className="owner-card-heading compact">
             <div>
               <span className="owner-card-kicker">{RANGE_LABEL[range]}</span>
-              <h2>Revenue</h2>
+              <h2>Completed service value</h2>
             </div>
-            <strong className="owner-revenue-total">{money(rangeRevenue)}</strong>
+            <strong className="owner-metric-total">{money(rangeCompletedServiceValue)}</strong>
           </div>
-          {rangeRevenue > 0 ? (
+          {rangeCompletedServiceValue > 0 ? (
             <DoodleBars
-              points={buckets.map((bucket) => ({ label: bucket.label, value: bucket.revenue }))}
+              points={buckets.map((bucket) => ({ label: bucket.label, value: bucket.completedServiceValueCents }))}
               format={shortMoney}
-              ariaLabel={`Revenue per ${range === 'week' ? 'day' : range === 'month' ? 'week' : 'month'}`}
+              ariaLabel={`Completed service value per ${range === 'week' ? 'day' : range === 'month' ? 'week' : 'month'}`}
             />
           ) : (
-            <OwnerEmptyChart icon="star" message={`Wala pang kita sa ${RANGE_LABEL[range].toLowerCase()}. Lalabas dito ang revenue kapag may completed booking na.`} />
+            <OwnerEmptyChart icon="star" message={`Wala pang completed visit sa ${RANGE_LABEL[range].toLowerCase()}. Lalabas dito ang completed service value kapag may natapos na booking.`} />
           )}
         </section>
 
@@ -582,7 +603,7 @@ export function OwnerOverviewLegacy({
               <span className="owner-card-kicker">{RANGE_LABEL[range]}</span>
               <h2>Completed deals</h2>
             </div>
-            <strong className="owner-revenue-total">{rangeDeals}</strong>
+            <strong className="owner-metric-total">{rangeDeals}</strong>
           </div>
           {rangeDeals > 0 ? (
             <DoodleBars
@@ -869,7 +890,7 @@ function OwnerBarbersPerformance({ staff, appointments }: {
       noShows,
       noShowRate: decided > 0 ? Math.round((noShows / decided) * 100) : 0,
       upcomingCount: barberAppointments.filter((appointment) => isUpcomingAppointment(appointment, nowMs)).length,
-      revenue: barberAppointments
+      completedServiceValueCents: barberAppointments
         .filter((appointment) => appointment.status === 'completed')
         .reduce((sum, appointment) => sum + appointment.service.price_cents, 0),
     }
@@ -889,7 +910,7 @@ function OwnerBarbersPerformance({ staff, appointments }: {
         </div>
       ) : (
         <div className="owner-performance-grid">
-          {rows.map(({ member, completedCount, noShows, noShowRate, revenue, upcomingCount }) => {
+          {rows.map(({ member, completedCount, noShows, noShowRate, completedServiceValueCents, upcomingCount }) => {
             const scheduledDays = new Set<number>(member.rules.map((rule) => rule.weekday))
             const onShift = member.barber.shift_status === 'on'
             return (
@@ -924,7 +945,7 @@ function OwnerBarbersPerformance({ staff, appointments }: {
 
                 <dl className="owner-performance-stats">
                   <div><dt>Completed cuts</dt><dd>{completedCount}</dd></div>
-                  <div><dt>Revenue</dt><dd>{money(revenue)}</dd></div>
+                  <div><dt>Completed service value</dt><dd>{money(completedServiceValueCents)}</dd></div>
                   <div><dt>Upcoming</dt><dd>{upcomingCount}</dd></div>
                   <div><dt>No-shows</dt><dd>{noShows} <small>({noShowRate}%)</small></dd></div>
                 </dl>

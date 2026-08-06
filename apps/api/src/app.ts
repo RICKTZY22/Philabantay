@@ -19,6 +19,9 @@ import { createAdminVerificationRouter } from './routes/admin-verification'
 import { createSupportRouter } from './routes/support'
 import { createQualificationsRouter } from './routes/qualifications'
 import { createPhase3OperationsRouter, createPublicWalkInClaimRouter } from './routes/phase3-operations'
+import { createPublicRatingsRouter, createRatingModerationRouter, createRatingsRouter } from './routes/ratings'
+import { createSupportCaseAdminRouter, createSupportCaseRouter } from './routes/support-cases'
+import { createAnalyticsRouter } from './routes/analytics'
 
 export interface CreateAppOptions {
   webOrigin: string | string[]
@@ -81,7 +84,10 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   // Anonymous discovery is a deliberately narrow, response-validated surface.
   // All mutations and private reads remain below both authentication guards.
   api.use('/catalog/availability/slots', slotLimiter)
-  api.use('/catalog', catalogueLimiter, createPublicCatalogRouter(dependencies))
+  // One `use` for both anonymous catalogue routers, deliberately. Mounting them
+  // as two `api.use('/catalog', catalogueLimiter, ...)` calls runs the limiter
+  // twice per request and silently halves the catalogue budget from 90/min to 45.
+  api.use('/catalog', catalogueLimiter, createPublicRatingsRouter(dependencies), createPublicCatalogRouter(dependencies))
   api.use('/walk-ins', createPublicWalkInClaimRouter(dependencies))
   api.use(authenticate(dependencies))
   // Locked professionals need the verification workspace and a narrow Help
@@ -90,6 +96,8 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use('/support', createSupportRouter(dependencies))
   api.use(requireOperationalAccess)
   api.use('/admin', requireAal2, createAdminVerificationRouter(dependencies))
+  api.use('/admin', requireAal2, createRatingModerationRouter(dependencies))
+  api.use('/admin', requireAal2, createSupportCaseAdminRouter(dependencies))
   api.use(createCatalogRouter(dependencies))
   // Same ceiling as the anonymous slot route, and for the same reason. Since
   // P2-07 these two ask the claim gate about every candidate on the grid, so one
@@ -101,6 +109,9 @@ export function createApp(dependencies: ApiDependencies, options: CreateAppOptio
   api.use(createAvailabilityRouter(dependencies))
   api.use(createBookingsRouter(dependencies))
   api.use(createPhase3OperationsRouter(dependencies))
+  api.use(createRatingsRouter(dependencies))
+  api.use(createSupportCaseRouter(dependencies))
+  api.use(createAnalyticsRouter(dependencies))
   api.use(createChatRouter(dependencies))
   api.use(createEmploymentRouter(dependencies))
   api.use(createQualificationsRouter(dependencies))

@@ -1033,16 +1033,508 @@ export interface BookingQuote {
   idempotency_key: string
 }
 
-/** One customer's rating for one completed appointment. */
+/**
+ * The five value concepts of contract section 10, kept separate all the way to
+ * the UI. There is deliberately no `revenue` field anywhere in this interface:
+ * none of these figures is recognized revenue, and V1 does not process money.
+ */
+export interface ShopValueMetrics {
+  /** Creation-time price snapshot for commitments in range. Not money. */
+  booked_value_cents: number
+  /** The same snapshot for visits that finished. Not money. */
+  completed_service_value_cents: number
+  completed_visits: number
+  /** Offline money staff recorded as received, from the payment ledger. */
+  collected_cents: number
+  /** Money recorded as returned or voided, as a positive number. */
+  refunded_cents: number
+  /** Collected minus refunded. */
+  net_collected_cents: number
+  payment_event_count: number
+}
+
+export interface ShopDemandMetrics {
+  requested: number
+  confirmed: number
+  completed: number
+  cancelled: number
+  declined: number
+  expired: number
+  customer_no_show: number
+  disputed: number
+  total: number
+  series: Array<{
+    date: string
+    completed: number
+    cancelled: number
+    customer_no_show: number
+    total: number
+  }>
+}
+
+export interface ShopCapacityMetrics {
+  available_provider_minutes: number
+  available_chair_minutes: number
+  assigned_minutes: number
+  /** Null rather than zero when there are no roster minutes to divide by. */
+  provider_utilization: number | null
+  chair_utilization: number | null
+  rejected_demand: number
+}
+
+export interface ShopCustomerMetrics {
+  unique_visitors: number
+  repeat_visitors: number
+  repeat_rate: number | null
+  top_visitors: Array<{
+    customer_id: string
+    full_name: string | null
+    avatar_url: string | null
+    completed_visits: number
+  }>
+}
+
+export interface ShopServiceMetrics {
+  top_services: Array<{
+    service_id: string
+    name: string
+    completed_count: number
+    completed_service_value_cents: number
+    booked_duration_min: number
+    actual_duration_min_avg: number | null
+    actual_duration_min_stddev: number
+  }>
+  failure_reason_mix: Array<{ status: string; count: number }>
+}
+
+export interface ShopStaffMetrics {
+  providers: Array<{
+    provider_id: string
+    full_name: string
+    completed_cuts: number
+    assigned_service_minutes: number
+    /** Never folded into a performance score. Required test 8. */
+    customer_no_shows: number
+    shop_caused_failures: number
+    repeat_customers: number
+    rating: number
+    rating_count: number
+    attendance_present: number
+    attendance_absent: number
+    punctuality_rate: number | null
+  }>
+}
+
+export interface ShopTrustMetrics {
+  shop_rating: number
+  shop_rating_count: number
+  distribution: Array<{ score: number; count: number }>
+  reviews_in_range: number
+  hidden_text_count: number
+  open_reports: number
+  disputes_opened: number
+  disputes_escalated: number
+  owner_decision_hours_avg: number | null
+}
+
+export interface ShopWalkInMetrics {
+  total: number
+  claimed: number
+  unclaimed: number
+  completed: number
+  cancelled: number
+  conversion_rate: number | null
+  wait_minutes_min: number | null
+  wait_minutes_avg: number | null
+  wait_minutes_max: number | null
+  service_mix: Array<{ service_id: string | null; name: string | null; count: number }>
+}
+
+/**
+ * One reproducible answer. `definitions` travels with the numbers because the
+ * plan requires every chart to state its definition, and a definition that lives
+ * only in a code comment cannot be shown to a reader.
+ */
+export interface ShopAnalytics {
+  shop_id: string
+  timezone: string
+  from_date: string
+  to_date: string
+  days: number
+  /** Data cutoff: the moment the answer was computed. */
+  generated_at: string
+  demand: ShopDemandMetrics
+  value: ShopValueMetrics
+  capacity: ShopCapacityMetrics
+  customers: ShopCustomerMetrics
+  services: ShopServiceMetrics
+  staff: ShopStaffMetrics
+  trust: ShopTrustMetrics
+  walk_ins: ShopWalkInMetrics
+  definitions: Record<string, string>
+}
+
+export interface ProviderPerformance {
+  provider_id: string
+  shop_id: string
+  from_date: string
+  to_date: string
+  generated_at: string
+  completed_cuts: number
+  assigned_service_minutes: number
+  repeat_customers: number
+  /** Shown separately and never counted against the provider. */
+  customer_no_shows: number
+  shop_cancellations: number
+  owner_declines: number
+  rating: number
+  rating_count: number
+  distribution: Array<{ score: number; count: number }>
+  attendance_present: number
+  attendance_absent: number
+  punctuality_rate: number | null
+  definitions: Record<string, string>
+}
+
+export type AnalyticsRange = 'week' | 'month' | 'custom' | 'all'
+
+/**
+ * Notification queue health for an operator. Plan section 8: outbox lag, failure
+ * rate, last successful cycle, plus a retry action.
+ */
+export interface NotificationOperationsHealth {
+  generated_at: string
+  pending: number
+  retry: number
+  delivered: number
+  /** Exhausted automatic retries. Needs an operator. */
+  dead_letter: number
+  /** Age of the oldest overdue notice. Future-dated notices are not lag. */
+  oldest_due_age_seconds: number
+  due_now: number
+  held_for_quiet_hours: number
+  attempts_last_24h: number
+  failures_last_24h: number
+  /** Null when nothing was attempted: unknown, not zero. */
+  failure_rate_last_24h: number | null
+  last_successful_delivery_at: string | null
+  last_failure_at: string | null
+  recent_error_codes: Array<{ error_code: string; count: number }>
+  definitions: Record<string, string>
+}
+
+export interface FailedNotification {
+  id: string
+  recipient_id: string
+  shop_id: string | null
+  title: string
+  status: 'retry' | 'dead_letter'
+  attempt_count: number
+  available_at: string
+  last_error: string | null
+  created_at: string
+}
+
+export type AccountLanguage = 'en' | 'fil'
+export type AccountTextSize = 'default' | 'large' | 'larger'
+
+/**
+ * One user's account preferences, stored server-side so they follow the person
+ * across devices rather than living in one browser's local storage.
+ */
+export interface AccountPreferences {
+  user_id: string
+  /** Optional channels. These are the ones a user may switch off. */
+  booking_reminders: boolean
+  chat_notifications: boolean
+  email_updates: boolean
+  nearby_alerts: boolean
+  nearby_radius_km: number
+  /** Both null means no quiet hours. A window may wrap midnight. */
+  quiet_hours_start: string | null
+  quiet_hours_end: string | null
+  language: AccountLanguage
+  text_size: AccountTextSize
+  high_contrast: boolean
+  reduce_motion: boolean
+  /**
+   * Mandatory transactional notices: booking changes and security events. Always
+   * true, enforced by a database check constraint rather than by a guard, so no
+   * caller and no future bug can switch it off.
+   */
+  transactional_notices: true
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+/** A one-way block on direct messages. Required notices are unaffected. */
+export interface ConversationBlock {
+  id: string
+  blocker_id: string
+  blocked_id: string
+  reason: string | null
+  created_at: string
+}
+
+export interface ConversationReport {
+  id: string
+  conversation_id: string
+  message_id: string | null
+  reporter_id: string
+  reason_category: 'abusive' | 'spam' | 'scam' | 'private_information' | 'off_platform_payment' | 'other'
+  reason: string
+  status: 'open' | 'reviewed' | 'dismissed'
+  created_at: string
+}
+
+/** Why this thread exists, stated rather than inferred from message text. */
+export type ConversationContext = 'customer_shop' | 'appointment' | 'staff'
+
+export type SupportCaseKind = 'appointment_dispute' | 'rating_moderation'
+export type SupportCaseStatus =
+  | 'owner_review' | 'owner_decided' | 'escalated' | 'information_requested' | 'resolved' | 'withdrawn'
+export type SupportCaseResolution =
+  | 'upheld_owner' | 'overturned_owner' | 'no_action' | 'closed_no_response'
+
+/**
+ * One trust process, shared by appointment disputes and rating moderation. Q13
+ * windows are stored on the row and presented as targets, not guarantees.
+ */
+export interface SupportCase {
+  id: string
+  /** Short quotable code, `PB-XXXXXXXX`, for support conversations. */
+  reference: string
+  kind: SupportCaseKind
+  shop_id: string
+  appointment_id: string | null
+  rating_report_id: string | null
+  opened_by: string
+  opened_by_role: 'customer' | 'barber' | 'shop_owner'
+  subject: string
+  reason: string
+  status: SupportCaseStatus
+  owner_response_due_at: string
+  owner_decision: 'completed' | 'cancelled' | 'no_action' | null
+  owner_decision_reason: string | null
+  owner_decided_at: string | null
+  escalation_deadline_at: string | null
+  escalated_at: string | null
+  escalation_reason: string | null
+  assigned_admin_id: string | null
+  admin_target_at: string | null
+  information_requested_at: string | null
+  information_request_reason: string | null
+  resolution: SupportCaseResolution | null
+  resolution_reason: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+/** Text-only in V1; attachments stay disabled until the whole safety set ships. */
+export interface CaseEvidence {
+  id: string
+  case_id: string
+  author_id: string
+  author_role: 'customer' | 'barber' | 'shop_owner' | 'admin'
+  note: string
+  /** `admin_only` notes are filtered out for every non-reviewer. */
+  visibility: 'case' | 'admin_only'
+  created_at: string
+}
+
+export type CaseEventType =
+  | 'opened' | 'evidence_added' | 'owner_decided' | 'customer_accepted' | 'escalated'
+  | 'assigned' | 'information_requested' | 'resolved' | 'withdrawn' | 'accessed' | 'correction_applied'
+
+/** Append-only, and it records reads as well as decisions. */
+export interface CaseEvent {
+  id: string
+  /** Total order within a case; `created_at` ties inside one transaction. */
+  seq: number
+  case_id: string
+  actor_id: string | null
+  actor_role: 'customer' | 'barber' | 'shop_owner' | 'admin' | 'system'
+  event_type: CaseEventType
+  reason: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface SupportCaseDetail {
+  case: SupportCase
+  evidence: CaseEvidence[]
+  events: CaseEvent[]
+  participants: Array<{ user_id: string; participant_role: string; full_name: string | null }>
+}
+
+/** Where a rateable visit came from. */
+export type RatingVisitSource = 'appointment' | 'walk_in'
+
+/** `open` may be rated, `used` already was, `void` never unlocks one. */
+export type RatingEligibilityState = 'open' | 'used' | 'void'
+
+/**
+ * The authoritative answer to "may this person rate this visit". Created by the
+ * database from finalized visit facts, never by a client, so eligibility cannot
+ * be forged by posting a different appointment id.
+ */
+export interface RatingEligibility {
+  id: string
+  shop_id: string
+  customer_id: string
+  /** The provider who actually performed the visit, not the requested one. */
+  provider_id: string
+  source: RatingVisitSource
+  appointment_id: string | null
+  walk_in_id: string | null
+  service_id: string | null
+  visit_completed_at: string
+  state: RatingEligibilityState
+  void_reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Moderation hides text; it never removes the score. */
+export type RatingTextState = 'visible' | 'hidden'
+export type RatingModerationState = 'none' | 'reported' | 'hidden' | 'restored' | 'cleared'
+/** Q14: first name plus last initial, or fully anonymous. */
+export type RatingDisplayMode = 'short_name' | 'anonymous'
+
+/** One customer's rating for one completed visit, booked or walk-in. */
 export interface Review {
   id: string
-  appointment_id: string
+  eligibility_id: string
+  appointment_id: string | null
+  walk_in_id: string | null
   customer_id: string
   barber_id: string
   shop_id: string
   barber_rating: number
   shop_rating: number
   comment: string | null
+  display_mode: RatingDisplayMode
+  /** Editable up to this moment; afterwards only moderation and responses apply. */
+  editable_until: string
+  edit_count: number
+  locked_at: string | null
+  text_state: RatingTextState
+  moderation_state: RatingModerationState
+  version: number
   created_at: string
   updated_at: string
+}
+
+/** One public response, at most one per authoring side (Q15). */
+export interface RatingResponse {
+  id: string
+  rating_id: string
+  shop_id: string
+  author_id: string
+  author_role: 'shop_owner' | 'barber'
+  body: string
+  editable_until: string
+  edit_count: number
+  text_state: RatingTextState
+  moderation_state: RatingModerationState
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export type RatingReportCategory =
+  | 'abusive' | 'spam' | 'private_information' | 'off_topic' | 'not_a_customer' | 'other'
+
+/** A report against review text or against a public response. */
+export interface RatingReport {
+  id: string
+  rating_id: string
+  response_id: string | null
+  shop_id: string
+  target: 'review' | 'response'
+  reporter_id: string
+  reporter_role: 'customer' | 'barber' | 'shop_owner'
+  reason_category: RatingReportCategory
+  reason: string
+  status: 'open' | 'upheld' | 'rejected'
+  resolution_reason: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export type RatingEventType =
+  | 'eligibility_opened' | 'eligibility_voided' | 'eligibility_restored'
+  | 'rating_submitted' | 'rating_edited' | 'rating_locked'
+  | 'response_published' | 'response_edited'
+  | 'report_opened' | 'report_upheld' | 'report_rejected'
+  | 'text_hidden' | 'text_restored'
+
+/** Append-only trust audit. Decisions accumulate; nothing is overwritten. */
+export interface RatingEvent {
+  id: string
+  /** Total order within a review; `created_at` ties inside one transaction. */
+  seq: number
+  shop_id: string
+  eligibility_id: string | null
+  rating_id: string | null
+  response_id: string | null
+  report_id: string | null
+  actor_id: string | null
+  actor_role: 'customer' | 'barber' | 'shop_owner' | 'admin' | 'system'
+  event_type: RatingEventType
+  reason: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+/** What a customer needs to answer "is there anything to rate?" in one read. */
+export interface CustomerRatingWorkspace {
+  /** Visits that unlock a rating and have not been rated yet. */
+  pending: Array<RatingEligibility & {
+    shop_name: string | null
+    provider_name: string | null
+    service_name: string | null
+  }>
+  /** The customer's own reviews, newest first, with any public responses. */
+  reviews: Array<Review & { responses: RatingResponse[] }>
+}
+
+/**
+ * One public review as discovery shows it. Hidden text is replaced by a
+ * moderation label and the score is still present, which is the whole point.
+ */
+export interface PublicReview {
+  id: string
+  shop_id: string
+  provider_id: string
+  reviewer_label: string
+  barber_rating: number
+  shop_rating: number
+  comment: string | null
+  text_hidden: boolean
+  service_name: string | null
+  visit_completed_at: string
+  created_at: string
+  responses: Array<Pick<RatingResponse, 'id' | 'author_role' | 'body' | 'created_at'> & { text_hidden: boolean }>
+}
+
+/** Average plus sample size plus the 1-5 spread. Never an average alone. */
+export interface RatingDistribution {
+  average: number
+  count: number
+  /** Index 0 is one star, index 4 is five stars. */
+  buckets: [number, number, number, number, number]
+}
+
+export interface PublicRatingSummary {
+  shop: RatingDistribution
+  provider: RatingDistribution | null
+  reviews: PublicReview[]
 }

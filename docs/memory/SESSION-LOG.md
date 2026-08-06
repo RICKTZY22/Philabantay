@@ -2142,3 +2142,73 @@ migrations — which is a real risk independent of testing.
   hiring/provider capability off, Bruno qualified for both services, no closure,
   the temporary booking cancelled, the shift request declined, and all roles
   signed out. The local web/API servers were restarted after one process exit.
+
+## 2026-08-05 — Phase 4 backend delivered, experience gate outstanding (Claude)
+
+Measured before building, per the handoff card. The live-database gap measurement
+is recorded in `docs/testing/PHASE-4-GAP-MEASUREMENT.md` and was taken before any
+code was written. It corrected the card twice — the ratings eligibility rule was
+enforced by a database trigger as well as by TypeScript, and the live function
+count is 193, not 152 — and found a live contract violation the card had not:
+`revenue_is_estimate: true` in `GET /shops/:id/stats` plus a "Revenue" column on
+the owner dashboard, which contract §10 forbids in as many words.
+
+Delivered P4-01 through P4-08 across eleven forward migrations,
+`20260805000100`–`20260805001100`:
+
+- **P4-03 ratings.** Eligibility records created from finalized visit facts by
+  trigger, seven-day edit window then lock, separate shop and provider scores,
+  public responses (one per authoring side, Q15), reports, moderator hide/restore
+  that preserves the score, and an immutable `rating_events` log. `POST /ratings`
+  is now a command; the direct grants are gone.
+- **P4-02 disputes.** `support_cases` / `case_participants` / `case_evidence` /
+  `case_events`, owner-first decision with Q13 windows as stated targets, customer
+  escalation, assigned admin review, audited *access* as well as decisions, and an
+  explicit visit-correction command so derived metrics recompute from final facts.
+- **P4-04 analytics.** One reproducible SQL read in the shop's own timezone. The
+  five §10 value concepts stay distinct, the ledger figures come from payment
+  events bucketed on `paid_at`, and every metric ships its own definition string
+  so a reader can re-derive the number. The "revenue" labels are gone.
+- **P4-01 conversations.** Creation became a command, context is explicit,
+  blocking is symmetric, sends are rate-limited inside the command, messages page
+  by cursor, retention is two years with a bounded purge.
+- **P4-05/06/07 workspaces.** Owner Analytics and Trust destinations, barber
+  Performance, the customer rating prompt on home, and a dispute panel replacing a
+  button that used to post a hardcoded sentence on the customer's behalf.
+- **P4-08 settings.** Preferences were `localStorage`-only with no service method
+  at all, so a second device saw defaults. They are now server state through a
+  version-checked command; mandatory transactional notices are enforced by a check
+  constraint rather than a guard; quiet hours actually delay optional delivery and
+  never a required notice; and operations can see and retry a provider failure.
+
+Security findings beyond the card, all fixed and all falsified: a customer could
+**delete their own review** through PostgREST (`authenticated` held INSERT and
+DELETE on `ratings` with permissive policies); `service_role` held write grants on
+`messages`, which would have let a caller step around the new block and rate
+limit; `authenticated` held INSERT on `conversations` and UPDATE/DELETE on
+`notification_preferences`. Also fixed a stale one-way owner-provider rating
+mirror, gave both trust audits a `seq` so events appended in one transaction have a
+total order, and serialized the DB-backed test files, which had been racing each
+other against one Postgres since before Phase 4.
+
+Falsification, nine sabotage runs each followed by a full reset: every regression
+was observed failing with its defect reintroduced. One result worth keeping —
+removing the employment recheck from `private.is_conversation_participant` alone
+did **not** break required test 6. The rule is enforced at three independent
+layers and it took disabling two database layers before the assertion could be
+seen failing.
+
+Gate on the final tree: 69 migrations from empty, DB lint zero findings, 219/219
+functions pinned to an empty `search_path`, typecheck clean, ESLint 0/0, 131 fast
+tests, **matrix 143/143 twice back to back with no reset**, both production builds,
+`git diff --check` clean.
+
+**Phase 4 is not closed.** Ten of twelve required tests are covered; required test
+11 (accessibility and responsive, per role and admin) has not been run at all and
+required test 12 is partial — bundle sizes are recorded as a new baseline, render
+time and image payload are not measured. The admin console screens, the
+rating-response editing UI, and a deliberately deferred `hiring` conversation kind
+are listed in full at the end of `docs/testing/PHASE-4-TESTS.md`. P2-08 and P3-09
+remain open on their own items; nothing here closes or depends on them.
+
+Nothing is committed and nothing is pushed.

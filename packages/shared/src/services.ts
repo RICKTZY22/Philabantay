@@ -14,7 +14,24 @@ import type {
   CreateEmploymentRequestInput,
   CreateJoinCodeRequestInput,
   SendMessageInput,
-  RateAppointmentInput,
+  NotificationPreferencesInput,
+  BlockConversationPeerInput,
+  ReportConversationInput,
+  SubmitRatingInput,
+  EditRatingInput,
+  PublishRatingResponseInput,
+  EditRatingResponseInput,
+  ReportRatingInput,
+  ModerateRatingReportInput,
+  SetRatingEditWindowInput,
+  OpenAppointmentDisputeInput,
+  DecideAppointmentDisputeInput,
+  RespondToDisputeDecisionInput,
+  CaseVersionInput,
+  CaseReasonInput,
+  AddCaseEvidenceInput,
+  ResolveSupportCaseInput,
+  EscalateRatingReportInput,
   ReassignAppointmentInput,
   RescheduleAppointmentInput,
   ResolveAppointmentDisputeInput,
@@ -123,6 +140,23 @@ import type {
   Message,
   Profile,
   Review,
+  RatingResponse,
+  RatingReport,
+  RatingEvent,
+  CustomerRatingWorkspace,
+  PublicRatingSummary,
+  SupportCase,
+  SupportCaseDetail,
+  CaseEvidence,
+  CaseEvent,
+  ShopAnalytics,
+  ProviderPerformance,
+  AnalyticsRange,
+  ConversationBlock,
+  ConversationReport,
+  AccountPreferences,
+  NotificationOperationsHealth,
+  FailedNotification,
   Service,
   StoredService,
   ShiftChangeRequest,
@@ -187,6 +221,21 @@ export interface AuthService {
   getCurrentProfile(): Promise<Profile | null>
   /** Fires whenever the signed-in profile changes (login/logout). */
   onAuthChange(cb: (profile: Profile | null) => void): Unsubscribe
+}
+
+/**
+ * Account preferences. There was no method here before Phase 4: the Express route
+ * existed but nothing in the app called it, so the Notification settings screen
+ * read and wrote browser local storage and a second device saw defaults.
+ */
+export interface PreferenceService {
+  /** Server-stored preferences, or the documented defaults for a new account. */
+  getMine(): Promise<AccountPreferences>
+  /**
+   * Version-checked save. Mandatory transactional notices are absent from the
+   * input by design: they cannot be switched off.
+   */
+  save(input: NotificationPreferencesInput): Promise<AccountPreferences>
 }
 
 export interface SupportService {
@@ -352,8 +401,12 @@ export interface CloseoutService {
 export interface ChatService {
   /** Conversations the signed-in user participates in, newest activity first. */
   listConversations(): Promise<ConversationDetailed[]>
-  /** Find or create the customer-to-shop conversation. */
-  openConversation(shopId: string): Promise<ConversationDetailed>
+  /**
+   * Find or create the customer-to-shop conversation. Idempotent in the database,
+   * so a double tap cannot produce two threads. Pass `appointmentId` to record
+   * which visit the thread is about.
+   */
+  openConversation(shopId: string, appointmentId?: string): Promise<ConversationDetailed>
   /**
    * Owner-only: find or create an internal owner-to-barber thread sa sariling
    * shop. Consumers distinguish it through `is_staff_thread`; the owner's
@@ -361,8 +414,25 @@ export interface ChatService {
    */
   openStaffConversation(barberId: string): Promise<ConversationDetailed>
   getMessages(conversationId: string, limit?: number): Promise<Message[]>
+  /**
+   * Cursor page of one thread, newest-first internally and returned oldest-first.
+   * `before` is the previous page's `next_cursor`.
+   */
+  getMessagePage(conversationId: string, query?: { limit?: number; before?: string }): Promise<{
+    messages: Message[]
+    has_more: boolean
+    next_cursor: string | null
+  }>
   sendMessage(input: SendMessageInput): Promise<Message>
   markRead(conversationId: string): Promise<void>
+  /** Accounts this user has blocked from direct messages. */
+  listBlocks(): Promise<ConversationBlock[]>
+  /**
+   * Block or unblock direct messages with one account. Blocking never suppresses
+   * required booking or security notices, which travel through notifications.
+   */
+  setBlock(userId: string, input: BlockConversationPeerInput): Promise<{ blocked_id: string; blocked: boolean }>
+  report(conversationId: string, input: ReportConversationInput): Promise<ConversationReport>
   /** Realtime: fires for each new message in the conversation. */
   subscribe(conversationId: string, cb: (message: Message) => void): Unsubscribe
 }
@@ -429,8 +499,91 @@ export interface FavoriteService {
 export interface ReviewService {
   /** Ratings created by the signed-in customer. */
   listMine(): Promise<Review[]>
-  /** Create or update both barber and shop ratings for a completed cut. */
-  rateAppointment(input: RateAppointmentInput): Promise<Review>
+  /**
+   * Pending eligibilities plus the customer's own reviews and their responses,
+   * in one read, so the rating prompt can appear on home rather than only in
+   * booking history.
+   */
+  myWorkspace(): Promise<CustomerRatingWorkspace>
+  /** Spend one eligibility. There is no way to rate a visit without one. */
+  submit(input: SubmitRatingInput): Promise<Review>
+  /** Version-checked edit, refused after the seven-day window closes. */
+  edit(ratingId: string, input: EditRatingInput): Promise<Review>
+  /** Public trust view for a shop, optionally narrowed to one provider. */
+  publicSummary(shopId: string, providerId?: string): Promise<PublicRatingSummary>
+  /** Reviews for the signed-in professional, with their own responses. */
+  listForProvider(): Promise<Array<Review & { responses: RatingResponse[] }>>
+  /** Reviews for the owner's shop, with responses and open reports. */
+  listForShop(): Promise<Array<Review & { responses: RatingResponse[]; reports: RatingReport[] }>>
+  /** One public response per authoring side. */
+  respond(ratingId: string, input: PublishRatingResponseInput): Promise<RatingResponse>
+  editResponse(responseId: string, input: EditRatingResponseInput): Promise<RatingResponse>
+  /** Customer reports a response; owner or barber reports review text. */
+  report(ratingId: string, input: ReportRatingInput): Promise<RatingReport>
+  /** Append-only decision history for one review. */
+  timeline(ratingId: string): Promise<RatingEvent[]>
+}
+
+export interface AnalyticsService {
+  /**
+   * Every owner figure in one reproducible read, in the shop's own timezone, with
+   * the definition of each metric attached. `range: 'custom'` needs `from`/`to`.
+   */
+  shop(shopId: string, query?: { range?: AnalyticsRange; from?: string; to?: string }): Promise<ShopAnalytics>
+  /** A provider's own numbers. An owner may pass `providerId`; a barber may not. */
+  providerPerformance(query?: {
+    range?: AnalyticsRange
+    from?: string
+    to?: string
+    providerId?: string
+  }): Promise<ProviderPerformance>
+}
+
+export interface SupportCaseService {
+  /** Open a dispute on a visit awaiting confirmation; owner-first by design. */
+  openAppointmentDispute(appointmentId: string, input: OpenAppointmentDisputeInput): Promise<SupportCase>
+  /** Cases the signed-in account participates in. */
+  listMine(): Promise<SupportCase[]>
+  /** Every case on the owner's shop. */
+  listForShop(): Promise<SupportCase[]>
+  /** Case body, evidence and audit. Reading it is itself an audited access. */
+  get(caseId: string): Promise<SupportCaseDetail>
+  addEvidence(caseId: string, input: AddCaseEvidenceInput): Promise<CaseEvidence>
+  /** Owner decision, which starts the customer's 48-hour escalation window. */
+  decide(caseId: string, input: DecideAppointmentDisputeInput): Promise<SupportCase>
+  /** Customer accepts the decision or escalates it for platform review. */
+  respond(caseId: string, input: RespondToDisputeDecisionInput): Promise<SupportCase>
+  /** Turn a moderation report into an escalated case. */
+  escalateRatingReport(reportId: string, input: EscalateRatingReportInput): Promise<SupportCase>
+}
+
+export interface SupportCaseAdminService {
+  /** Escalated work only. Owner-review cases never appear here. */
+  listQueue(status?: 'escalated' | 'information_requested' | 'resolved'): Promise<SupportCase[]>
+  assign(caseId: string, input: CaseVersionInput): Promise<SupportCase>
+  requestInformation(caseId: string, input: CaseReasonInput): Promise<SupportCase>
+  /** Final decision; `overturned_owner` applies an audited visit correction. */
+  resolve(caseId: string, input: ResolveSupportCaseInput): Promise<SupportCase>
+  /** Sensitive-access view: who opened which case body. */
+  listAccessAudit(): Promise<CaseEvent[]>
+}
+
+export interface NotificationOperationsService {
+  /** Queue health with the definition of each figure attached. */
+  health(): Promise<NotificationOperationsHealth>
+  /** Notices that are retrying or dead-lettered. */
+  listFailed(): Promise<FailedNotification[]>
+  /** Return one notice to the queue with its attempt counter reset. */
+  retry(outboxId: string): Promise<FailedNotification>
+}
+
+export interface RatingModerationService {
+  /** Open reports across every shop, for a moderator. */
+  listReports(status?: 'open' | 'upheld' | 'rejected'): Promise<RatingReport[]>
+  /** Hide text, restore text, or reject the report. The score never moves. */
+  decide(reportId: string, input: ModerateRatingReportInput): Promise<RatingReport>
+  /** Q15 support correction: reopen or close a review's edit window. */
+  setEditWindow(ratingId: string, input: SetRatingEditWindowInput): Promise<Review>
 }
 
 export interface BarberEmploymentService {
@@ -522,6 +675,12 @@ export interface DataBackend {
   ownerShop: OwnerShopService
   favorites: FavoriteService
   reviews: ReviewService
+  preferences: PreferenceService
+  ratingModeration: RatingModerationService
+  notificationOperations: NotificationOperationsService
+  analytics: AnalyticsService
+  supportCases: SupportCaseService
+  supportCaseAdmin: SupportCaseAdminService
   employment: BarberEmploymentService
   qualifications: QualificationService
   support: SupportService
@@ -755,6 +914,14 @@ export class ApiBackend implements DataBackend {
   }
 
   private async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+    return (await this.requestWithMeta<T, unknown>(path, options)).data
+  }
+
+  /**
+   * Same transport as `request`, but keeps the response envelope's `meta` block.
+   * Cursor pagination needs it; everything else can keep ignoring it.
+   */
+  private async requestWithMeta<T, M>(path: string, options: ApiRequestOptions = {}): Promise<{ data: T; meta?: M }> {
     const authenticated = options.authenticated ?? true
     const token = this.session?.access_token
     if (authenticated && !token) throw new DataError('not_authenticated', 'Please sign in to continue.')
@@ -775,14 +942,14 @@ export class ApiBackend implements DataBackend {
     }
 
     if (response.status === 401 && authenticated && options.retryAfterRefresh !== false && await this.refreshAccessToken()) {
-      return this.request<T>(path, { ...options, retryAfterRefresh: false })
+      return this.requestWithMeta<T, M>(path, { ...options, retryAfterRefresh: false })
     }
 
     const text = response.status === 204 ? '' : await response.text()
-    let payload: ({ data?: T } & ApiErrorPayload) | null = null
+    let payload: ({ data?: T; meta?: M } & ApiErrorPayload) | null = null
     if (text) {
       try {
-        payload = JSON.parse(text) as { data?: T } & ApiErrorPayload
+        payload = JSON.parse(text) as { data?: T; meta?: M } & ApiErrorPayload
       } catch {
         if (!response.ok) throw new DataError('server', 'The API returned an invalid response.')
       }
@@ -791,7 +958,7 @@ export class ApiBackend implements DataBackend {
       if (response.status === 401 && authenticated) this.clearAuth()
       throw this.toDataError(response, payload)
     }
-    return payload?.data as T
+    return { data: payload?.data as T, meta: payload?.meta }
   }
 
   private async refreshAccessToken(): Promise<boolean> {
@@ -1165,15 +1332,35 @@ export class ApiBackend implements DataBackend {
 
   readonly chat: ChatService = {
     listConversations: async () => this.hydrateConversations(await this.request<ConversationDetailed[]>('/conversations')),
-    openConversation: async (shopId) => this.hydrateConversation(await this.request<ConversationDetailed>('/conversations', { method: 'POST', body: { shop_id: shopId } })),
+    openConversation: async (shopId, appointmentId) => this.hydrateConversation(
+      await this.request<ConversationDetailed>('/conversations', {
+        method: 'POST',
+        body: appointmentId ? { shop_id: shopId, appointment_id: appointmentId } : { shop_id: shopId },
+      }),
+    ),
     openStaffConversation: async (barberId) => this.hydrateConversation(await this.request<ConversationDetailed>('/conversations/staff', { method: 'POST', body: { barber_id: barberId } })),
     getMessages: (conversationId, limit = 100) => this.request<Message[]>(`/conversations/${encoded(conversationId)}/messages?limit=${Math.max(1, Math.min(100, limit))}`),
+    getMessagePage: async (conversationId, query) => {
+      const search = new URLSearchParams({ limit: String(Math.max(1, Math.min(200, query?.limit ?? 50))) })
+      if (query?.before) search.set('before', query.before)
+      const page = await this.requestWithMeta<Message[], { has_more: boolean; next_cursor: string | null }>(
+        `/conversations/${encoded(conversationId)}/messages?${search.toString()}`,
+      )
+      return { messages: page.data, has_more: page.meta?.has_more ?? false, next_cursor: page.meta?.next_cursor ?? null }
+    },
     sendMessage: async (input) => {
       const message = await this.request<Message>('/messages', { method: 'POST', body: input })
       this.emitMessage(message)
       return message
     },
     markRead: (conversationId) => this.request<void>(`/conversations/${encoded(conversationId)}/read`, { method: 'POST' }),
+    listBlocks: () => this.request<ConversationBlock[]>('/conversation-blocks'),
+    setBlock: (userId, input) => this.request<{ blocked_id: string; blocked: boolean }>(
+      `/conversation-blocks/${encoded(userId)}`, { method: 'PUT', body: input },
+    ),
+    report: (conversationId, input) => this.request<ConversationReport>(
+      `/conversations/${encoded(conversationId)}/report`, { method: 'POST', body: input },
+    ),
     subscribe: (conversationId, callback) => {
       let subscription = this.messageSubscriptions.get(conversationId)
       if (!subscription) {
@@ -1271,7 +1458,75 @@ export class ApiBackend implements DataBackend {
 
   readonly reviews: ReviewService = {
     listMine: () => this.request<Review[]>('/ratings'),
-    rateAppointment: (input) => this.request<Review>('/ratings', { method: 'POST', body: input }),
+    myWorkspace: () => this.request<CustomerRatingWorkspace>('/ratings/workspace'),
+    submit: (input) => this.request<Review>('/ratings', { method: 'POST', body: input }),
+    edit: (ratingId, input) => this.request<Review>(`/ratings/${encoded(ratingId)}`, { method: 'POST', body: input }),
+    publicSummary: (shopId, providerId) => this.request<PublicRatingSummary>(
+      `/catalog/shops/${encoded(shopId)}/ratings${providerId ? `?provider_id=${encodeURIComponent(providerId)}` : ''}`,
+      { authenticated: false },
+    ),
+    listForProvider: () => this.request<Array<Review & { responses: RatingResponse[] }>>('/provider/ratings'),
+    listForShop: () => this.request<Array<Review & { responses: RatingResponse[]; reports: RatingReport[] }>>('/owner/ratings'),
+    respond: (ratingId, input) => this.request<RatingResponse>(`/ratings/${encoded(ratingId)}/responses`, { method: 'POST', body: input }),
+    editResponse: (responseId, input) => this.request<RatingResponse>(`/rating-responses/${encoded(responseId)}`, { method: 'POST', body: input }),
+    report: (ratingId, input) => this.request<RatingReport>(`/ratings/${encoded(ratingId)}/reports`, { method: 'POST', body: input }),
+    timeline: (ratingId) => this.request<RatingEvent[]>(`/ratings/${encoded(ratingId)}/timeline`),
+  }
+
+  readonly preferences: PreferenceService = {
+    getMine: () => this.request<AccountPreferences>('/notification-preferences'),
+    save: (input) => this.request<AccountPreferences>('/notification-preferences', { method: 'PUT', body: input }),
+  }
+
+  readonly analytics: AnalyticsService = {
+    shop: (shopId, query) => {
+      const search = new URLSearchParams()
+      if (query?.range) search.set('range', query.range)
+      if (query?.from) search.set('from', query.from)
+      if (query?.to) search.set('to', query.to)
+      const suffix = search.size > 0 ? `?${search.toString()}` : ''
+      return this.request<ShopAnalytics>(`/shops/${encoded(shopId)}/analytics${suffix}`)
+    },
+    providerPerformance: (query) => {
+      const search = new URLSearchParams()
+      if (query?.range) search.set('range', query.range)
+      if (query?.from) search.set('from', query.from)
+      if (query?.to) search.set('to', query.to)
+      if (query?.providerId) search.set('provider_id', query.providerId)
+      const suffix = search.size > 0 ? `?${search.toString()}` : ''
+      return this.request<ProviderPerformance>(`/provider/performance${suffix}`)
+    },
+  }
+
+  readonly supportCases: SupportCaseService = {
+    openAppointmentDispute: (appointmentId, input) => this.request<SupportCase>(`/bookings/${encoded(appointmentId)}/disputes`, { method: 'POST', body: input }),
+    listMine: () => this.request<SupportCase[]>('/support-cases?scope=mine'),
+    listForShop: () => this.request<SupportCase[]>('/support-cases?scope=shop'),
+    get: (caseId) => this.request<SupportCaseDetail>(`/support-cases/${encoded(caseId)}`),
+    addEvidence: (caseId, input) => this.request<CaseEvidence>(`/support-cases/${encoded(caseId)}/evidence`, { method: 'POST', body: input }),
+    decide: (caseId, input) => this.request<SupportCase>(`/support-cases/${encoded(caseId)}/decision`, { method: 'POST', body: input }),
+    respond: (caseId, input) => this.request<SupportCase>(`/support-cases/${encoded(caseId)}/response`, { method: 'POST', body: input }),
+    escalateRatingReport: (reportId, input) => this.request<SupportCase>(`/rating-reports/${encoded(reportId)}/escalate`, { method: 'POST', body: input }),
+  }
+
+  readonly supportCaseAdmin: SupportCaseAdminService = {
+    listQueue: (status) => this.request<SupportCase[]>(`/admin/disputes${status ? `?status=${status}` : ''}`),
+    assign: (caseId, input) => this.request<SupportCase>(`/admin/disputes/${encoded(caseId)}/assign`, { method: 'POST', body: input }),
+    requestInformation: (caseId, input) => this.request<SupportCase>(`/admin/disputes/${encoded(caseId)}/request-information`, { method: 'POST', body: input }),
+    resolve: (caseId, input) => this.request<SupportCase>(`/admin/disputes/${encoded(caseId)}/resolve`, { method: 'POST', body: input }),
+    listAccessAudit: () => this.request<CaseEvent[]>('/admin/case-audit'),
+  }
+
+  readonly notificationOperations: NotificationOperationsService = {
+    health: () => this.request<NotificationOperationsHealth>('/admin/notifications/health'),
+    listFailed: () => this.request<FailedNotification[]>('/admin/notifications/failed'),
+    retry: (outboxId) => this.request<FailedNotification>(`/admin/notifications/${encoded(outboxId)}/retry`, { method: 'POST' }),
+  }
+
+  readonly ratingModeration: RatingModerationService = {
+    listReports: (status) => this.request<RatingReport[]>(`/admin/rating-reports${status ? `?status=${status}` : ''}`),
+    decide: (reportId, input) => this.request<RatingReport>(`/admin/rating-reports/${encoded(reportId)}`, { method: 'POST', body: input }),
+    setEditWindow: (ratingId, input) => this.request<Review>(`/admin/ratings/${encoded(ratingId)}/edit-window`, { method: 'POST', body: input }),
   }
 
   readonly employment: BarberEmploymentService = {

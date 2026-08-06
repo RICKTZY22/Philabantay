@@ -228,14 +228,14 @@
 .owner-chart-points { fill: var(--paper-soft); stroke: #16878d; stroke-width: 3; }
 .owner-chart-days { fill: var(--faint); font: 12px 'Patrick Hand', cursive; }
 
-.owner-revenue-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 17px; }
-.owner-revenue-card h2 { margin: 2px 0 10px; }
+.owner-metric-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 17px; }
+.owner-metric-card h2 { margin: 2px 0 10px; }
 .owner-chart-legend { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 14px; }
 .owner-chart-legend span { width: 8px; height: 8px; border: 1px solid var(--ink); border-radius: 50%; }
 .owner-chart-legend .is-service { background: #143f3f; }
 .owner-chart-legend .is-product { background: #28bfc2; }
-.owner-revenue-card small { display: block; margin-top: 10px; color: var(--faint); }
-.owner-revenue-total { display: block; font: 700 26px 'Kalam', cursive; }
+.owner-metric-card small { display: block; margin-top: 10px; color: var(--faint); }
+.owner-metric-total { display: block; font: 700 26px 'Kalam', cursive; }
 .owner-growth { color: #388c50; font-size: 14px; }
 
 .owner-insights { display: grid; align-content: start; gap: 18px; }
@@ -299,7 +299,7 @@
   .owner-join-code-card code,
   .owner-join-code-card .btn { grid-column: 1 / -1; }
   .owner-bottom-grid { grid-template-columns: 1fr; }
-  .owner-revenue-card { grid-template-columns: 1fr auto; }
+  .owner-metric-card { grid-template-columns: 1fr auto; }
 }
 
 
