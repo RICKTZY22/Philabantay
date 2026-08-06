@@ -4,6 +4,7 @@ import { useAuth } from '../../features/auth/AuthContext'
 import { useSignOutToHome } from '../../hooks/useSignOutToHome'
 import { DoodleIcon } from '../../theme/DoodleDefs'
 import { SettingsActionRow, SettingsHeading } from './AccountSettingsPanel'
+import { MfaSettingsCard } from './MfaSettingsCard'
 
 export function SecuritySettingsPanel() {
   const { changePassword } = useAuth()
@@ -53,6 +54,8 @@ export function SecuritySettingsPanel() {
         <small className="settings-password-hint">Use at least 10 characters and one special character.</small>
         <SettingsActionRow message={message}><button type="submit" className="settings-primary-button" disabled={saving || !currentPassword || !newPassword || !confirmPassword}>{saving ? 'Updating…' : 'Update password'}</button></SettingsActionRow>
       </form>
+
+      <MfaSettingsCard />
 
       <section className="settings-panel-card settings-session-card">
         <div className="settings-card-title"><i className="is-blue"><DoodleIcon name="user" size={23} /></i><div><h2>Current session</h2><p>You’re signed in on this browser.</p></div></div>

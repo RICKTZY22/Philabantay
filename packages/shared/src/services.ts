@@ -36,6 +36,7 @@ import type {
   RescheduleAppointmentInput,
   ResolveAppointmentDisputeInput,
   ShiftChangeRequestInput,
+  VerifyMfaInput,
   SignInInput,
   SignUpInput,
   StaffNoteInput,
@@ -155,6 +156,8 @@ import type {
   ConversationBlock,
   ConversationReport,
   AccountPreferences,
+  MfaStatus,
+  MfaEnrolment,
   NotificationOperationsHealth,
   FailedNotification,
   Service,
@@ -221,6 +224,28 @@ export interface AuthService {
   getCurrentProfile(): Promise<Profile | null>
   /** Fires whenever the signed-in profile changes (login/logout). */
   onAuthChange(cb: (profile: Profile | null) => void): Unsubscribe
+
+  /**
+   * Multi-factor authentication.
+   *
+   * Every `/admin` route is mounted behind an AAL2 check, and until these
+   * existed there was no way for a browser to reach AAL2: no enrolment, and no
+   * challenge at sign-in. `signIn` reports `mfa_required` when the identity has
+   * a verified factor, and `verifyMfa` exchanges a code for the stepped-up
+   * session.
+   */
+  /**
+   * The factor this session may step up with, set by the most recent `signIn`
+   * and cleared once used. Null when there is nothing to step up.
+   */
+  pendingMfaFactor(): string | null
+  mfaStatus(): Promise<MfaStatus>
+  /** Begin enrolment. The secret is returned once and never again. */
+  enrolMfa(): Promise<MfaEnrolment>
+  /** Finish enrolment, or step an existing session up to AAL2. */
+  verifyMfa(input: VerifyMfaInput): Promise<void>
+  /** Removing a factor requires an AAL2 session, not just a password. */
+  removeMfa(factorId: string): Promise<void>
 }
 
 /**
@@ -695,6 +720,9 @@ interface ApiSession {
 interface ApiAuthPayload {
   profile: Profile
   session: ApiSession | null
+  /** Present when the identity has a verified factor and can step up to AAL2. */
+  mfa_required?: boolean
+  factor_id?: string
 }
 
 interface ApiErrorPayload {
@@ -801,6 +829,12 @@ export class ApiBackend implements DataBackend {
   private session: ApiSession | null
   private currentProfile: Profile | null = null
   private refreshPromise: Promise<boolean> | null = null
+  /**
+   * Set by `signIn` when the identity holds a verified factor, cleared once the
+   * session is stepped up. Deliberately in memory only: a pending step-up must
+   * not survive a reload, or a closed tab would leave a stale prompt behind.
+   */
+  private pendingMfa: { factor_id: string } | null = null
 
   constructor(options: ApiBackendOptions) {
     const baseUrl = options.baseUrl.trim().replace(/\/+$/, '')
@@ -1062,8 +1096,25 @@ export class ApiBackend implements DataBackend {
       const data = await this.request<ApiAuthPayload>('/auth/signin', { method: 'POST', body: input, authenticated: false })
       if (!data.session) throw new DataError('not_authenticated', 'Sign-in did not create a session.')
       this.saveSession(data.session)
+      // Step-up, not a gate: the AAL1 session is real and every ordinary route
+      // accepts it. `pendingMfa` tells the UI it can raise this session to AAL2,
+      // which is the only way to reach any `/admin` surface.
+      this.pendingMfa = data.mfa_required ? { factor_id: data.factor_id ?? '' } : null
       this.emitAuth(data.profile)
       return data.profile
+    },
+    pendingMfaFactor: () => this.pendingMfa?.factor_id ?? null,
+    mfaStatus: () => this.request<MfaStatus>('/auth/mfa'),
+    enrolMfa: () => this.request<MfaEnrolment>('/auth/mfa/enroll', { method: 'POST' }),
+    verifyMfa: async (input) => {
+      const data = await this.request<{ session: ApiSession }>('/auth/mfa/verify', { method: 'POST', body: input })
+      // The stepped-up session replaces the AAL1 one, so subsequent requests
+      // carry AAL2 without the caller having to thread it anywhere.
+      this.saveSession(data.session)
+      this.pendingMfa = null
+    },
+    removeMfa: async (factorId) => {
+      await this.request<unknown>(`/auth/mfa/${encoded(factorId)}`, { method: 'DELETE' })
     },
     completeRoleOnboarding: async (input) => {
       const profile = await this.request<Profile>('/auth/onboarding', { method: 'POST', body: input })

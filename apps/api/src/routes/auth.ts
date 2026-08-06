@@ -3,15 +3,18 @@ import {
   changePasswordInputSchema,
   completeRoleOnboardingInputSchema,
   refreshSessionInputSchema,
+  verifyMfaInputSchema,
+  mfaFactorParamsSchema,
   signInInputSchema,
   signUpInputSchema,
   updateProfileInputSchema,
 } from '@barbershop/shared/schemas'
 import type { ApiDependencies } from '../lib/supabase'
+import { enrolFactor, listFactors, removeFactor, verifyFactor } from '../lib/mfa'
 import { authenticate } from '../http/auth'
 import { requireOperationalAccess } from '../http/authorization'
 import { ApiError, fromDatabaseError } from '../http/errors'
-import { parseBody } from '../http/validation'
+import { parseBody, parseParams } from '../http/validation'
 
 export function createAuthRouter(dependencies: ApiDependencies): Router {
   const router = Router()
@@ -45,7 +48,22 @@ export function createAuthRouter(dependencies: ApiDependencies): Router {
       .eq('id', data.user.id)
       .single()
     if (profileError) throw fromDatabaseError(profileError)
-    response.json({ data: { profile, session: data.session } })
+
+    // Step-up rather than block: password alone is a valid AAL1 session and
+    // every ordinary route accepts it. Only the `/admin` surfaces require AAL2,
+    // so an identity with a verified factor is told it can step up rather than
+    // being held at the door. `mfa_required` is the client's cue to ask for a
+    // code; without it the browser had no way to reach AAL2 at all.
+    const factors = await listFactors(data.session.access_token).catch(() => [])
+    const verified = factors.find((factor) => factor.status === 'verified')
+
+    response.json({
+      data: {
+        profile,
+        session: data.session,
+        ...(verified ? { mfa_required: true, factor_id: verified.id } : {}),
+      },
+    })
   })
 
   router.post('/refresh', async (request, response) => {
@@ -59,6 +77,58 @@ export function createAuthRouter(dependencies: ApiDependencies): Router {
 
   router.get('/me', (request, response) => {
     response.json({ data: request.auth.profile })
+  })
+
+  /**
+   * Multi-factor authentication.
+   *
+   * Every route below acts with the caller's own token, so a user can only see
+   * and change their own factors. Removing a factor deliberately requires an
+   * AAL2 session: a stolen password must not be enough to strip the second
+   * factor off an administrator's account.
+   */
+  router.get('/mfa', async (request, response) => {
+    const factors = await listFactors(request.auth.token)
+    response.json({
+      data: {
+        aal: request.auth.aal,
+        factors: factors.map((factor) => ({
+          id: factor.id,
+          friendly_name: factor.friendly_name,
+          status: factor.status,
+          created_at: factor.created_at,
+        })),
+      },
+    })
+  })
+
+  router.post('/mfa/enroll', async (request, response) => {
+    const existing = await listFactors(request.auth.token)
+    if (existing.some((factor) => factor.status === 'verified')) {
+      throw new ApiError(409, 'mfa_already_enrolled', 'This account already has an authenticator app set up.')
+    }
+    // A previous abandoned attempt would otherwise accumulate unverified rows
+    // and eventually collide with the provider's factor limit.
+    for (const stale of existing.filter((factor) => factor.status !== 'verified')) {
+      await removeFactor(request.auth.token, stale.id).catch(() => undefined)
+    }
+    const enrolled = await enrolFactor(request.auth.token, 'Philabantay authenticator')
+    response.status(201).json({ data: enrolled })
+  })
+
+  router.post('/mfa/verify', async (request, response) => {
+    const input = parseBody(request, verifyMfaInputSchema)
+    const session = await verifyFactor(request.auth.token, input.factor_id, input.code)
+    response.json({ data: { session } })
+  })
+
+  router.delete('/mfa/:factorId', async (request, response) => {
+    const { factorId } = parseParams(request, mfaFactorParamsSchema)
+    if (request.auth.aal !== 'aal2') {
+      throw new ApiError(403, 'mfa_required', 'Enter a code from your authenticator app before removing it.')
+    }
+    await removeFactor(request.auth.token, factorId)
+    response.status(204).end()
   })
 
   router.post('/onboarding', requireOperationalAccess, async (request, response) => {

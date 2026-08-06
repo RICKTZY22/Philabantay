@@ -1,0 +1,25 @@
+.aal2-gate {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  max-width: 44rem;
+  padding: 22px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-soft);
+}
+.aal2-gate h1 { margin: 4px 0 0; }
+.aal2-note { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); max-width: 62ch; }
+.aal2-form { display: grid; gap: 10px; justify-items: start; width: 100%; }
+.aal2-form label { display: grid; gap: 4px; font-weight: 600; }
+.aal2-form input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: .3em;
+}
+.app-shell.is-workspace .aal2-gate .btn { min-height: 44px; }

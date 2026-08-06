@@ -341,3 +341,34 @@
 .settings-panel-card input[type='range'] { min-height: 44px; width: 100%; }
 .settings-panel-card input:disabled,
 .settings-panel-card select:disabled { opacity: .65; cursor: not-allowed; }
+
+/* Authenticator setup. Targets are 44px because this is new code and the
+   contract asks for it, and the secret is selectable text rather than only a QR
+   so it is readable by a screen reader and usable on the phone itself. */
+.settings-mfa-state { display: flex; align-items: center; gap: 8px; margin: 0; }
+.settings-mfa-setup { display: grid; gap: 10px; }
+.settings-mfa-setup p { margin: 0; }
+.settings-mfa-setup label { display: grid; gap: 4px; font-weight: 600; }
+.settings-mfa-setup input {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: .3em;
+}
+.settings-mfa-secret {
+  display: block;
+  padding: 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+  word-break: break-all;
+  user-select: all;
+}
+.settings-mfa-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell.is-workspace .settings-mfa-actions .btn { min-height: 44px; }

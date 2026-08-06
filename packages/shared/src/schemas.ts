@@ -54,6 +54,7 @@ import type {
   ReassignAppointmentInput,
   RescheduleAppointmentInput,
   RefreshSessionInput,
+  VerifyMfaInput,
   ResolveAppointmentDisputeInput,
   ResolveEmploymentRequestInput,
   RevokeShopJoinCodeInput,
@@ -270,6 +271,17 @@ export const signInInputSchema: z.ZodType<SignInInput> = z.strictObject({
 export const refreshSessionInputSchema: z.ZodType<RefreshSessionInput> = z.strictObject({
   refresh_token: z.string().min(20).max(4096),
 })
+
+/**
+ * A TOTP code is exactly six digits. Accepting anything else would send a
+ * guaranteed-wrong value to the provider and spend one of the user's attempts.
+ */
+export const verifyMfaInputSchema: z.ZodType<VerifyMfaInput> = z.strictObject({
+  factor_id: uuidSchema,
+  code: z.string().regex(/^\d{6}$/, 'Enter the six-digit code from your authenticator app.'),
+})
+
+export const mfaFactorParamsSchema = z.strictObject({ factorId: uuidSchema })
 
 export const completeRoleOnboardingInputSchema: z.ZodType<CompleteRoleOnboardingInput> = z.strictObject({
   role: roleSchema,

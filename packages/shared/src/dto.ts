@@ -31,6 +31,12 @@ export interface RefreshSessionInput {
   refresh_token: string
 }
 
+/** Step up an existing session to AAL2, or finish enrolling a new factor. */
+export interface VerifyMfaInput {
+  factor_id: string
+  code: string
+}
+
 /** One-time role choice after signup. Professional choices are requests only. */
 export interface CompleteRoleOnboardingInput {
   role: OnboardingRole

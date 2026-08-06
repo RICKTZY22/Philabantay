@@ -1202,6 +1202,27 @@ export type AnalyticsRange = 'week' | 'month' | 'custom' | 'all'
  * Notification queue health for an operator. Plan section 8: outbox lag, failure
  * rate, last successful cycle, plus a retry action.
  */
+/** One enrolled authenticator. The secret is never included here. */
+export interface MfaFactor {
+  id: string
+  friendly_name: string | null
+  status: 'verified' | 'unverified'
+  created_at: string
+}
+
+export interface MfaStatus {
+  /** Assurance level of the session making the request. */
+  aal: 'aal1' | 'aal2'
+  factors: MfaFactor[]
+}
+
+/** Returned once, at enrolment. Neither value is retrievable afterwards. */
+export interface MfaEnrolment {
+  factor_id: string
+  secret: string
+  uri: string
+}
+
 export interface NotificationOperationsHealth {
   generated_at: string
   pending: number

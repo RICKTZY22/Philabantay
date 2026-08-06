@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { RequireAal2 } from './components/RequireAal2'
 import { RequireAuth } from './components/RequireAuth'
 import { LandingPage } from './pages/LandingPage'
 import { useAuth } from './features/auth/AuthContext'
@@ -170,13 +171,13 @@ export function App() {
         />
         <Route path="dashboard/barber" element={<Navigate to="/schedule" replace />} />
         <Route path="professional" element={<RequireAuth role="barber"><ProfessionalProfilePage /></RequireAuth>} />
-        <Route path="admin/disputes" element={<RequireAuth role="admin"><AdminDisputesPage /></RequireAuth>} />
-        <Route path="admin/disputes/:caseId" element={<RequireAuth role="admin"><AdminDisputeDetailPage /></RequireAuth>} />
-        <Route path="admin/moderation" element={<RequireAuth role="admin"><AdminModerationPage /></RequireAuth>} />
-        <Route path="admin/operations" element={<RequireAuth role="admin"><AdminOperationsPage /></RequireAuth>} />
-        <Route path="admin/verifications" element={<RequireAuth role="admin"><AdminVerificationPage /></RequireAuth>} />
-        <Route path="admin/verifications/:submissionId" element={<RequireAuth role="admin"><AdminVerificationDetailPage /></RequireAuth>} />
-        <Route path="admin/users/:userId" element={<RequireAuth role="admin"><AdminProfessionalPage /></RequireAuth>} />
+        <Route path="admin/disputes" element={<RequireAuth role="admin"><RequireAal2><AdminDisputesPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/disputes/:caseId" element={<RequireAuth role="admin"><RequireAal2><AdminDisputeDetailPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/moderation" element={<RequireAuth role="admin"><RequireAal2><AdminModerationPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/operations" element={<RequireAuth role="admin"><RequireAal2><AdminOperationsPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/verifications" element={<RequireAuth role="admin"><RequireAal2><AdminVerificationPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/verifications/:submissionId" element={<RequireAuth role="admin"><RequireAal2><AdminVerificationDetailPage /></RequireAal2></RequireAuth>} />
+        <Route path="admin/users/:userId" element={<RequireAuth role="admin"><RequireAal2><AdminProfessionalPage /></RequireAal2></RequireAuth>} />
         {/* Catch-all para friendly pa rin kapag mali o luma ang URL. */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
