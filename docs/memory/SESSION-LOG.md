@@ -2309,3 +2309,54 @@ browser tooling exposes no way to force the media query, and the handoff is
 explicit that a CSS toggle is not equivalent. The blanket `!important` guard
 matches, and after the bar fix the only animation left on any Phase 4 surface is
 the composited `.btn` transition. A human with real emulation should confirm it.
+
+## 2026-08-06 (later) - staff admin console, and two matrix flakes (Claude)
+
+Built plan section 11's three missing surfaces: `/admin/disputes` with a case
+detail, `/admin/moderation`, and `/admin/operations`. The whole contract already
+existed and was correct, so this was UI only. Verified against real data.
+
+**A blocker the card did not know about.** The P4-09 card tells you to run
+`admin:provision --capabilities content_moderation,dispute_review`. That command
+could not work: the script's allowlist held only the four Phase 1 capabilities and
+rejected both Phase 4 ones before reaching the database. Migration
+`20260805000300` had deliberately raised the database ceiling from four to six for
+exactly these two, and the script never followed. Fixed, and provisioning then
+succeeded with all three.
+
+**The bigger blocker, and the reason Phase 4 still does not close.** There is no
+MFA anywhere in this product. Every `/admin` route is mounted behind
+`requireAal2`, but `apps/web` has no enrolment and no challenge, `/settings/security`
+offers only a password change and a session card, and `/auth/signin` has no MFA
+step at all. So no admin surface has ever been reachable in a browser by anyone,
+including the `/admin/verifications` page that has shipped since Phase 1, whose own
+error text points at a screen that does not exist. The console was verified by
+minting a genuine AAL2 session out of band and injecting it, which proves the
+screens, capability checks and data contracts work, and deliberately does not
+claim reachability.
+
+**Two defects in the new code, found by measuring it.** Disclosure summaries
+rendered at 18px, a fresh instance of the target-size problem recorded earlier the
+same day; now 44px. A 320px check then reported the page overflowing to 684px and
+a CSS comment was written claiming a `min-width: 0` fix had cured it. It had not,
+and the overflow was not real: `window.scrollX` stays at 0, so the page cannot
+scroll sideways. It is an artifact of viewport emulation when scroller content
+exceeds the real window width. The comment was corrected rather than left
+asserting a cause that does not exist.
+
+**Two Phase 3 matrix tests were flaky on any repeat run**, which means the
+"143/143 twice back to back" property recorded earlier was luck rather than a
+guarantee. Both are now deterministic and neither assertion was loosened:
+
+- the delivery-retry test took `.at(-1)` of an unordered query over every
+  notification the customer had ever received, so a second run picked an
+  already-delivered notice and recording a failed attempt against it left the row
+  `delivered`. It now names the pending notice for its own appointment.
+- the closeout test inherited the previous run's `completed` shop-day run.
+  `api_run_shop_closeout` correctly returns immediately once a day is closed, so
+  the new appointment was never processed and the attention assertion saw an empty
+  array. It now clears the row it is about to exercise.
+
+Matrix 143/143 **three times** back to back with no reset, where run 2 previously
+failed reliably. Typecheck, ESLint 0/0, 131 fast tests, both builds, DB lint clean.
+Committed as `fbd113b`, not pushed.

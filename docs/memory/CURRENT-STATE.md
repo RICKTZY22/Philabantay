@@ -589,7 +589,25 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Two things need the product owner, in this order.**
+**Build MFA: TOTP enrolment in Settings, Security, and a challenge step at
+sign-in.** This is now the only thing keeping Phase 4 open, and it is bigger than
+Phase 4. Every `/admin` route is mounted behind `requireAal2`, and the product has
+no MFA at all: no enrolment UI, no challenge UI, and no MFA step in
+`/auth/signin`. **No admin surface has ever been reachable in a browser**,
+including the `/admin/verifications` page that has shipped since Phase 1.
+
+The staff admin console itself is built and verified (`fbd113b`): the dispute
+queue and case detail, the moderation queue, and the notification operations view
+all work against real data. They were verified with an AAL2 session minted out of
+band, so the screens are proven and their reachability is not.
+
+Shape of the work: `/auth/signin` returns a challenge instead of a session when
+the identity has a verified factor; a verify endpoint exchanges the code for an
+AAL2 session; Settings gains enrolment with a QR and secret, a confirm step, and
+factor removal. `scripts/provision-admin.ts` already accepts the Phase 4
+capabilities as of `fbd113b`.
+
+### Then, still open for the product owner
 
 1. **Review the palette change and decide whether to push.** Fixing WCAG AA meant
    darkening three global colour tokens (`--studio-muted`, `--studio-faint`, and
