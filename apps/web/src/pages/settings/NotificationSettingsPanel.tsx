@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DataError, type AccountPreferences } from '@barbershop/shared'
 import { useBackend } from '../../services/backend'
+import { applyAppearance } from '../../lib/appearance'
 import { DoodleIcon } from '../../theme/DoodleDefs'
 import { SettingsHeading } from './AccountSettingsPanel'
 
@@ -22,7 +23,9 @@ export function NotificationSettingsPanel() {
   const load = useCallback(async () => {
     setLoadError('')
     try {
-      setPrefs(await backend.preferences.getMine())
+      const stored = await backend.preferences.getMine()
+      setPrefs(stored)
+      applyAppearance(stored)
     } catch (caught) {
       setLoadError(caught instanceof DataError ? caught.message : 'Hindi ma-load ang preferences.')
     }
@@ -52,6 +55,9 @@ export function NotificationSettingsPanel() {
         reduce_motion: next.reduce_motion,
       })
       setPrefs(stored)
+      // Text size, contrast and reduced motion have to change the screen the
+      // moment they are chosen, otherwise the control looks broken.
+      applyAppearance(stored)
       setSaved(true)
       window.setTimeout(() => setSaved(false), 1600)
     } catch (caught) {

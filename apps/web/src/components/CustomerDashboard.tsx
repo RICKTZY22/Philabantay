@@ -344,8 +344,14 @@ export function CustomerDashboard({ firstName }: { firstName: string }) {
       backend.chat.listConversations(),
       backend.favorites.list(),
       backend.services.list(),
-      // The rating prompt belongs on home, not only buried in booking history.
-      backend.reviews.myWorkspace(),
+      // The rating prompt belongs on home, not only buried in booking history -
+      // but it is a secondary panel, so its failure must not take discovery,
+      // bookings and messages down with it. A broken embed in this one read used
+      // to blank the entire customer home.
+      backend.reviews.myWorkspace().catch((caught: unknown) => {
+        console.error('[dashboard] Rating workspace unavailable; home renders without the prompt.', caught)
+        return { pending: [], reviews: [] } as CustomerRatingWorkspace
+      }),
     ]).then(([shopList, all, available, mine, convos, favs, serviceList, ratingWorkspace]) => {
       if (!active) return
       setShops(shopList)

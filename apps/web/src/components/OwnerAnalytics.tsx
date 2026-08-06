@@ -66,10 +66,11 @@ function EmptySection({ message }: { message: string }) {
  * expose a table/download view, so the table is the primary representation and
  * the bars are decoration layered on top of it.
  */
-function BarSeries({ caption, rows, format }: {
+function BarSeries({ caption, rows, format, definition }: {
   caption: string
   rows: Array<{ label: string; value: number }>
   format: (value: number) => string
+  definition?: string
 }) {
   const max = Math.max(1, ...rows.map((row) => row.value))
   const csv = useMemo(
@@ -82,6 +83,14 @@ function BarSeries({ caption, rows, format }: {
 
   return (
     <div className="analytics-series">
+      {/* The plan requires every chart to state its definition, not only every
+          metric tile. */}
+      {definition && (
+        <details className="analytics-definition">
+          <summary>How this is calculated</summary>
+          <p>{definition}</p>
+        </details>
+      )}
       <div className="analytics-bars" aria-hidden="true">
         {rows.map((row) => (
           <div key={row.label} className="analytics-bar">
@@ -374,7 +383,10 @@ export function OwnerAnalytics({ shopId }: { shopId: string }) {
                 definitions={definitions}
               />
               <Metric label="Reviews in range" value={String(data.trust.reviews_in_range)} definitions={definitions} />
-              <Metric label="Text hidden by moderation" value={String(data.trust.hidden_text_count)} definitionKey="distribution" definitions={definitions} />
+              {/* This used to carry the `distribution` definition, which describes
+                  the rating spread below rather than this count, and said the
+                  opposite of what the tile measures. */}
+              <Metric label="Text hidden by moderation" value={String(data.trust.hidden_text_count)} definitions={definitions} />
               <Metric label="Open reports" value={String(data.trust.open_reports)} definitions={definitions} />
               <Metric label="Disputes opened" value={String(data.trust.disputes_opened)} definitions={definitions} />
               <Metric label="Disputes escalated" value={String(data.trust.disputes_escalated)} definitions={definitions} />
@@ -391,6 +403,7 @@ export function OwnerAnalytics({ shopId }: { shopId: string }) {
               caption="Shop rating distribution"
               rows={data.trust.distribution.map((bucket) => ({ label: `${bucket.score}★`, value: bucket.count }))}
               format={String}
+              definition={definitions.distribution}
             />
           </section>
 

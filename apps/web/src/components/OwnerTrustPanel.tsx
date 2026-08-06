@@ -284,7 +284,15 @@ export function OwnerTrustPanel() {
     void load()
   }, [load])
 
-  const openCases = cases.filter((entry) => entry.status !== 'resolved' && entry.status !== 'withdrawn')
+  // "Needing a decision" has to mean exactly that. Counting every unresolved case
+  // sent the owner looking for decisions they had already made: a case waiting on
+  // the customer, or on a platform reviewer, is not theirs to act on.
+  const awaitingOwner = cases.filter((entry) => entry.status === 'owner_review')
+  const awaitingOthers = cases.filter((entry) => (
+    entry.status === 'owner_decided'
+    || entry.status === 'escalated'
+    || entry.status === 'information_requested'
+  ))
   const closedCases = cases.filter((entry) => entry.status === 'resolved' || entry.status === 'withdrawn')
 
   return (
@@ -305,11 +313,22 @@ export function OwnerTrustPanel() {
       )}
 
       <section aria-labelledby="trust-cases">
-        <h2 id="trust-cases">Disputes needing a decision ({openCases.length})</h2>
-        {openCases.length === 0
-          ? <p className="trust-empty" role="status">Walang open dispute. Lalabas dito ang bagong case kapag may customer na nag-dispute.</p>
-          : openCases.map((entry) => <CaseCard key={entry.id} supportCase={entry} onChanged={() => void load()} />)}
+        <h2 id="trust-cases">Disputes needing a decision ({awaitingOwner.length})</h2>
+        {awaitingOwner.length === 0
+          ? <p className="trust-empty" role="status">Walang dispute na naghihintay ng desisyon mo ngayon.</p>
+          : awaitingOwner.map((entry) => <CaseCard key={entry.id} supportCase={entry} onChanged={() => void load()} />)}
       </section>
+
+      {awaitingOthers.length > 0 && (
+        <section aria-labelledby="trust-cases-waiting">
+          <h2 id="trust-cases-waiting">Decided, waiting on someone else ({awaitingOthers.length})</h2>
+          <p className="trust-hint">
+            Nasa customer o sa platform reviewer na ang susunod na hakbang dito. Wala ka nang kailangang gawin
+            maliban kung may hilingin silang dagdag na impormasyon.
+          </p>
+          {awaitingOthers.map((entry) => <CaseCard key={entry.id} supportCase={entry} onChanged={() => void load()} />)}
+        </section>
+      )}
 
       {closedCases.length > 0 && (
         <details className="trust-closed">

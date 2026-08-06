@@ -41,7 +41,16 @@
   --paper-soft: #fdf7ee;
   --ink: #2b2b2b;
   --muted: #54514b;
-  --faint: #8a867e;
+  /*
+   * Darkened during the P4-09 accessibility gate. #8a867e measured 3.29:1 at
+   * worst on this palette's own paper backgrounds, under the 4.5:1 AA minimum.
+   * It reaches further than the landing page: `ModalPortal` renders outside
+   * `.app-shell`, so every portalled dialog falls back to these base tokens
+   * rather than the workspace ones, and the booking-detail modal was showing
+   * 3.26:1 label text because of it. `--muted` above already measures 7.18:1
+   * and is unchanged.
+   */
+  --faint: #706c64;
   --line: rgba(43, 42, 40, 0.18);
   --yellow: #fbe7a2;
   --green: #c7e7c4;

@@ -88,7 +88,9 @@
   min-height: 44px;
   cursor: pointer;
 }
-.trust-form .btn { justify-self: start; min-height: 44px; }
+.trust-form .btn { justify-self: start; }
+/* Scoped so it beats `.app-shell.is-workspace .btn-sm` (three classes). */
+.app-shell.is-workspace .trust-form .btn { min-height: 44px; }
 
 .trust-hint { margin: 0; color: var(--faint); font-size: 13px; }
 .trust-report summary,

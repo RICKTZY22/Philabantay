@@ -18,7 +18,9 @@
 .barber-performance > header p { margin: 0; color: var(--muted); max-width: 60ch; }
 
 .performance-range { display: flex; flex-wrap: wrap; gap: 8px; }
-.performance-range .btn { min-height: 44px; }
+/* Scoped so it beats `.app-shell.is-workspace .btn-sm`, which otherwise pins
+   these to 36px. See the same note in OwnerAnalytics.css. */
+.app-shell.is-workspace .performance-range .btn { min-height: 44px; }
 
 .performance-cutoff {
   margin: 0;
@@ -90,7 +92,8 @@
   border-radius: 6px 6px 0 0;
   border: 1.5px solid var(--ink);
   background: var(--yellow);
-  transition: height 240ms ease;
+  /* Not animated; see the matching note in OwnerAnalytics.css. `height` is a
+     layout property and CODE-PATTERNS asks for transform/opacity. */
 }
 .performance-bar-label { color: var(--faint); font-size: 12px; }
 
@@ -117,6 +120,5 @@
   .barber-performance > header { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .performance-bar-fill { transition: none; }
-}
+/* No reduced-motion guard needed: nothing here animates. The workspace-wide
+   guard in `theme/studio.css` covers the rest of this screen. */

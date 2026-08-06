@@ -13,8 +13,21 @@
   --studio-charcoal: #202428;
   --studio-charcoal-soft: #2a3035;
   --studio-ink: #24282c;
-  --studio-muted: #66717b;
-  --studio-faint: #87909a;
+  /*
+   * Darkened during the P4-09 accessibility gate. Measured across every
+   * background this palette actually paints (white, surface-soft, page, and the
+   * blue/pink/copper/green tints), the previous values were:
+   *   --studio-muted  #66717b  worst 4.06:1
+   *   --studio-faint  #87909a  worst 2.64:1
+   * Both are under the 4.5:1 AA minimum for normal text, and both are used for
+   * body copy, hints, table headers and metric labels on every signed-in screen.
+   * The replacements clear 4.5:1 on all of those backgrounds while staying in
+   * the same warm-neutral family and keeping muted darker than faint.
+   * This is a visual change to every workspace surface, flagged for product
+   * review in SESSION-LOG.md; reverting is these two lines.
+   */
+  --studio-muted: #525a63;
+  --studio-faint: #5f6874;
   --studio-line: #d8d9d6;
   --studio-copper: #a7653d;
   --studio-copper-deep: #824729;
@@ -1285,6 +1298,16 @@ body:has(.app-shell.is-workspace) {
   color: var(--studio-muted);
 }
 
+/*
+ * The selected item paints copper-soft behind this 12px description, and
+ * `--studio-muted` on that background measures 4.06:1, under the 4.5:1 AA
+ * minimum for normal text. Measured, not estimated. Copper-deep on the same
+ * background clears it.
+ */
+.app-shell.is-workspace .settings-fluent-nav nav a.is-active small {
+  color: var(--studio-copper-deep);
+}
+
 .app-shell.is-workspace .settings-nav-icon {
   color: currentColor;
   background: transparent !important;
@@ -1926,4 +1949,66 @@ body:has(.app-shell.is-workspace) {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Account accessibility preferences                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Plan section 9 requires a text-size mode, a contrast mode, and a reduced-motion
+ * path for every role. The Settings panel stored all three and none of them had
+ * any effect; `lib/appearance.ts` now puts them on the document root and these
+ * rules are what they do.
+ */
+
+/*
+ * Text size scales the whole root rather than a font token, because roughly 60%
+ * of this app's `font-size` declarations are in px: scaling `html { font-size }`
+ * would grow the rem-sized 40% and leave the rest behind, which reads as broken
+ * rather than as larger. Root `zoom` also reaches the modal layer, which portals
+ * to `document.body` outside `.app-shell`.
+ */
+:root[data-text-size='large'] { zoom: 1.125; }
+:root[data-text-size='larger'] { zoom: 1.25; }
+
+/*
+ * The shell has a global 320px minimum width. On a 320px device, `zoom: 1.25`
+ * puts the effective viewport at 256 CSS px, and that minimum then forces the
+ * page itself to scroll sideways, measured at 346px against a 320px viewport.
+ * Two-dimensional scrolling is a worse outcome than slightly smaller text, so
+ * the largest step holds at the middle one until there is room for it. Lifting
+ * this cap means removing the 320px floor first.
+ */
+@media (max-width: 359px) {
+  :root[data-text-size='larger'] { zoom: 1.125; }
+}
+
+/*
+ * Higher contrast only re-points the studio palette. Every signed-in surface
+ * reads `--ink` / `--muted` / `--faint` / `--line` through these tokens, so
+ * darker text and stronger borders reach the whole workspace without a single
+ * component stylesheet changing. Text colours here sit at or above 7:1 on the
+ * page and surface backgrounds.
+ */
+:root[data-contrast='high'] {
+  --studio-ink: #101316;
+  --studio-muted: #353c43;
+  --studio-faint: #4a525a;
+  --studio-line: #6d7278;
+  --studio-copper: #7c4526;
+  --studio-copper-deep: #5e3319;
+}
+
+/*
+ * The account-level reduced-motion switch, matching the device-level media query
+ * above. The device setting is honoured on its own; this can only add to it.
+ */
+:root[data-motion='reduce'] .app-shell.is-workspace *,
+:root[data-motion='reduce'] .app-menu *,
+:root[data-motion='reduce'] .app-profile-avatar {
+  scroll-behavior: auto !important;
+  transition-duration: .01ms !important;
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
 }

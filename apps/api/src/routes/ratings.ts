@@ -234,7 +234,7 @@ export function createRatingsRouter(dependencies: ApiDependencies): Router {
         .select(`
           *,
           shop:shops!rating_eligibilities_shop_id_fkey(name),
-          provider:users!rating_eligibilities_provider_id_fkey(full_name),
+          provider:barbers!rating_eligibilities_provider_id_fkey(profile:users!barbers_id_fkey(full_name)),
           service:services!rating_eligibilities_service_id_fkey(name)
         `)
         .eq('customer_id', customerId)
@@ -256,7 +256,10 @@ export function createRatingsRouter(dependencies: ApiDependencies): Router {
           return {
             ...eligibility,
             shop_name: (shop as { name?: string } | null)?.name ?? null,
-            provider_name: (provider as { full_name?: string } | null)?.full_name ?? null,
+            // `provider_id` points at `barbers`, not `users`, so the name is one
+            // hop further out. Embedding `users` directly here returned PGRST200
+            // and took the whole customer home down with it.
+            provider_name: (provider as { profile?: { full_name?: string } | null } | null)?.profile?.full_name ?? null,
             service_name: (service as { name?: string } | null)?.name ?? null,
           }
         }),

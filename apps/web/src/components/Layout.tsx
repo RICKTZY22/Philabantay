@@ -2,7 +2,9 @@ import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SHOP_NAME } from '@barbershop/shared'
 import { isProfessionalLocked } from '../lib/access'
+import { applyAppearance, clearAppearance } from '../lib/appearance'
 import { profileAvatarRole } from '../lib/profile'
+import { useBackend } from '../services/backend'
 import { DoodleDefs } from '../theme/DoodleDefs'
 import { useAuth } from '../features/auth/AuthContext'
 import { AppMenu } from './AppMenu'
@@ -13,6 +15,7 @@ import { RouteErrorBoundary } from './RouteErrorBoundary'
 
 export function Layout() {
   const { profile, loading } = useAuth()
+  const backend = useBackend()
   const location = useLocation()
   const navigate = useNavigate()
   const [headerVisible, setHeaderVisible] = useState(true)
@@ -33,6 +36,27 @@ export function Layout() {
       navigate('/', { replace: true, state: null })
     }
   }, [navigate, profile, signingOutToHome])
+  // Text size, contrast and reduced motion are account preferences, so they have
+  // to be applied wherever the account is signed in, not only while the Settings
+  // panel that writes them happens to be mounted. Signing out clears them so the
+  // next person on this device does not inherit them.
+  useEffect(() => {
+    if (!profile) {
+      clearAppearance()
+      return
+    }
+    let active = true
+    backend.preferences.getMine()
+      .then((preferences) => {
+        if (active) applyAppearance(preferences)
+      })
+      .catch(() => {
+        // Appearance is a preference, not a permission. If the read fails the app
+        // stays on its defaults rather than blocking the route.
+        if (active) clearAppearance()
+      })
+    return () => { active = false }
+  }, [backend, profile])
   // Landing keeps a transparent marketing header; auth lives on dedicated routes.
   const onLanding = location.pathname === '/'
   const onAuth = location.pathname === '/login' || location.pathname === '/signup'

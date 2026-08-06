@@ -49,7 +49,11 @@
   resize: vertical;
 }
 .dispute-form .btn,
-.dispute-actions .btn { justify-self: start; min-height: 44px; }
+.dispute-actions .btn { justify-self: start; }
+/* Scoped so it beats `.app-shell.is-workspace .btn` / `.btn-sm`, which pin these
+   to 42px and 36px. Measured before scoping; the unscoped rule never applied. */
+.app-shell.is-workspace .dispute-form .btn,
+.app-shell.is-workspace .dispute-actions .btn { min-height: 44px; }
 .dispute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .dispute-timeline summary { cursor: pointer; color: var(--muted); font-size: 14px; min-height: 32px; }

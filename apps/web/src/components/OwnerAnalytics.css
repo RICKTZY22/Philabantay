@@ -10,7 +10,11 @@
 .analytics-head p { margin: 0; color: var(--muted); max-width: 60ch; }
 
 .analytics-range { display: flex; flex-wrap: wrap; gap: 8px; }
-.analytics-range .btn { min-height: 44px; }
+/* Scoped under the workspace shell on purpose. `.app-shell.is-workspace .btn-sm`
+   is three classes and pins small buttons to 36px, so an unscoped
+   `.analytics-range .btn` loses on specificity and the 44px target never
+   applies. This was measured at 36px in the browser before it was scoped. */
+.app-shell.is-workspace .analytics-range .btn { min-height: 44px; }
 
 .analytics-custom {
   display: flex;
@@ -121,8 +125,16 @@
   border-radius: 6px 6px 0 0;
   background: var(--yellow);
   border: 1.5px solid var(--ink);
-  /* Transform/opacity only, and nothing at all under reduced motion. */
-  transition: height 240ms ease;
+  /* Deliberately not animated. This used to be `transition: height 240ms`, under
+     a comment claiming transform/opacity only, it was neither. CODE-PATTERNS
+     requires animating transform and opacity, and `height` is a layout property:
+     the demand series emits one bar per active day, so "All time" on an
+     established shop animates hundreds of bars and forces a full reflow of the
+     row on every frame, at exactly the moment the owner is waiting for numbers.
+     `transform: scaleY` was the obvious swap and was rejected: it squashes the
+     1.5px border and the 6px top radius that give these bars their look. The
+     transition only ever fired on a range change (a new element renders at its
+     final height), so removing it costs nothing and the numbers still arrive. */
 }
 .analytics-bar-label { color: var(--faint); font-size: 11px; white-space: nowrap; }
 
@@ -149,13 +161,14 @@
 }
 .analytics-table-scroll thead th { color: var(--muted); font-size: 14px; }
 .analytics-table-toggle { display: grid; gap: 8px; }
-.analytics-table-toggle .btn { justify-self: start; min-height: 44px; }
+.analytics-table-toggle .btn { justify-self: start; }
+.app-shell.is-workspace .analytics-table-toggle .btn { min-height: 44px; }
 
 @media (max-width: 720px) {
   .analytics-head { grid-template-columns: 1fr; }
   .analytics-section { padding: 14px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .analytics-bar-fill { transition: none; }
-}
+/* No reduced-motion guard for the bars any more: there is no animation left to
+   guard. The workspace-wide guard in `theme/studio.css` still covers everything
+   else on this screen. */
