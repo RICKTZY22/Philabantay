@@ -74,12 +74,18 @@ not formally complete.
 
 ## Phase 4 — trust, insights, settings, workspaces 🟨
 
-**Backend complete and falsified; the experience gate is not run, so Phase 4 is
-not closed.** Ten of the twelve required tests are covered by automated
-regressions. Required test 11 (keyboard, screen reader, contrast, reduced motion,
-320 px / tablet / desktop, per role and admin) has not been run at all, and
-required test 12 is partial: role bundle sizes are recorded, render time and image
-payload are not. Full detail and the falsification record are in the
+**Backend complete and falsified; the experience gate ran on 2026-08-06 and
+passed for three roles of four, so Phase 4 is still not closed.** Required test 12
+is complete. Required test 11 passes for customer, barber and owner; **the admin
+quarter is deferred** because three of its four surfaces do not exist and the
+fourth cannot be reached without provisioning an admin by hand. That deferral is
+the only thing keeping Phase 4 open.
+
+The gate found six real defects on surfaces that had never been rendered, plus one
+missing behaviour, all fixed and re-measured, including a 500 that blanked the
+entire customer home, five `min-height: 44px` rules that were dead CSS at a
+measured 36px, and three palette tokens that failed WCAG AA app-wide. Full detail,
+the falsification record, and the P4-09 execution record are in the
 [Phase 4 test catalogue](../testing/PHASE-4-TESTS.md).
 
 The measurement that preceded the work is in the
@@ -100,18 +106,25 @@ card in two places.
 - P4-04 Analytics facts: **implemented and falsified.** One reproducible SQL read;
   the five contract §10 value concepts stay distinct and every metric ships its
   own definition. The live `revenue_is_estimate` violation is removed.
-- P4-05/06/07 Role workspaces: **implemented, unobserved in a browser.** Owner
-  Analytics and Trust destinations, barber Performance, customer rating prompt and
-  dispute panel.
-- P4-08 Settings and access: **implemented and falsified.** Preferences are server
-  state, mandatory transactional notices cannot be switched off, quiet hours delay
-  optional delivery only, and operations can see and retry a provider failure.
-- P4-09 Experience gate: **not started.** This is the packet that owes required
-  tests 11 and 12.
+- P4-05/06/07 Role workspaces: **observed and repaired.** All six surfaces were
+  rendered with real data on 2026-08-06. The customer rating prompt was reached
+  only after fixing a 500 that blanked the whole home screen; Owner Analytics,
+  Owner Trust, Barber Performance and the dispute panel each needed a fix.
+- P4-08 Settings and access: **implemented and falsified, then repaired.**
+  Preferences are server state, mandatory notices cannot be switched off, quiet
+  hours delay optional delivery only, and operations can see and retry a provider
+  failure. The gate found that `text_size`, `high_contrast` and `reduce_motion`
+  were stored and read by nothing; they now apply app-wide (D-053).
+- P4-09 Experience gate: **run, three roles of four pass.** Required test 12 is
+  complete with no unexplained bundle regression. Required test 11 passes for
+  customer, barber and owner. The admin quarter is deferred and named.
 
-Outstanding work, listed in full at the end of the test catalogue: the admin
-console screens (dispute queue, moderation queue, notification operations), the
-rating-response editing UI, and a deliberately deferred `hiring` conversation kind.
+Outstanding work, listed in full at the end of the test catalogue: **the admin
+console screens (dispute queue, moderation queue, notification operations), now
+the packet that closes Phase 4**, the rating-response editing UI, a deliberately
+deferred `hiring` conversation kind, one reduced-motion confirmation with real
+media emulation, and the app-wide 44px target floor (`.btn-sm` is 36px for every
+small workspace button, which is a product-owner decision rather than a gate fix).
 
 ## Phases 5–6 ⬜
 

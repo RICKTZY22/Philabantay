@@ -2170,3 +2170,57 @@ lane or a browser lane. Evidence and the full outstanding list are in
 
 P2-08 and P3-09 remain open on their own items. This lane did not touch them and
 does not depend on them.
+
+---
+
+## 2026-08-06, P4-09 experience gate (Claude, browser lane)
+
+Ran the gate. **Three roles of four pass; the admin quarter is deferred, so Phase
+4 stays open.** Required test 12 is complete. Evidence is in
+`docs/testing/PHASE-4-TESTS.md`, section "P4-09 execution record".
+
+**Files this lane changed.** One API file, seven web files, one new lib file, and
+two theme files:
+
+```text
+apps/api/src/routes/ratings.ts                        the /ratings/workspace embed
+apps/web/src/lib/appearance.ts                        new
+apps/web/src/components/Layout.tsx                    applies preferences app-wide
+apps/web/src/components/CustomerDashboard.tsx         rating read made non-fatal
+apps/web/src/components/OwnerAnalytics.tsx / .css
+apps/web/src/components/OwnerTrustPanel.tsx / .css
+apps/web/src/components/BarberPerformancePanel.css
+apps/web/src/components/DisputePanel.css
+apps/web/src/pages/settings/NotificationSettingsPanel.tsx
+apps/web/src/theme/studio.css                         palette + appearance modes
+apps/web/src/theme/doodle.css                         base --faint
+```
+
+**Four things another lane needs to know:**
+
+1. **Three global colour tokens changed** (`--studio-muted`, `--studio-faint`, base
+   `--faint`). Every signed-in surface and every portalled dialog looks slightly
+   darker in its secondary text. This was a WCAG AA fix, not a style preference -
+   the old values measured 2.64:1 and 4.06:1, but it is a visible change and is
+   flagged for product review as **D-052**, revertible in three lines.
+2. **A `min-height` on `.something .btn` inside the workspace is dead CSS.**
+   `.app-shell.is-workspace .btn` / `.btn-sm` are three classes and win on
+   specificity. Five Phase 4 rules were silently losing and measured 36px against
+   a stated 44px. Scope target-size rules under `.app-shell.is-workspace`, and
+   measure them in a browser rather than trusting the declaration.
+3. **`ModalPortal` renders outside `.app-shell`**, so a portalled dialog does not
+   inherit the workspace token remap and falls back to the base doodle palette.
+   Anything checked for colour has to be checked with a dialog open too.
+4. **`GET /ratings/workspace` had no test and was returning 500.** The embed hint
+   named a foreign key that targets `barbers`, not `users`. If you add an embed in
+   these routes, probe it against PostgREST, a wrong hint typechecks, builds, and
+   fails only at runtime, and it took the entire customer home down with it.
+
+**What is left, and whose lane it is:** plan section 11's staff admin console
+(dispute queue, moderation queue, notification operations) is now the packet that
+closes Phase 4, and it needs a backend-plus-frontend lane rather than a browser
+lane. Provisioning a usable admin is part of it; the five existing `admin` rows are
+fixture leftovers with random per-run passwords.
+
+Nothing is pushed. `61e8372` holds P4-01…P4-08; the P4-09 fixes are uncommitted
+pending the product owner's call on D-052.

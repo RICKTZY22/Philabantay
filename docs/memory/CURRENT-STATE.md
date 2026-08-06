@@ -11,15 +11,35 @@ Authoritative detail: [Roadmap status](../plans/ROADMAP-STATUS.md).
 
 ## Active phase
 
-**Phase 4 — trust, insights, settings, workspaces: backend complete and
-falsified, experience gate not run.** P4-01 through P4-08 are implemented, with
-every claim falsified before being trusted. P4-09 has not started, and it owes
-required test 11 (keyboard, screen reader, contrast, reduced motion, 320 px,
-tablet, desktop, per role and admin) and the render-time and image-payload half of
-required test 12. **Phase 4 is not closed.**
+**Phase 4 (trust, insights, settings, workspaces): P4-09 run, three roles of four
+pass, admin deferred.** P4-01 through P4-08 are implemented and falsified. P4-09
+executed on 2026-08-06: required test 12 is **complete**, and required test 11
+**passes for customer, barber and owner**. **Phase 4 is not closed.** The admin
+quarter of test 11 is deferred because three of the four admin surfaces do not
+exist and the fourth cannot be reached without provisioning an admin by hand.
 
-Evidence: [Phase 4 test catalogue](../testing/PHASE-4-TESTS.md). Measurement taken
-before any code: [Phase 4 gap measurement](../testing/PHASE-4-GAP-MEASUREMENT.md).
+The gate found **six real defects on surfaces nobody had opened**, all fixed and
+re-measured, plus one whole missing behaviour. The two that matter most:
+
+1. **`GET /ratings/workspace` returned 500 and blanked the entire customer home.**
+   The embed hint named a foreign key that points at `barbers`, not `users`, so
+   PostgREST answered `PGRST200`. Fourteen passing rating tests sat beside a
+   broken home screen because no automated test covers that route. It was also a
+   single-point failure: the read was one of eight in one `Promise.all`, so it
+   took discovery, bookings and messages down with it. Both fixed.
+2. **Text size, contrast and reduced motion were stored and never applied.** The
+   Settings panel wrote all three to the server and nothing in `apps/web` read
+   them back, so two of the three modes section 9 requires did not exist. Now
+   applied from the app shell through `lib/appearance.ts`.
+
+Also fixed: five `min-height: 44px` rules that were dead CSS (measured 36px,
+beaten on specificity by `.app-shell.is-workspace .btn-sm`); a metric documented
+with the wrong definition; a dispute queue that counted decisions the owner had
+already made; and three palette tokens that failed WCAG AA app-wide.
+
+Evidence: [Phase 4 test catalogue](../testing/PHASE-4-TESTS.md), section
+"P4-09 execution record". Measurement taken before any code:
+[Phase 4 gap measurement](../testing/PHASE-4-GAP-MEASUREMENT.md).
 
 Gate on the current tree, from a database replayed from empty:
 
@@ -33,10 +53,13 @@ fast tests      131
 matrix          143 / 143 twice back to back, no reset
 build           API + web production build passed
 diff            git diff --check clean
+shops           zero published left behind
 ```
 
-Eleven forward migrations, `20260805000100` through `20260805001100`. Nothing is
-committed or pushed; the working tree holds all of it.
+Eleven forward migrations, `20260805000100` through `20260805001100`. **P4-01
+through P4-08 are committed at `61e8372`** (61 files, staged by explicit path).
+**Nothing is pushed**, and the P4-09 fixes are still in the working tree awaiting
+the product owner's call on the palette change.
 
 ### Security findings beyond the handoff card, all fixed and falsified
 
@@ -566,21 +589,26 @@ Remaining risks / deliberately excluded work:
 
 ## Exact next action
 
-**Run P4-09: required test 11 and the rest of required test 12.** Everything else
-in Phase 4 is implemented and falsified. The new surfaces were built to the
-accessibility contract — 44 px targets, visible focus, `prefers-reduced-motion`
-paths, no colour-only status, an accessible table beside every chart, wide tables
-scrolling inside their own container — but built to the contract is not the same as
-observed passing, and none of them has been opened in a browser.
+**Two things need the product owner, in this order.**
 
-Surfaces to sweep: Owner Analytics, Owner Trust, Barber Performance, the customer
-rating prompt on home, the customer dispute panel, and the rewritten Notification
-settings panel. Then record render time and image payload against the bundle-size
-baseline already in the test catalogue.
+1. **Review the palette change and decide whether to push.** Fixing WCAG AA meant
+   darkening three global colour tokens (`--studio-muted`, `--studio-faint`, and
+   the base `--faint`), which changes the look of every signed-in screen and every
+   dialog. It is recorded as D-052 with the measured before/after and a one-line
+   revert. Nothing is pushed; `61e8372` holds P4-01..P4-08 and the P4-09 fixes are
+   uncommitted.
+2. **Build plan section 11's staff admin console**, then run test 11's admin
+   quarter against it. That is the only thing still holding Phase 4 open. The
+   dispute queue, the rating-moderation queue and the notification operations view
+   are all API-complete with no UI. Provisioning a usable admin is part of the job:
+   sign up, enrol TOTP in Settings → Security, then
+   `npm run admin:provision -w @barbershop/api`. The five existing `admin` rows are
+   fixture leftovers with random per-run passwords.
 
-Three items are implemented at the API with no screen, and are the natural next
-build after the gate: the admin dispute queue, the admin moderation queue, and the
-notification operations view. Plan section 11's staff admin console is their home.
+One small confirmation is also outstanding: **reduced motion was verified by rule
+inspection, not by real media emulation**, because this session's browser tooling
+could not force the media query. The guard is `!important` and matches; toggling
+the OS setting once closes it.
 
 ### Also still open, from Phase 3
 

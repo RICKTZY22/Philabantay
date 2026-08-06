@@ -2212,3 +2212,100 @@ are listed in full at the end of `docs/testing/PHASE-4-TESTS.md`. P2-08 and P3-0
 remain open on their own items; nothing here closes or depends on them.
 
 Nothing is committed and nothing is pushed.
+
+## 2026-08-06, P4-09 experience gate: three roles pass, admin deferred (Claude)
+
+Committed P4-01 through P4-08 first, by explicit path, as `61e8372`, 61 files,
+not the 59 the card estimated, because the card predates its own handoff note and
+`PHASE-4-CODEX-HANDOFF.md`. Nothing pushed.
+
+Then populated the seeded dev shop with real data before opening anything:
+completed visits across ten days, three reviews with a deliberate spread, two
+disputes, offline collections, a chat thread. Empty states do not exercise a
+chart, a decision form, or a focus trap, and five of the six surfaces would have
+looked fine while broken.
+
+**Six defects on surfaces nobody had opened, plus one missing behaviour.**
+
+The worst was invisible to the whole automated suite. `GET /ratings/workspace`
+returned **500** on every load and blanked the entire customer home, no
+discovery, no bookings, no messages, just "Hindi ma-load ang dashboard data". The
+embed hint `users!rating_eligibilities_provider_id_fkey` names a constraint that
+points at `barbers`, not `users`, so PostgREST answered `PGRST200`. Fourteen
+passing rating tests sat beside it because no test covers that route. Probing
+every FK-hinted embed in the Phase 4 routes found exactly this one broken and
+confirmed the two-hop form already used in `bookings.ts` and `chat.ts` fixes it.
+It was also a single point of failure: the read was one of eight in one
+`Promise.all`, so a secondary panel could take the whole screen down. It now
+degrades to "no prompt".
+
+**Text size, contrast and reduced motion were stored and never applied.** The
+Settings panel wrote all three to the server; nothing in `apps/web` read them
+back. Choosing "Larger" persisted at version 1 and changed no font, colour, class
+or attribute, two of the three modes section 9 requires simply did not exist.
+`lib/appearance.ts` now reflects them onto the document root from the app shell,
+so they hold on every route and clear on sign-out (D-053).
+
+**Five `min-height: 44px` rules were dead CSS.** `.app-shell.is-workspace .btn-sm`
+is three classes and pins small buttons to 36px, so `.analytics-range .btn` and
+four siblings lost on specificity and never applied. Measured at 36px, scoped
+under the workspace shell, re-measured at 44px. The card said "measure, do not
+assume", and measuring is the only reason this was found.
+
+Also: a metric documented with the wrong definition, "Text hidden by moderation"
+carried the rating-distribution definition, which says the opposite of what the
+tile counts, on a screen whose whole premise is that you can check the number; and
+"Disputes needing a decision (2)" still read `(2)` after both decisions had been
+recorded, sending an owner looking for work that was already done.
+
+**Contrast failed app-wide and fixing it changed the palette.** `--studio-faint`
+measured **2.64:1** and `--studio-muted` **4.06:1** across the backgrounds they
+actually paint; the base `--faint` measured **3.29:1** and reaches every portalled
+dialog, because `ModalPortal` renders outside `.app-shell` and falls back to the
+doodle palette. Three tokens darkened; five surfaces then measured zero AA
+failures at a minimum of 4.59:1. This changes the look of every signed-in screen
+and is flagged for product review as D-052, revertible in three lines.
+
+**The animated-bars question, answered rather than assumed.** The transform/opacity
+preference does apply, but through `CODE-PATTERNS.md`, which states it
+unconditionally, not through section 9, whose transform/opacity sentence is inside
+the landing-page paragraph. It matters in practice: the demand series emits one
+bar per active day, so "All time" animates hundreds of `height` transitions and
+reflows the row every frame. `scaleY` was rejected, it squashes the 1.5px border
+and 6px radius, and both transitions were removed instead, since they only ever
+fired on a range change (D-054).
+
+**Test 11: customer, barber and owner pass; admin is deferred.** Not counted as a
+partial pass. Three of the four admin surfaces do not exist, and the fourth
+(`/admin/verifications`) could not be reached because the five `admin` rows are
+fixture leftovers with random passwords and provisioning a real one is
+deliberately manual. Building plan section 11's console is what closes Phase 4.
+
+Evidence worth keeping: 29 keyboard stops in DOM order on Owner Analytics at 320px
+with a visible ring on every one, including the three horizontally-scrolling
+tables, Chrome 148 makes a childless scroller keyboard-reachable, so the
+off-screen columns are reachable. A programmatic `.focus()` probe said otherwise
+and was wrong. Likewise a "focus not restored" reading on the booking modal turned
+out to be my own instrumentation opening it from an unfocused trigger;
+`ModalPortal` restores correctly, verified properly on the second attempt. Two
+near-misses, both caught by re-testing instead of filing.
+
+**Test 12 complete.** Bundle sizes moved by about 1.5 kB total, every delta
+attributable to a P4-09 fix, so no unexplained regression. Paint timing was
+unusable (the pane does not composite: FCP 3604 ms against a 143 ms DCL), so
+render time is recorded as shell-ready and role-data-ready, which are
+compositing-independent: customer 69/639 ms, barber 95/1569 ms, owner 96/1942 ms.
+Image payload is 32.3 kB of first-party assets for every signed-in role, the
+333 kB of hero WebPs is landing-only, plus 12 cross-origin OSM tiles on customer
+home whose bytes are not measurable from the page.
+
+Gate on a database replayed from empty: 69 migrations, DB lint no schema errors,
+219/219 functions pin `search_path = ''`, matrix 143/143 twice back to back, 131
+fast tests, typecheck, ESLint 0/0, both production builds, `git diff --check`
+clean, zero published shops left behind.
+
+Reduced motion is **rule-verified, not emulation-observed**. This session's
+browser tooling exposes no way to force the media query, and the handoff is
+explicit that a CSS toggle is not equivalent. The blanket `!important` guard
+matches, and after the bar fix the only animation left on any Phase 4 surface is
+the composited `.btn` transition. A human with real emulation should confirm it.
